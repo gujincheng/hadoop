@@ -195,21 +195,19 @@
                   <goal>yarn</goal>
                 </goals>
                 <configuration>
-                  <arguments>install</arguments>
+                    <arguments>install --ignore-engines</arguments>
                 </configuration>
             </execution>
-              <!--
               <execution>
                 <phase>generate-resources</phase>
                 <id>bower install</id>
                 <configuration>
-                    <arguments>install ##allow-root</arguments> 
+                    <arguments>install --allow-root</arguments> 
                 </configuration>
                 <goals>
                   <goal>bower</goal>
                   </goals>
                   </execution>
-              -->
             </executions>
           </plugin>
 

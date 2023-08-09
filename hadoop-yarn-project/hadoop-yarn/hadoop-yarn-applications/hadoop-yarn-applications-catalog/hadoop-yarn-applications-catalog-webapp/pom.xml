@@ -285,6 +285,10 @@
                         <goals>
                             <goal>yarn</goal>
                         </goals>
+                        <!-- 在 npmArguments 中添加参数 -->
+                        <configuration>
+                            <npmArguments>install --ignore-engines</npmArguments>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
