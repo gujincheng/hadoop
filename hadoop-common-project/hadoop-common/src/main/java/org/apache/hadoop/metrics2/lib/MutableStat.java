@@ -140,14 +140,14 @@ public class MutableStat extends MutableMetric {
     if (all || changed()) {
       numSamples += intervalStat.numSamples();
       builder.addCounter(numInfo, numSamples)
-             .addGauge(avgInfo, intervalStat.mean());
+             .addGauge(avgInfo, lastStat().mean());
       if (extended) {
-        builder.addGauge(stdevInfo, intervalStat.stddev())
-               .addGauge(iMinInfo, intervalStat.min())
-               .addGauge(iMaxInfo, intervalStat.max())
+        builder.addGauge(stdevInfo, lastStat().stddev())
+               .addGauge(iMinInfo, lastStat().min())
+               .addGauge(iMaxInfo, lastStat().max())
                .addGauge(minInfo, minMax.min())
                .addGauge(maxInfo, minMax.max())
-               .addGauge(iNumInfo, intervalStat.numSamples());
+               .addGauge(iNumInfo, lastStat().numSamples());
       }
       if (changed()) {
         if (numSamples > 0) {
@@ -179,7 +179,7 @@ public class MutableStat extends MutableMetric {
   }
 
   /**
-   * @return Return the SampleStat snapshot timestamp.
+   * Return the SampleStat snapshot timestamp
    */
   public long getSnapshotTimeStamp() {
     return snapshotTimeStamp;

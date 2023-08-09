@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
  *  DSQuotaExceededException or
  *  NSQuotaExceededException
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class QuotaExceededException extends ClusterStorageCapacityExceededException {
   protected static final long serialVersionUID = 1L;

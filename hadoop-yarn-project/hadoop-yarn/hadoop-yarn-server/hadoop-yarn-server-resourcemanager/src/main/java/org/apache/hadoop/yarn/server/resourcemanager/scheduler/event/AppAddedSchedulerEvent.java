@@ -34,7 +34,6 @@ public class AppAddedSchedulerEvent extends SchedulerEvent {
   private final boolean isAppRecovering;
   private final Priority appPriority;
   private final ApplicationPlacementContext placementContext;
-  private boolean unmanagedAM = false;
 
   public AppAddedSchedulerEvent(ApplicationId applicationId, String queue,
       String user) {
@@ -59,7 +58,6 @@ public class AppAddedSchedulerEvent extends SchedulerEvent {
     this(submissionContext.getApplicationId(), submissionContext.getQueue(),
         user, isAppRecovering, submissionContext.getReservationID(),
         appPriority, null);
-    this.unmanagedAM = submissionContext.getUnmanagedAM();
   }
 
   public AppAddedSchedulerEvent(String user,
@@ -68,7 +66,6 @@ public class AppAddedSchedulerEvent extends SchedulerEvent {
     this(submissionContext.getApplicationId(), submissionContext.getQueue(),
         user, isAppRecovering, submissionContext.getReservationID(),
         appPriority, placementContext);
-    this.unmanagedAM = submissionContext.getUnmanagedAM();
   }
 
   public AppAddedSchedulerEvent(ApplicationId applicationId, String queue,
@@ -110,9 +107,5 @@ public class AppAddedSchedulerEvent extends SchedulerEvent {
 
   public ApplicationPlacementContext getPlacementContext() {
     return placementContext;
-  }
-
-  public boolean isUnmanagedAM() {
-    return unmanagedAM;
   }
 }

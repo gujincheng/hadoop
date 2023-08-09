@@ -42,8 +42,8 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,11 +68,6 @@ public class ClientContext {
    * Name of context.
    */
   private final String name;
-
-  /**
-   * The client conf used to initialize context.
-   */
-  private final DfsClientConf dfsClientConf;
 
   /**
    * String representation of the configuration.
@@ -136,17 +131,6 @@ public class ClientContext {
   private volatile DeadNodeDetector deadNodeDetector = null;
 
   /**
-   * The switch for the {@link LocatedBlocksRefresher}.
-   */
-  private final boolean locatedBlocksRefresherEnabled;
-
-  /**
-   * Periodically refresh the {@link org.apache.hadoop.hdfs.protocol.LocatedBlocks} backing
-   * registered {@link DFSInputStream}s, to take advantage of changes in block placement.
-   */
-  private volatile LocatedBlocksRefresher locatedBlocksRefresher = null;
-
-  /**
    * Count the reference of ClientContext.
    */
   private int counter = 0;
@@ -162,7 +146,6 @@ public class ClientContext {
     final ShortCircuitConf scConf = conf.getShortCircuitConf();
 
     this.name = name;
-    this.dfsClientConf = conf;
     this.confString = scConf.confAsString();
     this.clientShortCircuitNum = conf.getClientShortCircuitNum();
     this.shortCircuitCache = new ShortCircuitCache[this.clientShortCircuitNum];
@@ -181,7 +164,6 @@ public class ClientContext {
     this.byteArrayManager = ByteArrayManager.newInstance(
         conf.getWriteByteArrayManagerConf());
     this.deadNodeDetectionEnabled = conf.isDeadNodeDetectionEnabled();
-    this.locatedBlocksRefresherEnabled = conf.isLocatedBlocksRefresherEnabled();
     initTopologyResolution(config);
   }
 
@@ -320,21 +302,6 @@ public class ClientContext {
   }
 
   /**
-   * If true, LocatedBlocksRefresher will be periodically refreshing LocatedBlocks
-   * of registered DFSInputStreams.
-   */
-  public boolean isLocatedBlocksRefresherEnabled() {
-    return locatedBlocksRefresherEnabled;
-  }
-
-  /**
-   * Obtain LocatedBlocksRefresher of the current client.
-   */
-  public LocatedBlocksRefresher getLocatedBlocksRefresher() {
-    return locatedBlocksRefresher;
-  }
-
-  /**
    * Increment the counter. Start the dead node detector thread if there is no
    * reference.
    */
@@ -343,10 +310,6 @@ public class ClientContext {
     if (deadNodeDetectionEnabled && deadNodeDetector == null) {
       deadNodeDetector = new DeadNodeDetector(name, configuration);
       deadNodeDetector.start();
-    }
-    if (locatedBlocksRefresherEnabled && locatedBlocksRefresher == null) {
-      locatedBlocksRefresher = new LocatedBlocksRefresher(name, configuration, dfsClientConf);
-      locatedBlocksRefresher.start();
     }
   }
 
@@ -360,11 +323,6 @@ public class ClientContext {
     if (counter == 0 && deadNodeDetectionEnabled && deadNodeDetector != null) {
       deadNodeDetector.shutdown();
       deadNodeDetector = null;
-    }
-
-    if (counter == 0 && locatedBlocksRefresherEnabled && locatedBlocksRefresher != null) {
-      locatedBlocksRefresher.shutdown();
-      locatedBlocksRefresher = null;
     }
   }
 }

@@ -18,16 +18,19 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.weightconversion.CapacityConverter;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.weightconversion.CapacityConverterFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
@@ -45,15 +48,15 @@ public class FSQueueConverter {
   private static final String FIFO_POLICY = "fifo";
 
   private final FSConfigToCSConfigRuleHandler ruleHandler;
-  private CapacitySchedulerConfiguration capacitySchedulerConfig;
+  private Configuration capacitySchedulerConfig;
   private final boolean preemptionEnabled;
   private final boolean sizeBasedWeight;
   @SuppressWarnings("unused")
   private final Resource clusterResource;
   private final float queueMaxAMShareDefault;
+  private final boolean autoCreateChildQueues;
   private final int queueMaxAppsDefault;
   private final boolean drfUsed;
-  private final boolean usePercentages;
 
   private ConversionOptions conversionOptions;
 
@@ -64,10 +67,10 @@ public class FSQueueConverter {
     this.sizeBasedWeight = builder.sizeBasedWeight;
     this.clusterResource = builder.clusterResource;
     this.queueMaxAMShareDefault = builder.queueMaxAMShareDefault;
+    this.autoCreateChildQueues = builder.autoCreateChildQueues;
     this.queueMaxAppsDefault = builder.queueMaxAppsDefault;
     this.conversionOptions = builder.conversionOptions;
     this.drfUsed = builder.drfUsed;
-    this.usePercentages = builder.usePercentages;
   }
 
   public void convertQueueHierarchy(FSQueue queue) {
@@ -82,10 +85,10 @@ public class FSQueueConverter {
 
     emitChildCapacity(queue);
     emitMaximumCapacity(queueName, queue);
+    emitAutoCreateChildQueue(queueName, queue);
     emitSizeBasedWeight(queueName);
     emitOrderingPolicy(queueName, queue);
     checkMaxChildCapacitySetting(queue);
-    emitDefaultUserLimitFactor(queueName, children);
 
     for (FSQueue childQueue : children) {
       convertQueueHierarchy(childQueue);
@@ -101,10 +104,11 @@ public class FSQueueConverter {
     ruleHandler.handleChildQueueCount(queueName, children.size());
 
     if (children.size() > 0) {
-      List<String> childQueues = children.stream()
+      String childQueues = children.stream()
           .map(child -> getQueueShortName(child.getName()))
-          .collect(Collectors.toList());
-      capacitySchedulerConfig.setQueues(queueName, childQueues.toArray(new String[0]));
+          .collect(Collectors.joining(","));
+
+      capacitySchedulerConfig.set(PREFIX + queueName + ".queues", childQueues);
     }
   }
 
@@ -121,14 +125,14 @@ public class FSQueueConverter {
     if (queueMaxAmShare != 0.0f
         && queueMaxAmShare != queueMaxAMShareDefault
         && queueMaxAmShare != QUEUE_MAX_AM_SHARE_DISABLED) {
-      capacitySchedulerConfig.setMaximumApplicationMasterResourcePerQueuePercent(
-          queueName, queueMaxAmShare);
+      capacitySchedulerConfig.setFloat(PREFIX + queueName +
+          ".maximum-am-resource-percent", queueMaxAmShare);
     }
 
     if (queueMaxAmShare == QUEUE_MAX_AM_SHARE_DISABLED
         && queueMaxAmShare != queueMaxAMShareDefault) {
-      capacitySchedulerConfig.setMaximumApplicationMasterResourcePerQueuePercent(
-          queueName, 1.0f);
+      capacitySchedulerConfig.setFloat(PREFIX + queueName +
+          ".maximum-am-resource-percent", 1.0f);
     }
   }
 
@@ -141,7 +145,7 @@ public class FSQueueConverter {
   private void emitMaxParallelApps(String queueName, FSQueue queue) {
     if (queue.getMaxRunningApps() != MAX_RUNNING_APPS_UNSET
         && queue.getMaxRunningApps() != queueMaxAppsDefault) {
-      capacitySchedulerConfig.setMaxParallelAppsForQueue(queueName,
+      capacitySchedulerConfig.set(PREFIX + queueName + ".max-parallel-apps",
           String.valueOf(queue.getMaxRunningApps()));
     }
   }
@@ -161,8 +165,8 @@ public class FSQueueConverter {
       ruleHandler.handleMaxResources();
     }
 
-    capacitySchedulerConfig.setMaximumCapacity(queueName,
-        100.0f);
+    capacitySchedulerConfig.set(PREFIX + queueName + ".maximum-capacity",
+        "100");
   }
 
   /**
@@ -176,7 +180,7 @@ public class FSQueueConverter {
     Resource maxAllocation = queue.getMaximumContainerAllocation();
 
     if (isNotUnboundedResource(maxAllocation)) {
-      int parentMaxVcores = Integer.MIN_VALUE;
+      long parentMaxVcores = Integer.MIN_VALUE;
       long parentMaxMemory = Integer.MIN_VALUE;
 
       if (queue.getParent() != null) {
@@ -188,16 +192,16 @@ public class FSQueueConverter {
         }
       }
 
-      int maxVcores = maxAllocation.getVirtualCores();
+      long maxVcores = maxAllocation.getVirtualCores();
       long maxMemory = maxAllocation.getMemorySize();
 
       // only emit max allocation if it differs from the parent's setting
       if (maxVcores != parentMaxVcores || maxMemory != parentMaxMemory) {
-        capacitySchedulerConfig.setQueueMaximumAllocationMb(
-            queueName, (int) maxMemory);
+        capacitySchedulerConfig.set(PREFIX + queueName +
+            ".maximum-allocation-mb", String.valueOf(maxMemory));
 
-        capacitySchedulerConfig.setQueueMaximumAllocationVcores(
-            queueName, maxVcores);
+        capacitySchedulerConfig.set(PREFIX + queueName +
+            ".maximum-allocation-vcores", String.valueOf(maxVcores));
       }
     }
   }
@@ -210,14 +214,22 @@ public class FSQueueConverter {
    */
   private void emitPreemptionDisabled(String queueName, FSQueue queue) {
     if (preemptionEnabled && !queue.isPreemptable()) {
-      capacitySchedulerConfig.setPreemptionDisabled(queueName, true);
+      capacitySchedulerConfig.set(PREFIX + queueName + ".disable_preemption",
+          "true");
     }
   }
 
-  public void emitDefaultUserLimitFactor(String queueName, List<FSQueue> children) {
-    if (children.isEmpty() &&
-            !capacitySchedulerConfig.isAutoQueueCreationV2Enabled(queueName)) {
-      capacitySchedulerConfig.setUserLimitFactor(queueName, -1.0f);
+  /**
+   * yarn.scheduler.fair.allow-undeclared-pools
+   * ==> yarn.scheduler.capacity.&lt;queue-name&gt;
+   * .auto-create-child-queue.enabled.
+   * @param queueName
+   */
+  private void emitAutoCreateChildQueue(String queueName, FSQueue queue) {
+    if (autoCreateChildQueues && !queue.getChildQueues().isEmpty()
+        && !queueName.equals(CapacitySchedulerConfiguration.ROOT)) {
+      capacitySchedulerConfig.setBoolean(PREFIX + queueName +
+          ".auto-create-child-queue.enabled", true);
     }
   }
 
@@ -246,16 +258,19 @@ public class FSQueueConverter {
 
       switch (policy) {
       case DominantResourceFairnessPolicy.NAME:
-        capacitySchedulerConfig.setOrderingPolicy(queueName, FAIR_POLICY);
+        capacitySchedulerConfig.set(PREFIX + queueName
+            + ".ordering-policy", FAIR_POLICY);
         break;
       case FairSharePolicy.NAME:
-        capacitySchedulerConfig.setOrderingPolicy(queueName, FAIR_POLICY);
+        capacitySchedulerConfig.set(PREFIX + queueName
+            + ".ordering-policy", FAIR_POLICY);
         if (drfUsed) {
           ruleHandler.handleFairAsDrf(queueName);
         }
         break;
       case FifoPolicy.NAME:
-        capacitySchedulerConfig.setOrderingPolicy(queueName, FIFO_POLICY);
+        capacitySchedulerConfig.set(PREFIX + queueName
+            + ".ordering-policy", FIFO_POLICY);
         break;
       default:
         String msg = String.format("Unexpected ordering policy " +
@@ -271,15 +286,13 @@ public class FSQueueConverter {
    * @param queue
    */
   private void emitChildCapacity(FSQueue queue) {
-    CapacityConverter converter =
-        CapacityConverterFactory.getConverter(usePercentages);
+    List<FSQueue> children = queue.getChildQueues();
 
-    converter.convertWeightsForChildQueues(queue,
-        capacitySchedulerConfig);
-
-    if (Resources.none().compareTo(queue.getMinShare()) != 0) {
-      ruleHandler.handleMinResources();
-    }
+    int totalWeight = getTotalWeight(children);
+    Map<String, BigDecimal> capacities = getCapacities(totalWeight, children);
+    capacities
+        .forEach((key, value) -> capacitySchedulerConfig.set(PREFIX + key +
+                ".capacity", value.toString()));
   }
 
   /**
@@ -297,6 +310,68 @@ public class FSQueueConverter {
         ruleHandler.handleMaxChildCapacity();
       }
     }
+  }
+
+  private Map<String, BigDecimal> getCapacities(int totalWeight,
+      List<FSQueue> children) {
+    final BigDecimal hundred = new BigDecimal(100).setScale(3);
+
+    if (children.size() == 0) {
+      return new HashMap<>();
+    } else if (children.size() == 1) {
+      Map<String, BigDecimal> capacity = new HashMap<>();
+      String queueName = children.get(0).getName();
+      capacity.put(queueName, hundred);
+
+      return capacity;
+    } else {
+      Map<String, BigDecimal> capacities = new HashMap<>();
+
+      children
+          .stream()
+          .forEach(queue -> {
+            BigDecimal total = new BigDecimal(totalWeight);
+            BigDecimal weight = new BigDecimal(queue.getWeight());
+            BigDecimal pct = weight
+                              .setScale(5)
+                              .divide(total, RoundingMode.HALF_UP)
+                              .multiply(hundred)
+                              .setScale(3);
+
+            if (Resources.none().compareTo(queue.getMinShare()) != 0) {
+              ruleHandler.handleMinResources();
+            }
+
+            capacities.put(queue.getName(), pct);
+          });
+
+      BigDecimal totalPct = new BigDecimal(0);
+      for (Map.Entry<String, BigDecimal> entry : capacities.entrySet()) {
+        totalPct = totalPct.add(entry.getValue());
+      }
+
+      // fix last value if total != 100.000
+      if (!totalPct.equals(hundred)) {
+        BigDecimal tmp = new BigDecimal(0);
+        for (int i = 0; i < children.size() - 1; i++) {
+          tmp = tmp.add(capacities.get(children.get(i).getQueueName()));
+        }
+
+        String lastQueue = children.get(children.size() - 1).getName();
+        BigDecimal corrected = hundred.subtract(tmp);
+        capacities.put(lastQueue, corrected);
+      }
+
+      return capacities;
+    }
+  }
+
+  private int getTotalWeight(List<FSQueue> children) {
+    double sum = children
+                  .stream()
+                  .mapToDouble(c -> c.getWeight())
+                  .sum();
+    return (int) sum;
   }
 
   private String getQueueShortName(String queueName) {

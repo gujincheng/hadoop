@@ -20,13 +20,11 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.sjoin;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_SC;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
 
 class AppsPage extends RouterView {
@@ -39,14 +37,9 @@ class AppsPage extends RouterView {
     setTableStyles(html, "apps", ".queue {width:6em}", ".ui {width:8em}");
 
     // Set the correct title.
-    String subClusterName = $(APP_SC);
     String reqState = $(APP_STATE);
-
-    if(StringUtils.isBlank(subClusterName)){
-      subClusterName = "Federation ";
-    }
-    reqState = (StringUtils.isBlank(reqState) ? "All" : reqState);
-    setTitle(sjoin(subClusterName, reqState,  "Applications"));
+    reqState = (reqState == null || reqState.isEmpty() ? "All" : reqState);
+    setTitle(sjoin(reqState, "Applications"));
   }
 
   private String appsTableInit() {

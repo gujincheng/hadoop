@@ -32,8 +32,8 @@ import org.apache.hadoop.yarn.util.AsyncCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Extends Thread and provides an implementation that is used for processing the
@@ -153,7 +153,6 @@ public class AMHeartbeatRequestHandler extends Thread {
 
   /**
    * Set the UGI for RM connection.
-   * @param ugi UserGroupInformation.
    */
   public void setUGI(UserGroupInformation ugi) {
     this.userUgi = ugi;

@@ -126,8 +126,7 @@ public class TestSchedulerApplicationAttempt {
     when(rmContext.getYarnConfiguration()).thenReturn(conf);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
         user, oldQueue, oldQueue.getAbstractUsersManager(), rmContext);
-    app.appSchedulingInfo.setUnmanagedAM(false);
-    oldMetrics.submitApp(user, false);
+    oldMetrics.submitApp(user);
     
     // confirm that containerId is calculated based on epoch.
     assertEquals(0x30000000001L, app.getNewContainerId());
@@ -217,9 +216,8 @@ public class TestSchedulerApplicationAttempt {
 
   private Queue createQueue(String name, Queue parent, float capacity) {
     QueueMetrics metrics = QueueMetrics.forQueue(name, parent, false, conf);
-    QueueInfo queueInfo = QueueInfo.newInstance(name,
-        "root." + name, capacity, 1.0f, 0, null,
-        null, QueueState.RUNNING, null, "", null, false, -1.0f, 10, null, false);
+    QueueInfo queueInfo = QueueInfo.newInstance(name, capacity, 1.0f, 0, null,
+        null, QueueState.RUNNING, null, "", null, false, null, false);
     ActiveUsersManager activeUsersManager = new ActiveUsersManager(metrics);
     Queue queue = mock(Queue.class);
     when(queue.getMetrics()).thenReturn(metrics);

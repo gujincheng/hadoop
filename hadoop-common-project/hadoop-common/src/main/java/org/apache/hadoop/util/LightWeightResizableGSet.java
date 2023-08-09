@@ -20,9 +20,6 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import java.util.Iterator;
-import java.util.function.Consumer;
-
 /**
  * A low memory footprint {@link GSet} implementation,
  * which uses an array for storing the elements
@@ -33,7 +30,7 @@ import java.util.function.Consumer;
  *
  * This class does not support null element.
  *
- * This class is thread safe.
+ * This class is not thread safe.
  *
  * @param <K> Key type for looking up the elements
  * @param <E> Element type, which must be
@@ -89,38 +86,17 @@ public class LightWeightResizableGSet<K, E extends K>
   }
 
   @Override
-  public synchronized E put(final E element) {
+  public E put(final E element) {
     E existing = super.put(element);
     expandIfNecessary();
     return existing;
   }
 
-  @Override
-  public synchronized E get(K key) {
-    return super.get(key);
-  }
-
-  @Override
-  public synchronized E remove(K key) {
-    return super.remove(key);
-  }
-
-  @Override
-  public synchronized int size() {
-    return super.size();
-  }
-
-  public synchronized void getIterator(Consumer<Iterator<E>> consumer) {
-    consumer.accept(super.values().iterator());
-  }
-
   /**
    * Resize the internal table to given capacity.
-   *
-   * @param cap capacity.
    */
   @SuppressWarnings("unchecked")
-  protected synchronized void resize(int cap) {
+  protected void resize(int cap) {
     int newCapacity = actualArrayLength(cap);
     if (newCapacity == this.capacity) {
       return;
@@ -145,7 +121,7 @@ public class LightWeightResizableGSet<K, E extends K>
   /**
    * Checks if we need to expand, and expands if necessary.
    */
-  protected synchronized void expandIfNecessary() {
+  protected void expandIfNecessary() {
     if (size > this.threshold && capacity < MAX_ARRAY_LENGTH) {
       resize(capacity * 2);
     }

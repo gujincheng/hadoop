@@ -17,10 +17,14 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
@@ -61,12 +65,28 @@ public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
   }
 
   @Override
-  protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
-    Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
+  public SubClusterId getHomeSubcluster(
+      ApplicationSubmissionContext appSubmissionContext,
+      List<SubClusterId> blacklist) throws YarnException {
+
+    // null checks and default-queue behavior
+    validate(appSubmissionContext);
+
+    Map<SubClusterId, SubClusterInfo> activeSubclusters =
+        getActiveSubclusters();
+
+    FederationPolicyUtils.validateSubClusterAvailability(
+        new ArrayList<SubClusterId>(activeSubclusters.keySet()), blacklist);
+
+    Map<SubClusterIdInfo, Float> weights =
+        getPolicyInfo().getRouterPolicyWeights();
     SubClusterIdInfo chosen = null;
     long currBestMem = -1;
-    for (Map.Entry<SubClusterId, SubClusterInfo> entry : preSelectSubclusters.entrySet()) {
+    for (Map.Entry<SubClusterId, SubClusterInfo> entry : activeSubclusters
+        .entrySet()) {
+      if (blacklist != null && blacklist.contains(entry.getKey())) {
+        continue;
+      }
       SubClusterIdInfo id = new SubClusterIdInfo(entry.getKey());
       if (weights.containsKey(id) && weights.get(id) > 0) {
         long availableMemory = getAvailableMemory(entry.getValue());
@@ -90,7 +110,7 @@ public class LoadBasedRouterPolicy extends AbstractRouterPolicy {
       mem = obj.getJSONObject("clusterMetrics").getLong("availableMB");
       return mem;
     } catch (JSONException j) {
-      throw new YarnException("FederationSubClusterInfo cannot be parsed", j);
+      throw new YarnException("FederationSubCluserInfo cannot be parsed", j);
     }
   }
 }

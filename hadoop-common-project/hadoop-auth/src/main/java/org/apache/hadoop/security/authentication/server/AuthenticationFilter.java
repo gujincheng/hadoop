@@ -616,9 +616,7 @@ public class AuthenticationFilter implements Filter {
         // present.. reset to 403 if not found..
         if ((errCode == HttpServletResponse.SC_UNAUTHORIZED)
             && (!httpResponse.containsHeader(
-                KerberosAuthenticator.WWW_AUTHENTICATE)
-                && !httpResponse.containsHeader(
-                KerberosAuthenticator.WWW_AUTHENTICATE.toLowerCase()))) {
+                KerberosAuthenticator.WWW_AUTHENTICATE))) {
           errCode = HttpServletResponse.SC_FORBIDDEN;
         }
         // After Jetty 9.4.21, sendError() no longer allows a custom message.

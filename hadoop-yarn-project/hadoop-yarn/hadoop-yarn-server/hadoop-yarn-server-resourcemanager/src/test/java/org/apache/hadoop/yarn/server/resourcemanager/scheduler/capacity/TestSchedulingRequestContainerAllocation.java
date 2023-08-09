@@ -582,7 +582,6 @@ public class TestSchedulingRequestContainerAllocation {
     } catch (Exception e) {
       Assert.fail("Failed to reject invalid scheduling request");
     }
-    rm1.stop();
   }
 
   private static void doNodeHeartbeat(MockNM... nms) throws Exception {

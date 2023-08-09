@@ -41,7 +41,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Objects;
-import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 /**
@@ -75,7 +75,6 @@ public final class CopyListingFileStatus implements Writable {
   private FsPermission permission;
   private String owner;
   private String group;
-  private String ecPolicy;
 
   // Retain static arrays of enum values to prevent repeated allocation of new
   // arrays during deserialization.

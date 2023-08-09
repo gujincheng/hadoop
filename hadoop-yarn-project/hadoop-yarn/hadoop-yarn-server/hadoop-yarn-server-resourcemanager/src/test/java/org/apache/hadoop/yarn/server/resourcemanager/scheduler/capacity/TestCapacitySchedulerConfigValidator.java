@@ -19,9 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.metrics2.MetricsSource;
-import org.apache.hadoop.metrics2.MetricsSystem;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
@@ -35,7 +32,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -64,14 +60,14 @@ public class TestCapacitySchedulerConfigValidator {
   private static final String LEAF_A = "leafA";
   private static final String LEAF_B = "leafB";
 
-  private static final QueuePath PARENT_A_FULL_PATH =
-          new QueuePath(CapacitySchedulerConfiguration.ROOT + "." + PARENT_A);
-  private static final QueuePath LEAF_A_FULL_PATH =
-          new QueuePath(PARENT_A_FULL_PATH + "." + LEAF_A);
-  private static final QueuePath PARENT_B_FULL_PATH =
-          new QueuePath(CapacitySchedulerConfiguration.ROOT + "." + PARENT_B);
-  private static final QueuePath LEAF_B_FULL_PATH =
-          new QueuePath(PARENT_B_FULL_PATH + "." + LEAF_B);
+  private static final String PARENT_A_FULL_PATH = CapacitySchedulerConfiguration.ROOT
+      + "." + PARENT_A;
+  private static final String LEAF_A_FULL_PATH = PARENT_A_FULL_PATH
+      + "." + LEAF_A;
+  private static final String PARENT_B_FULL_PATH = CapacitySchedulerConfiguration.ROOT
+      + "." + PARENT_B;
+  private static final String LEAF_B_FULL_PATH = PARENT_B_FULL_PATH
+      + "." + LEAF_B;
 
   private final Resource A_MINRES = Resource.newInstance(16 * GB, 10);
   private final Resource B_MINRES = Resource.newInstance(32 * GB, 5);
@@ -229,8 +225,7 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("",
-            LEAF_A_FULL_PATH, FULL_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, FULL_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -250,8 +245,7 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("",
-            LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -270,8 +264,7 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("",
-            LEAF_A_FULL_PATH, FULL_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, FULL_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -291,8 +284,7 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("",
-            LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -312,8 +304,7 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("",
-            LEAF_A_FULL_PATH, GPU_EXCEEDED_MAXRES_GPU);
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, GPU_EXCEEDED_MAXRES_GPU);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -386,7 +377,7 @@ public class TestCapacitySchedulerConfigValidator {
   public void testValidateCSConfigAddALeafQueueInvalid() {
     Configuration oldConfig = CapacitySchedulerConfigGeneratorForTest
             .createBasicCSConfiguration();
-    CapacitySchedulerConfiguration newConfig = new CapacitySchedulerConfiguration(oldConfig);
+    Configuration newConfig = new Configuration(oldConfig);
     newConfig
             .set("yarn.scheduler.capacity.root.queues", "test1, test2, test3");
     newConfig
@@ -398,9 +389,7 @@ public class TestCapacitySchedulerConfigValidator {
     try {
       CapacitySchedulerConfigValidator
               .validateCSConfiguration(oldConfig, newConfig, rmContext);
-      if (newConfig.isLegacyQueueMode()) {
-        fail("Invalid capacity for children of queue root");
-      }
+      fail("Invalid capacity for children of queue root");
     } catch (IOException e) {
       Assert.assertTrue(e.getCause().getMessage()
               .startsWith("Illegal capacity"));
@@ -429,98 +418,6 @@ public class TestCapacitySchedulerConfigValidator {
     Boolean isValidConfig = CapacitySchedulerConfigValidator
             .validateCSConfiguration(oldConfig, newConfig, rmContext);
     Assert.assertTrue(isValidConfig);
-  }
-
-  @Test
-  public void testValidateDoesNotModifyTheDefaultMetricsSystem() throws Exception {
-    try {
-      YarnConfiguration conf = new YarnConfiguration(CapacitySchedulerConfigGeneratorForTest
-          .createBasicCSConfiguration());
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-          ResourceScheduler.class);
-      mockRM = new MockRM(conf);
-
-      cs = (CapacityScheduler) mockRM.getResourceScheduler();
-      mockRM.start();
-      cs.start();
-      RMContext rmContext = mockRM.getRMContext();
-      Configuration oldConfig = cs.getConfig();
-
-      final Map<String, QueueMetrics> cache = QueueMetrics.getQueueMetrics();
-      final MetricsSystem ms = DefaultMetricsSystem.instance();
-
-      QueueMetrics origQM1 = cache.get("root.test1");
-      QueueMetrics origQM2 = cache.get("root.test2");
-      Assert.assertNotNull("Original queues should be found in the cache", origQM1);
-      Assert.assertNotNull("Original queues should be found in the cache", origQM2);
-
-      QueueMetrics origPQM1 = cache.get("default.root.test1");
-      QueueMetrics origPQM2 = cache.get("default.root.test2");
-      Assert.assertNotNull("Original queues should be found in the cache (PartitionQueueMetrics)",
-          origPQM1);
-      Assert.assertNotNull("Original queues should be found in the cache (PartitionQueueMetrics)",
-          origPQM2);
-
-      MetricsSource origMS1 =
-          ms.getSource("QueueMetrics,q0=root,q1=test1");
-      MetricsSource origMS2 =
-          ms.getSource("QueueMetrics,q0=root,q1=test2");
-      Assert.assertNotNull("Original queues should be found in the Metrics System",
-          origMS1);
-      Assert.assertNotNull("Original queues should be found in the Metrics System",
-          origMS2);
-
-      MetricsSource origPMS1 = ms
-          .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test1");
-      MetricsSource origPMS2 = ms
-          .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test2");
-      Assert.assertNotNull(
-          "Original queues should be found in Metrics System (PartitionQueueMetrics)", origPMS1);
-      Assert.assertNotNull(
-          "Original queues should be found in Metrics System (PartitionQueueMetrics)", origPMS2);
-
-      Configuration newConfig = new Configuration(oldConfig);
-      newConfig
-          .set("yarn.scheduler.capacity.root.queues", "test1, test2, test3");
-      newConfig
-          .set("yarn.scheduler.capacity.root.test3.state", "RUNNING");
-      newConfig
-          .set("yarn.scheduler.capacity.root.test3.capacity", "30");
-      newConfig
-          .set("yarn.scheduler.capacity.root.test1.capacity", "20");
-
-      boolean isValidConfig = CapacitySchedulerConfigValidator
-          .validateCSConfiguration(oldConfig, newConfig, rmContext);
-      Assert.assertTrue(isValidConfig);
-
-      Assert.assertFalse("Validated new queue should not be in the cache",
-          cache.containsKey("root.test3"));
-      Assert.assertFalse("Validated new queue should not be in the cache (PartitionQueueMetrics)",
-          cache.containsKey("default.root.test3"));
-      Assert.assertNull("Validated new queue should not be in the Metrics System",
-          ms.getSource("QueueMetrics,q0=root,q1=test3"));
-      Assert.assertNull(
-          "Validated new queue should not be in Metrics System (PartitionQueueMetrics)",
-          ms
-              .getSource("PartitionQueueMetrics,partition=,q0=root,q1=test3"));
-
-      // Config validation should not change the existing
-      // objects in the cache and the metrics system
-      Assert.assertEquals(origQM1, cache.get("root.test1"));
-      Assert.assertEquals(origQM2, cache.get("root.test2"));
-      Assert.assertEquals(origPQM1, cache.get("default.root.test1"));
-      Assert.assertEquals(origPQM1, cache.get("default.root.test1"));
-      Assert.assertEquals(origMS1,
-          ms.getSource("QueueMetrics,q0=root,q1=test1"));
-      Assert.assertEquals(origMS2,
-          ms.getSource("QueueMetrics,q0=root,q1=test2"));
-      Assert.assertEquals(origPMS1,
-          ms.getSource("PartitionQueueMetrics,partition=,q0=root,q1=test1"));
-      Assert.assertEquals(origPMS2,
-          ms.getSource("PartitionQueueMetrics,partition=,q0=root,q1=test2"));
-    } finally {
-      mockRM.stop();
-    }
   }
 
   /**
@@ -557,8 +454,7 @@ public class TestCapacitySchedulerConfigValidator {
   public void testValidateCSConfigInvalidQueueDeletion2() {
     Configuration oldConfig = CapacitySchedulerConfigGeneratorForTest
             .createBasicCSConfiguration();
-    oldConfig.set("yarn.scheduler.capacity.root.test2.state", "STOPPED");
-    CapacitySchedulerConfiguration newConfig = new CapacitySchedulerConfiguration(oldConfig);
+    Configuration newConfig = new Configuration(oldConfig);
     newConfig.set("yarn.scheduler.capacity.root.queues", "test1");
     newConfig.unset("yarn.scheduler.capacity.root.test2.maximum-capacity");
     newConfig.unset("yarn.scheduler.capacity.root.test2.state");
@@ -568,9 +464,7 @@ public class TestCapacitySchedulerConfigValidator {
     try {
       CapacitySchedulerConfigValidator
               .validateCSConfiguration(oldConfig, newConfig, rmContext);
-      if (newConfig.isLegacyQueueMode()) {
-        fail("Invalid capacity for children of queue root");
-      }
+      fail("Invalid capacity for children of queue root");
     } catch (IOException e) {
       Assert.assertTrue(e.getCause().getMessage()
               .contains("Illegal capacity"));
@@ -701,8 +595,8 @@ public class TestCapacitySchedulerConfigValidator {
 
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[]{PARENT_A, PARENT_B});
-    csConf.setQueues(PARENT_A_FULL_PATH.getFullPath(), new String[]{LEAF_A});
-    csConf.setQueues(PARENT_B_FULL_PATH.getFullPath(), new String[]{LEAF_B});
+    csConf.setQueues(PARENT_A_FULL_PATH, new String[]{LEAF_A});
+    csConf.setQueues(PARENT_B_FULL_PATH, new String[]{LEAF_B});
 
     if (useDominantRC) {
       setupGpuResourceValues();

@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -313,8 +313,7 @@ public class LocatedFileStatusFetcher implements IOStatisticsSource {
             if (recursive && stat.isDirectory()) {
               result.dirsNeedingRecursiveCalls.add(stat);
             } else {
-              result.locatedFileStatuses.add(org.apache.hadoop.mapreduce.lib.
-                  input.FileInputFormat.shrinkStatus(stat));
+              result.locatedFileStatuses.add(stat);
             }
           }
         }

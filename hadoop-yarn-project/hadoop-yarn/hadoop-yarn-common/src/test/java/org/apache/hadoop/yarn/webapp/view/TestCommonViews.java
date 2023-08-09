@@ -19,36 +19,37 @@
 package org.apache.hadoop.yarn.webapp.view;
 
 import com.google.inject.Injector;
-import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
+import org.apache.hadoop.yarn.webapp.view.ErrorPage;
+import org.apache.hadoop.yarn.webapp.view.FooterBlock;
+import org.apache.hadoop.yarn.webapp.view.HeaderBlock;
+import org.apache.hadoop.yarn.webapp.view.JQueryUI;
+
+import org.junit.Test;
+import static org.mockito.Mockito.*;
 
 public class TestCommonViews {
 
-  @Test
-  void testErrorPage() {
+  @Test public void testErrorPage() {
     Injector injector = WebAppTests.testPage(ErrorPage.class);
 
   }
 
-  @Test
-  void testHeaderBlock() {
+  @Test public void testHeaderBlock() {
     WebAppTests.testBlock(HeaderBlock.class);
   }
 
-  @Test
-  void testFooterBlock() {
+  @Test public void testFooterBlock() {
     WebAppTests.testBlock(FooterBlock.class);
   }
 
-  @Test
-  void testJQueryUI() {
+  @Test public void testJQueryUI() {
     WebAppTests.testBlock(JQueryUI.class);
   }
 
-  @Test
-  void testInfoBlock() {
+  @Test public void testInfoBlock() {
     Injector injector = WebAppTests.createMockInjector(this);
     ResponseInfo info = injector.getInstance(ResponseInfo.class);
   }

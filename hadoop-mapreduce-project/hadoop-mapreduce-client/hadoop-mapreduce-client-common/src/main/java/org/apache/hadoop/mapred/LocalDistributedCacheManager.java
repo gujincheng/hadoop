@@ -45,12 +45,14 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -93,13 +95,13 @@ class LocalDistributedCacheManager {
 
     // Find which resources are to be put on the local classpath
     Map<String, Path> classpaths = new HashMap<String, Path>();
-    Path[] archiveClassPaths = JobContextImpl.getArchiveClassPaths(conf);
+    Path[] archiveClassPaths = DistributedCache.getArchiveClassPaths(conf);
     if (archiveClassPaths != null) {
       for (Path p : archiveClassPaths) {
         classpaths.put(p.toUri().getPath().toString(), p);
       }
     }
-    Path[] fileClassPaths = JobContextImpl.getFileClassPaths(conf);
+    Path[] fileClassPaths = DistributedCache.getFileClassPaths(conf);
     if (fileClassPaths != null) {
       for (Path p : fileClassPaths) {
         classpaths.put(p.toUri().getPath().toString(), p);

@@ -150,9 +150,6 @@ public class RPC {
    * Get the protocol name.
    *  If the protocol class has a ProtocolAnnotation, then get the protocol
    *  name from the annotation; otherwise the class name is the protocol name.
-   *
-   * @param protocol input protocol.
-   * @return protocol name.
    */
   static public String getProtocolName(Class<?> protocol) {
     if (protocol == null) {
@@ -167,9 +164,6 @@ public class RPC {
    * If the protocol class has a ProtocolAnnotation,
    * then get the protocol version from the annotation;
    * otherwise get it from the versionID field of the protocol class.
-   *
-   * @param protocol input protocol.
-   * @return ProtocolVersion.
    */
   static public long getProtocolVersion(Class<?> protocol) {
     if (protocol == null) {
@@ -264,14 +258,14 @@ public class RPC {
     }
     
     /**
-     * @return Get the client's preferred version.
+     * Get the client's preferred version
      */
     public long getClientVersion() {
       return clientVersion;
     }
     
     /**
-     * @return Get the server's agreed to version.
+     * Get the server's agreed to version.
      */
     public long getServerVersion() {
       return serverVersion;
@@ -292,9 +286,8 @@ public class RPC {
   }
 
   /**
-   * Get a proxy connection to a remote server.
-   *
-   * @param <T> Generics Type T.
+   * Get a proxy connection to a remote server
+   * 
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -313,9 +306,8 @@ public class RPC {
 
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
-   * and a set of methods that are supported by the server.
-   *
-   * @param <T> Generics Type T.
+   * and a set of methods that are supported by the server
+   * 
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -332,9 +324,8 @@ public class RPC {
   }
 
   /**
-   * Get a proxy connection to a remote server.
-   *
-   * @param <T> Generics Type T.
+   * Get a proxy connection to a remote server
+   * 
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -353,8 +344,7 @@ public class RPC {
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
    * and a set of methods that are supported by the server
-   *
-   * @param <T> Generics Type T.
+   * 
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -372,9 +362,8 @@ public class RPC {
   }
   
   /**
-   * Get a proxy connection to a remote server.
-   *
-   * @param <T> Generics Type T.
+   * Get a proxy connection to a remote server
+   * 
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -395,18 +384,16 @@ public class RPC {
 
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
-   * and a set of methods that are supported by the server.
-   *
-   * @param <T> Generics Type.
+   * and a set of methods that are supported by the server
+   * 
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
    * @param conf configuration to use
    * @param rpcTimeout timeout for each RPC
-   * @param connectionRetryPolicy input connectionRetryPolicy.
    * @param timeout time in milliseconds before giving up
    * @return the proxy
-   * @throws IOException if the far end through a RemoteException.
+   * @throws IOException if the far end through a RemoteException
    */
   public static <T> ProtocolProxy<T> waitForProtocolProxy(Class<T> protocol,
                                long clientVersion,
@@ -452,18 +439,9 @@ public class RPC {
     }
   }
 
-  /**
-   * Construct a client-side proxy object that implements the named protocol,
+  /** Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. 
-   * @param <T> Generics Type T.
-   * @param protocol input protocol.
-   * @param clientVersion input clientVersion.
-   * @param addr input addr.
-   * @param conf input Configuration.
-   * @param factory input factory.
-   * @throws IOException raised on errors performing I/O.
-   * @return proxy.
-   */
+   * @param <T>*/
   public static <T> T getProxy(Class<T> protocol,
                                 long clientVersion,
                                 InetSocketAddress addr, Configuration conf,
@@ -474,9 +452,8 @@ public class RPC {
 
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
-   * and a set of methods that are supported by the server.
-   *
-   * @param <T> Generics Type T.
+   * and a set of methods that are supported by the server
+   * 
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -493,21 +470,9 @@ public class RPC {
     return getProtocolProxy(protocol, clientVersion, addr, ugi, conf, factory);
   }
   
-  /**
-   * Construct a client-side proxy object that implements the named protocol,
+  /** Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. 
-   *
-   * @param <T> Generics Type T.
-   * @param protocol input protocol.
-   * @param clientVersion input clientVersion.
-   * @param addr input addr.
-   * @param ticket input tocket.
-   * @param conf input conf.
-   * @param factory input factory.
-   * @return the protocol proxy.
-   * @throws IOException raised on errors performing I/O.
-   *
-   */
+   * @param <T>*/
   public static <T> T getProxy(Class<T> protocol,
                                 long clientVersion,
                                 InetSocketAddress addr,
@@ -521,8 +486,7 @@ public class RPC {
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
    * and a set of methods that are supported by the server
-   *
-   * @param <T> Generics Type T.
+   * 
    * @param protocol protocol class
    * @param clientVersion client version
    * @param addr remote address
@@ -541,56 +505,12 @@ public class RPC {
     return getProtocolProxy(protocol, clientVersion, addr, ticket, conf,
         factory, getRpcTimeout(conf), null);
   }
-
-  /**
-   * Get a protocol proxy that contains a proxy connection to a remote server
-   * and a set of methods that are supported by the server.
-   *
-   * @param <T> Generics Type T
-   * @param protocol protocol class
-   * @param clientVersion client's version
-   * @param connId client connection identifier
-   * @param conf configuration
-   * @param factory socket factory
-   * @return the protocol proxy
-   * @throws IOException if the far end through a RemoteException
-   */
-  public static <T> ProtocolProxy<T> getProtocolProxy(Class<T> protocol,
-      long clientVersion, ConnectionId connId, Configuration conf,
-      SocketFactory factory) throws IOException {
-    return getProtocolProxy(protocol, clientVersion, connId, conf,
-        factory, null);
-  }
-
-  /**
-   * Get a protocol proxy that contains a proxy connection to a remote server
-   * and a set of methods that are supported by the server.
-   *
-   * @param <T> Generics Type T
-   * @param protocol protocol class
-   * @param clientVersion client's version
-   * @param connId client connection identifier
-   * @param conf configuration
-   * @param factory socket factory
-   * @param alignmentContext StateID alignment context
-   * @return the protocol proxy
-   * @throws IOException if the far end through a RemoteException
-   */
-  public static <T> ProtocolProxy<T> getProtocolProxy(Class<T> protocol,
-      long clientVersion, ConnectionId connId, Configuration conf,
-      SocketFactory factory, AlignmentContext alignmentContext) throws IOException {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      SaslRpcServer.init(conf);
-    }
-    return getProtocolEngine(protocol, conf).getProxy(
-        protocol, clientVersion, connId, conf, factory, alignmentContext);
-  }
   
   /**
    * Construct a client-side proxy that implements the named protocol,
    * talking to a server at the named address.
-   *
-   * @param <T> Generics Type T.
+   * @param <T>
+   * 
    * @param protocol protocol
    * @param clientVersion client's version
    * @param addr server address
@@ -614,9 +534,8 @@ public class RPC {
   
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
-   * and a set of methods that are supported by the server.
-   *
-   * @param <T> Generics Type T.
+   * and a set of methods that are supported by the server
+   * 
    * @param protocol protocol
    * @param clientVersion client's version
    * @param addr server address
@@ -642,9 +561,8 @@ public class RPC {
 
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
-   * and a set of methods that are supported by the server.
+   * and a set of methods that are supported by the server
    *
-   * @param <T> Generics Type T.
    * @param protocol protocol
    * @param clientVersion client's version
    * @param addr server address
@@ -691,7 +609,6 @@ public class RPC {
    * @param fallbackToSimpleAuth set to true or false during calls to indicate
    *   if a secure client falls back to simple auth
    * @param alignmentContext state alignment context
-   * @param <T> Generics Type T.
    * @return the proxy
    * @throws IOException if any error occurs
    */
@@ -715,15 +632,15 @@ public class RPC {
   }
 
    /**
-    * Construct a client-side proxy object with the default SocketFactory.
-    *
-    * @param <T> Generics Type T.
-    * @param protocol input protocol.
-    * @param clientVersion input clientVersion.
-    * @param addr input addr.
-    * @param conf input Configuration.
+    * Construct a client-side proxy object with the default SocketFactory
+    * @param <T>
+    * 
+    * @param protocol
+    * @param clientVersion
+    * @param addr
+    * @param conf
     * @return a proxy instance
-    * @throws IOException  if the thread is interrupted.
+    * @throws IOException
     */
    public static <T> T getProxy(Class<T> protocol,
                                  long clientVersion,
@@ -734,8 +651,7 @@ public class RPC {
    }
   
   /**
-   * @return Returns the server address for a given proxy.
-   * @param proxy input proxy.
+   * Returns the server address for a given proxy.
    */
   public static InetSocketAddress getServerAddress(Object proxy) {
     return getConnectionIdForProxy(proxy).getAddress();
@@ -762,13 +678,12 @@ public class RPC {
    * Get a protocol proxy that contains a proxy connection to a remote server
    * and a set of methods that are supported by the server
    * 
-   * @param protocol input protocol.
-   * @param clientVersion input clientVersion.
-   * @param addr input addr.
-   * @param conf input configuration.
-   * @param <T> Generics Type T.
+   * @param protocol
+   * @param clientVersion
+   * @param addr
+   * @param conf
    * @return a protocol proxy
-   * @throws IOException if the thread is interrupted.
+   * @throws IOException
    */
   public static <T> ProtocolProxy<T> getProtocolProxy(Class<T> protocol,
                                 long clientVersion,
@@ -852,123 +767,75 @@ public class RPC {
       this.conf = conf;
     }
 
-    /**
-     * @return Mandatory field.
-     * @param protocol input protocol.
-     */
+    /** Mandatory field */
     public Builder setProtocol(Class<?> protocol) {
       this.protocol = protocol;
       return this;
     }
     
-    /**
-     * @return Mandatory field.
-     * @param instance input instance.
-     */
+    /** Mandatory field */
     public Builder setInstance(Object instance) {
       this.instance = instance;
       return this;
     }
     
-    /**
-     * @return Default: 0.0.0.0.
-     * @param bindAddress input bindAddress.
-     */
+    /** Default: 0.0.0.0 */
     public Builder setBindAddress(String bindAddress) {
       this.bindAddress = bindAddress;
       return this;
     }
     
-    /**
-     * @return Default: 0.
-     * @param port input port.
-     */
+    /** Default: 0 */
     public Builder setPort(int port) {
       this.port = port;
       return this;
     }
     
-    /**
-     * @return Default: 1.
-     * @param numHandlers input numHandlers.
-     */
+    /** Default: 1 */
     public Builder setNumHandlers(int numHandlers) {
       this.numHandlers = numHandlers;
       return this;
     }
-
-    /**
-     * @return Default: -1.
-     * @param numReaders input numReaders.
-     * @deprecated call {@link #setNumReaders(int value)} instead.
-     */
-    @Deprecated
+    
+    /** Default: -1 */
     public Builder setnumReaders(int numReaders) {
       this.numReaders = numReaders;
       return this;
     }
-
-    /**
-     * Set the number of reader threads.
-     *
-     * @return this builder.
-     * @param value input numReaders.
-     * @since HADOOP-18625.
-     */
-    public Builder setNumReaders(int value) {
-      this.numReaders = value;
-      return this;
-    }
     
-    /**
-     * @return Default: -1.
-     * @param queueSizePerHandler
-     *        input queueSizePerHandler.
-     */
+    /** Default: -1 */
     public Builder setQueueSizePerHandler(int queueSizePerHandler) {
       this.queueSizePerHandler = queueSizePerHandler;
       return this;
     }
     
-    /**
-     * @return Default: false.
-     * @param verbose input verbose.
-     */
+    /** Default: false */
     public Builder setVerbose(boolean verbose) {
       this.verbose = verbose;
       return this;
     }
     
-    /**
-     * @return Default: null.
-     * @param secretManager input secretManager.
-     */
+    /** Default: null */
     public Builder setSecretManager(
         SecretManager<? extends TokenIdentifier> secretManager) {
       this.secretManager = secretManager;
       return this;
     }
     
-    /**
-     * @return Default: null.
-     * @param portRangeConfig input portRangeConfig.
-     */
+    /** Default: null */
     public Builder setPortRangeConfig(String portRangeConfig) {
       this.portRangeConfig = portRangeConfig;
       return this;
     }
     
-    /**
-     * @return Default: null.
-     * @param alignmentContext input alignmentContext.
-     */
+    /** Default: null */
     public Builder setAlignmentContext(AlignmentContext alignmentContext) {
       this.alignmentContext = alignmentContext;
       return this;
     }
 
     /**
-     * @return Build the RPC Server.
+     * Build the RPC Server. 
      * @throws IOException on error
      * @throws HadoopIllegalArgumentException when mandatory fields are not set
      */
@@ -1210,7 +1077,6 @@ public class RPC {
     
     /**
      * Add a protocol to the existing server.
-     * @param rpcKind - input rpcKind
      * @param protocolClass - the protocol class
      * @param protocolImpl - the impl of the protocol that will be called
      * @return the server (for convenience)

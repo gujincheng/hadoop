@@ -22,47 +22,47 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Enumeration;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
+
 import javax.servlet.FilterConfig;
+import javax.servlet.FilterChain;
+import javax.servlet.Filter;
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.util.function.Supplier;
+import org.apache.hadoop.http.TestHttpServer;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.glassfish.grizzly.servlet.HttpServletResponseImpl;
+import org.junit.Test;
 import org.mockito.Mockito;
-
-import org.apache.hadoop.http.TestHttpServer;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
-import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test AmIpFilter. Requests to a no declared hosts should has way through
@@ -117,10 +117,9 @@ public class TestAmFilter {
     }
   }
 
-  @Test
-  @Timeout(5000)
+  @Test(timeout = 5000)
   @SuppressWarnings("deprecation")
-  void filterNullCookies() throws Exception {
+  public void filterNullCookies() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
 
     Mockito.when(request.getCookies()).thenReturn(null);
@@ -149,7 +148,7 @@ public class TestAmFilter {
   }
 
   @Test
-  void testFindRedirectUrl() throws Exception {
+  public void testFindRedirectUrl() throws Exception {
     final String rm1 = "rm1";
     final String rm2 = "rm2";
     // generate a valid URL
@@ -163,7 +162,7 @@ public class TestAmFilter {
     spy.proxyUriBases = new HashMap<>();
     spy.proxyUriBases.put(rm1, rm1Url);
     spy.proxyUriBases.put(rm2, rm2Url);
-    spy.rmUrls = new String[]{rm1, rm2};
+    spy.rmUrls = new String[] { rm1, rm2 };
 
     assertThat(spy.findRedirectUrl()).isEqualTo(rm1Url);
   }
@@ -183,9 +182,8 @@ public class TestAmFilter {
     return server.getURI().toString() + servletPath;
   }
 
-  @Test
-  @Timeout(2000)
-  void testProxyUpdate() throws Exception {
+  @Test(timeout = 2000)
+  public void testProxyUpdate() throws Exception {
     Map<String, String> params = new HashMap<>();
     params.put(AmIpFilter.PROXY_HOSTS, proxyHost);
     params.put(AmIpFilter.PROXY_URI_BASES, proxyUri);
@@ -225,10 +223,9 @@ public class TestAmFilter {
   /**
    * Test AmIpFilter
    */
-  @Test
-  @Timeout(10000)
+  @Test(timeout = 10000)
   @SuppressWarnings("deprecation")
-  void testFilter() throws Exception {
+  public void testFilter() throws Exception {
     Map<String, String> params = new HashMap<String, String>();
     params.put(AmIpFilter.PROXY_HOST, proxyHost);
     params.put(AmIpFilter.PROXY_URI_BASE, proxyUri);
@@ -292,7 +289,7 @@ public class TestAmFilter {
     assertTrue(doFilterRequest.contains("HttpServletRequest"));
 
     // cookie added
-    Cookie[] cookies = new Cookie[]{
+    Cookie[] cookies = new Cookie[] {
         new Cookie(WebAppProxyServlet.PROXY_USER_COOKIE_NAME, "user")
     };
 
@@ -309,7 +306,7 @@ public class TestAmFilter {
 
   }
 
-  private class HttpServletResponseForTest implements HttpServletResponse {
+  private class HttpServletResponseForTest extends HttpServletResponseImpl {
     String redirectLocation = "";
     int status;
     private String contentType;
@@ -327,53 +324,8 @@ public class TestAmFilter {
     }
 
     @Override
-    public void setDateHeader(String name, long date) {
-
-    }
-
-    @Override
-    public void addDateHeader(String name, long date) {
-
-    }
-
-    @Override
-    public void addCookie(Cookie cookie) {
-
-    }
-
-    @Override
-    public boolean containsHeader(String name) {
-      return false;
-    }
-
-    @Override
-    public String encodeURL(String url) {
-      return null;
-    }
-
-    @Override
     public String encodeRedirectURL(String url) {
       return url;
-    }
-
-    @Override
-    public String encodeUrl(String url) {
-      return null;
-    }
-
-    @Override
-    public String encodeRedirectUrl(String url) {
-      return null;
-    }
-
-    @Override
-    public void sendError(int sc, String msg) throws IOException {
-
-    }
-
-    @Override
-    public void sendError(int sc) throws IOException {
-
     }
 
     @Override
@@ -382,58 +334,8 @@ public class TestAmFilter {
     }
 
     @Override
-    public void setStatus(int sc, String sm) {
-
-    }
-
-    @Override
-    public int getStatus() {
-      return 0;
-    }
-
-    @Override
     public void setContentType(String type) {
       this.contentType = type;
-    }
-
-    @Override
-    public void setBufferSize(int size) {
-
-    }
-
-    @Override
-    public int getBufferSize() {
-      return 0;
-    }
-
-    @Override
-    public void flushBuffer() throws IOException {
-
-    }
-
-    @Override
-    public void resetBuffer() {
-
-    }
-
-    @Override
-    public boolean isCommitted() {
-      return false;
-    }
-
-    @Override
-    public void reset() {
-
-    }
-
-    @Override
-    public void setLocale(Locale loc) {
-
-    }
-
-    @Override
-    public Locale getLocale() {
-      return null;
     }
 
     @Override
@@ -441,69 +343,14 @@ public class TestAmFilter {
       headers.put(name, value);
     }
 
-    @Override
-    public void addHeader(String name, String value) {
-
-    }
-
-    @Override
-    public void setIntHeader(String name, int value) {
-
-    }
-
-    @Override
-    public void addIntHeader(String name, int value) {
-
-    }
-
     public String getHeader(String name) {
       return headers.get(name);
-    }
-
-    @Override
-    public Collection<String> getHeaders(String name) {
-      return null;
-    }
-
-    @Override
-    public Collection<String> getHeaderNames() {
-      return null;
-    }
-
-    @Override
-    public String getCharacterEncoding() {
-      return null;
-    }
-
-    @Override
-    public String getContentType() {
-      return null;
-    }
-
-    @Override
-    public ServletOutputStream getOutputStream() throws IOException {
-      return null;
     }
 
     @Override
     public PrintWriter getWriter() throws IOException {
       body = new StringWriter();
       return new PrintWriter(body);
-    }
-
-    @Override
-    public void setCharacterEncoding(String charset) {
-
-    }
-
-    @Override
-    public void setContentLength(int len) {
-
-    }
-
-    @Override
-    public void setContentLengthLong(long len) {
-
     }
   }
 

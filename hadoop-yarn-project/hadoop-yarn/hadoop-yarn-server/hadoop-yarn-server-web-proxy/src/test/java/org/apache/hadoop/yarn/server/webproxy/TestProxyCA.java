@@ -18,6 +18,20 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
+import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.X509KeyManager;
+import javax.net.ssl.X509TrustManager;
+import javax.security.auth.x500.X500Principal;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
@@ -38,132 +52,109 @@ import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.X509KeyManager;
-import javax.net.ssl.X509TrustManager;
-import javax.security.auth.x500.X500Principal;
-
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestProxyCA {
 
   @Test
-  void testInit() throws Exception {
+  public void testInit() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
-    assertNull(proxyCA.getCaCert());
-    assertNull(proxyCA.getCaKeyPair());
-    assertNull(proxyCA.getX509KeyManager());
-    assertNull(proxyCA.getHostnameVerifier());
+    Assert.assertNull(proxyCA.getCaCert());
+    Assert.assertNull(proxyCA.getCaKeyPair());
+    Assert.assertNull(proxyCA.getX509KeyManager());
+    Assert.assertNull(proxyCA.getHostnameVerifier());
 
     proxyCA.init();
-    assertNotNull(proxyCA.getCaCert());
-    assertNotNull(proxyCA.getCaKeyPair());
-    assertNotNull(proxyCA.getX509KeyManager());
-    assertNotNull(proxyCA.getHostnameVerifier());
+    Assert.assertNotNull(proxyCA.getCaCert());
+    Assert.assertNotNull(proxyCA.getCaKeyPair());
+    Assert.assertNotNull(proxyCA.getX509KeyManager());
+    Assert.assertNotNull(proxyCA.getHostnameVerifier());
   }
 
   @Test
-  void testInit2Null() throws Exception {
+  public void testInit2Null() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
-    assertNull(proxyCA.getCaCert());
-    assertNull(proxyCA.getCaKeyPair());
-    assertNull(proxyCA.getX509KeyManager());
-    assertNull(proxyCA.getHostnameVerifier());
+    Assert.assertNull(proxyCA.getCaCert());
+    Assert.assertNull(proxyCA.getCaKeyPair());
+    Assert.assertNull(proxyCA.getX509KeyManager());
+    Assert.assertNull(proxyCA.getHostnameVerifier());
 
     // null certificate and private key
     proxyCA.init(null, null);
-    assertNotNull(proxyCA.getCaCert());
-    assertNotNull(proxyCA.getCaKeyPair());
-    assertNotNull(proxyCA.getX509KeyManager());
-    assertNotNull(proxyCA.getHostnameVerifier());
+    Assert.assertNotNull(proxyCA.getCaCert());
+    Assert.assertNotNull(proxyCA.getCaKeyPair());
+    Assert.assertNotNull(proxyCA.getX509KeyManager());
+    Assert.assertNotNull(proxyCA.getHostnameVerifier());
   }
 
   @Test
-  void testInit2Mismatch() throws Exception {
+  public void testInit2Mismatch() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
-    assertNull(proxyCA.getCaCert());
-    assertNull(proxyCA.getCaKeyPair());
-    assertNull(proxyCA.getX509KeyManager());
-    assertNull(proxyCA.getHostnameVerifier());
+    Assert.assertNull(proxyCA.getCaCert());
+    Assert.assertNull(proxyCA.getCaKeyPair());
+    Assert.assertNull(proxyCA.getX509KeyManager());
+    Assert.assertNull(proxyCA.getHostnameVerifier());
 
     // certificate and private key don't match
     CertKeyPair pair1 = createCertAndKeyPair();
     CertKeyPair pair2 = createCertAndKeyPair();
-    assertNotEquals(pair1.getCert(), pair2.getCert());
-    assertNotEquals(pair1.getKeyPair().getPrivate(),
+    Assert.assertNotEquals(pair1.getCert(), pair2.getCert());
+    Assert.assertNotEquals(pair1.getKeyPair().getPrivate(),
         pair2.getKeyPair().getPrivate());
-    assertNotEquals(pair1.getKeyPair().getPublic(),
+    Assert.assertNotEquals(pair1.getKeyPair().getPublic(),
         pair2.getKeyPair().getPublic());
     proxyCA.init(pair1.getCert(), pair2.getKeyPair().getPrivate());
-    assertNotNull(proxyCA.getCaCert());
-    assertNotNull(proxyCA.getCaKeyPair());
-    assertNotNull(proxyCA.getX509KeyManager());
-    assertNotNull(proxyCA.getHostnameVerifier());
-    assertNotEquals(proxyCA.getCaCert(), pair1.getCert());
-    assertNotEquals(proxyCA.getCaKeyPair().getPrivate(),
+    Assert.assertNotNull(proxyCA.getCaCert());
+    Assert.assertNotNull(proxyCA.getCaKeyPair());
+    Assert.assertNotNull(proxyCA.getX509KeyManager());
+    Assert.assertNotNull(proxyCA.getHostnameVerifier());
+    Assert.assertNotEquals(proxyCA.getCaCert(), pair1.getCert());
+    Assert.assertNotEquals(proxyCA.getCaKeyPair().getPrivate(),
         pair2.getKeyPair().getPrivate());
-    assertNotEquals(proxyCA.getCaKeyPair().getPublic(),
+    Assert.assertNotEquals(proxyCA.getCaKeyPair().getPublic(),
         pair2.getKeyPair().getPublic());
   }
 
   @Test
-  void testInit2Invalid() throws Exception {
+  public void testInit2Invalid() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
-    assertNull(proxyCA.getCaCert());
-    assertNull(proxyCA.getCaKeyPair());
-    assertNull(proxyCA.getX509KeyManager());
-    assertNull(proxyCA.getHostnameVerifier());
+    Assert.assertNull(proxyCA.getCaCert());
+    Assert.assertNull(proxyCA.getCaKeyPair());
+    Assert.assertNull(proxyCA.getX509KeyManager());
+    Assert.assertNull(proxyCA.getHostnameVerifier());
 
     // Invalid key - fail the verification
     X509Certificate certificate = Mockito.mock(X509Certificate.class);
     PrivateKey privateKey = Mockito.mock(PrivateKey.class);
     try {
       proxyCA.init(certificate, privateKey);
-      fail("Expected InvalidKeyException");
+      Assert.fail("Expected InvalidKeyException");
     } catch (InvalidKeyException e) {
       // expected
     }
   }
 
   @Test
-  void testInit2() throws Exception {
+  public void testInit2() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
-    assertNull(proxyCA.getCaCert());
-    assertNull(proxyCA.getCaKeyPair());
-    assertNull(proxyCA.getX509KeyManager());
-    assertNull(proxyCA.getHostnameVerifier());
+    Assert.assertNull(proxyCA.getCaCert());
+    Assert.assertNull(proxyCA.getCaKeyPair());
+    Assert.assertNull(proxyCA.getX509KeyManager());
+    Assert.assertNull(proxyCA.getHostnameVerifier());
 
     // certificate and private key do match
     CertKeyPair pair = createCertAndKeyPair();
     proxyCA.init(pair.getCert(), pair.getKeyPair().getPrivate());
-    assertEquals(pair.getCert(), proxyCA.getCaCert());
-    assertEquals(pair.getKeyPair().getPrivate(),
+    Assert.assertEquals(pair.getCert(), proxyCA.getCaCert());
+    Assert.assertEquals(pair.getKeyPair().getPrivate(),
         proxyCA.getCaKeyPair().getPrivate());
-    assertEquals(pair.getKeyPair().getPublic(),
+    Assert.assertEquals(pair.getKeyPair().getPublic(),
         proxyCA.getCaKeyPair().getPublic());
-    assertNotNull(proxyCA.getX509KeyManager());
-    assertNotNull(proxyCA.getHostnameVerifier());
+    Assert.assertNotNull(proxyCA.getX509KeyManager());
+    Assert.assertNotNull(proxyCA.getHostnameVerifier());
   }
 
   @Test
-  void testCreateChildKeyStore() throws Exception {
+  public void testCreateChildKeyStore() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     ApplicationId appId =
@@ -172,29 +163,29 @@ public class TestProxyCA {
         "password");
     KeyStore keyStore = KeyStoreTestUtil.bytesToKeyStore(keystoreBytes,
         "password");
-    assertEquals(1, keyStore.size());
+    Assert.assertEquals(1, keyStore.size());
     Certificate[] certChain = keyStore.getCertificateChain("server");
-    assertEquals(2, certChain.length);
+    Assert.assertEquals(2, certChain.length);
     X509Certificate caCert = (X509Certificate) certChain[1];
     X509Certificate cert = (X509Certificate) certChain[0];
 
     // check child cert
-    assertEquals(caCert.getSubjectX500Principal().toString(),
+    Assert.assertEquals(caCert.getSubjectX500Principal().toString(),
         cert.getIssuerDN().toString());
-    assertEquals(new X500Principal("CN=" + appId),
+    Assert.assertEquals(new X500Principal("CN=" + appId),
         cert.getSubjectX500Principal());
-    assertFalse(cert.getSubjectX500Principal().toString().contains(","),
-        "Found multiple fields in X500 Principal, when there " +
-            "should have only been one: " + cert.getSubjectX500Principal());
-    assertEquals("SHA512withRSA", cert.getSigAlgName());
-    assertEquals(cert.getNotBefore(), cert.getNotAfter());
-    assertTrue(cert.getNotAfter().before(new Date()),
-        "Expected certificate to be expired but was not: " + cert.getNotAfter());
-    assertEquals(new X500Principal("CN=" + appId).toString(),
+    Assert.assertFalse("Found multiple fields in X500 Principal, when there " +
+            "should have only been one: " + cert.getSubjectX500Principal(),
+        cert.getSubjectX500Principal().toString().contains(","));
+    Assert.assertEquals("SHA512withRSA", cert.getSigAlgName());
+    Assert.assertEquals(cert.getNotBefore(), cert.getNotAfter());
+    Assert.assertTrue("Expected certificate to be expired but was not: "
+        + cert.getNotAfter(), cert.getNotAfter().before(new Date()));
+    Assert.assertEquals(new X500Principal("CN=" + appId).toString(),
         cert.getSubjectDN().toString());
     Key privateKey = keyStore.getKey("server", "password".toCharArray());
-    assertEquals("RSA", privateKey.getAlgorithm());
-    assertEquals(-1, cert.getBasicConstraints());
+    Assert.assertEquals("RSA", privateKey.getAlgorithm());
+    Assert.assertEquals(-1, cert.getBasicConstraints());
 
     // verify signature on child cert
     PublicKey caPublicKey = caCert.getPublicKey();
@@ -202,7 +193,7 @@ public class TestProxyCA {
 
     // check CA cert
     checkCACert(caCert);
-    assertEquals(proxyCA.getCaCert(), caCert);
+    Assert.assertEquals(proxyCA.getCaCert(), caCert);
 
     // verify signature on CA cert
     caCert.verify(caPublicKey);
@@ -211,24 +202,24 @@ public class TestProxyCA {
     PrivateKey caPrivateKey =
         proxyCA.getX509KeyManager().getPrivateKey(null);
     checkPrivatePublicKeys(caPrivateKey, caPublicKey);
-    assertEquals(proxyCA.getCaKeyPair().getPublic(), caPublicKey);
-    assertEquals(proxyCA.getCaKeyPair().getPrivate(), caPrivateKey);
+    Assert.assertEquals(proxyCA.getCaKeyPair().getPublic(), caPublicKey);
+    Assert.assertEquals(proxyCA.getCaKeyPair().getPrivate(), caPrivateKey);
   }
 
   @Test
-  void testGetChildTrustStore() throws Exception {
+  public void testGetChildTrustStore() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     byte[] truststoreBytes = proxyCA.getChildTrustStore("password");
     KeyStore truststore = KeyStoreTestUtil.bytesToKeyStore(truststoreBytes,
         "password");
-    assertEquals(1, truststore.size());
+    Assert.assertEquals(1, truststore.size());
     X509Certificate caCert =
         (X509Certificate) truststore.getCertificate("client");
 
     // check CA cert
     checkCACert(caCert);
-    assertEquals(proxyCA.getCaCert(), caCert);
+    Assert.assertEquals(proxyCA.getCaCert(), caCert);
 
     // verify signature on CA cert
     PublicKey caPublicKey = caCert.getPublicKey();
@@ -238,12 +229,12 @@ public class TestProxyCA {
     PrivateKey caPrivateKey =
         proxyCA.getX509KeyManager().getPrivateKey(null);
     checkPrivatePublicKeys(caPrivateKey, caPublicKey);
-    assertEquals(proxyCA.getCaKeyPair().getPublic(), caPublicKey);
-    assertEquals(proxyCA.getCaKeyPair().getPrivate(), caPrivateKey);
+    Assert.assertEquals(proxyCA.getCaKeyPair().getPublic(), caPublicKey);
+    Assert.assertEquals(proxyCA.getCaKeyPair().getPrivate(), caPrivateKey);
   }
 
   @Test
-  void testGenerateKeyStorePassword() throws Exception {
+  public void testGenerateKeyStorePassword() throws Exception {
     // We can't possibly test every possible string, but we can at least verify
     // a few things about a few of the generated strings as a sanity check
     ProxyCA proxyCA = new ProxyCA();
@@ -252,23 +243,23 @@ public class TestProxyCA {
 
     for (int i = 0; i < 5; i++) {
       String password = proxyCA.generateKeyStorePassword();
-      assertEquals(16, password.length());
+      Assert.assertEquals(16, password.length());
       for (char c : password.toCharArray()) {
-        assertFalse(c < ' ', "Found character '" + c + "' in password '"
-            + password + "' which is outside of the expected range");
-        assertFalse(c > 'z', "Found character '" + c + "' in password '"
-            + password + "' which is outside of the expected range");
+        Assert.assertFalse("Found character '" + c + "' in password '"
+            + password + "' which is outside of the expected range", c < ' ');
+        Assert.assertFalse("Found character '" + c + "' in password '"
+            + password + "' which is outside of the expected range", c > 'z');
       }
-      assertFalse(passwords.contains(password),
-          "Password " + password
-              + " was generated twice, which is _extremely_ unlikely"
-              + " and shouldn't practically happen: " + passwords);
+      Assert.assertFalse("Password " + password
+          + " was generated twice, which is _extremely_ unlikely"
+          + " and shouldn't practically happen: " + passwords,
+          passwords.contains(password));
       passwords.add(password);
     }
   }
 
   @Test
-  void testCreateTrustManagerDefaultTrustManager() throws Exception {
+  public void testCreateTrustManagerDefaultTrustManager() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     X509TrustManager defaultTrustManager = Mockito.mock(X509TrustManager.class);
@@ -281,13 +272,13 @@ public class TestProxyCA {
             "CN=foo", KeyStoreTestUtil.generateKeyPair("RSA"), 30,
             "SHA1withRSA")});
 
-    assertArrayEquals(defaultTrustManager.getAcceptedIssuers(),
+    Assert.assertArrayEquals(defaultTrustManager.getAcceptedIssuers(),
         trustManager.getAcceptedIssuers());
     trustManager.checkClientTrusted(null, null);
   }
 
   @Test
-  void testCreateTrustManagerYarnCert() throws Exception {
+  public void testCreateTrustManagerYarnCert() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     X509TrustManager defaultTrustManager = Mockito.mock(X509TrustManager.class);
@@ -306,7 +297,7 @@ public class TestProxyCA {
   }
 
   @Test
-  void testCreateTrustManagerWrongApp() throws Exception {
+  public void testCreateTrustManagerWrongApp() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     X509TrustManager defaultTrustManager = Mockito.mock(X509TrustManager.class);
@@ -323,15 +314,15 @@ public class TestProxyCA {
             .getCertificateChain("server"));
     try {
       trustManager.checkServerTrusted(certChain, "RSA");
-      fail("Should have thrown a CertificateException, but did not");
+      Assert.fail("Should have thrown a CertificateException, but did not");
     } catch (CertificateException ce) {
-      assertEquals("Expected to find Subject X500 Principal with CN=" +
+      Assert.assertEquals("Expected to find Subject X500 Principal with CN=" +
           appId + " but found CN=" + appId2, ce.getMessage());
     }
   }
 
   @Test
-  void testCreateTrustManagerWrongRM() throws Exception {
+  public void testCreateTrustManagerWrongRM() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     X509TrustManager defaultTrustManager = Mockito.mock(X509TrustManager.class);
@@ -354,7 +345,7 @@ public class TestProxyCA {
   }
 
   @Test
-  void testCreateTrustManagerRealCert() throws Exception {
+  public void testCreateTrustManagerRealCert() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     X509TrustManager defaultTrustManager = Mockito.mock(X509TrustManager.class);
@@ -366,8 +357,8 @@ public class TestProxyCA {
     // "real" cert
     X509Certificate[]
         certChain = new X509Certificate[]{
-            KeyStoreTestUtil.generateCertificate("CN=foo.com",
-                KeyStoreTestUtil.generateKeyPair("RSA"), 30, "SHA1withRSA")};
+        KeyStoreTestUtil.generateCertificate("CN=foo.com",
+            KeyStoreTestUtil.generateKeyPair("RSA"), 30, "SHA1withRSA")};
     Mockito.verify(defaultTrustManager, Mockito.times(0))
         .checkServerTrusted(certChain, "RSA");
     trustManager.checkServerTrusted(certChain, "RSA");
@@ -388,7 +379,7 @@ public class TestProxyCA {
   }
 
   @Test
-  void testCreateTrustManagerExceptions() throws Exception {
+  public void testCreateTrustManagerExceptions() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     X509TrustManager defaultTrustManager = Mockito.mock(X509TrustManager.class);
@@ -418,37 +409,37 @@ public class TestProxyCA {
   }
 
   @Test
-  void testCreateKeyManager() throws Exception {
+  public void testCreateKeyManager() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     X509KeyManager keyManager = proxyCA.getX509KeyManager();
 
-    assertArrayEquals(new String[]{"client"},
+    Assert.assertArrayEquals(new String[]{"client"},
         keyManager.getClientAliases(null, null));
-    assertEquals("client",
+    Assert.assertEquals("client",
         keyManager.chooseClientAlias(null, null, null));
-    assertNull(keyManager.getServerAliases(null, null));
-    assertNull(keyManager.chooseServerAlias(null, null, null));
+    Assert.assertNull(keyManager.getServerAliases(null, null));
+    Assert.assertNull(keyManager.chooseServerAlias(null, null, null));
 
     byte[] truststoreBytes = proxyCA.getChildTrustStore("password");
     KeyStore truststore = KeyStoreTestUtil.bytesToKeyStore(truststoreBytes,
         "password");
-    assertEquals(1, truststore.size());
+    Assert.assertEquals(1, truststore.size());
     X509Certificate caCert =
         (X509Certificate) truststore.getCertificate("client");
-    assertArrayEquals(new X509Certificate[]{caCert},
+    Assert.assertArrayEquals(new X509Certificate[]{caCert},
         keyManager.getCertificateChain(null));
-    assertEquals(proxyCA.getCaCert(), caCert);
+    Assert.assertEquals(proxyCA.getCaCert(), caCert);
 
     PrivateKey caPrivateKey = keyManager.getPrivateKey(null);
     PublicKey caPublicKey = caCert.getPublicKey();
     checkPrivatePublicKeys(caPrivateKey, caPublicKey);
-    assertEquals(proxyCA.getCaKeyPair().getPublic(), caPublicKey);
-    assertEquals(proxyCA.getCaKeyPair().getPrivate(), caPrivateKey);
+    Assert.assertEquals(proxyCA.getCaKeyPair().getPublic(), caPublicKey);
+    Assert.assertEquals(proxyCA.getCaKeyPair().getPrivate(), caPrivateKey);
   }
 
   @Test
-  void testCreateHostnameVerifier() throws Exception {
+  public void testCreateHostnameVerifier() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     HostnameVerifier verifier = proxyCA.getHostnameVerifier();
@@ -459,11 +450,11 @@ public class TestProxyCA {
             proxyCA.createChildKeyStore(
                 ApplicationId.newInstance(System.currentTimeMillis(), 1),
                 "password"), "password").getCertificateChain("server"));
-    assertTrue(verifier.verify("foo", sslSession));
+    Assert.assertTrue(verifier.verify("foo", sslSession));
   }
 
   @Test
-  void testCreateHostnameVerifierSSLPeerUnverifiedException()
+  public void testCreateHostnameVerifierSSLPeerUnverifiedException()
       throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
@@ -472,11 +463,11 @@ public class TestProxyCA {
     SSLSession sslSession = Mockito.mock(SSLSession.class);
     Mockito.when(sslSession.getPeerCertificates()).thenThrow(
         new SSLPeerUnverifiedException(""));
-    assertFalse(verifier.verify("foo", sslSession));
+    Assert.assertFalse(verifier.verify("foo", sslSession));
   }
 
   @Test
-  void testCreateHostnameVerifierWrongRM() throws Exception {
+  public void testCreateHostnameVerifierWrongRM() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     HostnameVerifier verifier = proxyCA.getHostnameVerifier();
@@ -489,11 +480,11 @@ public class TestProxyCA {
             proxyCA2.createChildKeyStore(
                 ApplicationId.newInstance(System.currentTimeMillis(), 1),
                 "password"), "password").getCertificateChain("server"));
-    assertFalse(verifier.verify("foo", sslSession));
+    Assert.assertFalse(verifier.verify("foo", sslSession));
   }
 
   @Test
-  void testCreateHostnameVerifierExceptions() throws Exception {
+  public void testCreateHostnameVerifierExceptions() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     HostnameVerifier verifier = proxyCA.getHostnameVerifier();
@@ -519,12 +510,12 @@ public class TestProxyCA {
               return certChain;
             }
           });
-      assertFalse(verifier.verify("foo", sslSession));
+      Assert.assertFalse(verifier.verify("foo", sslSession));
     }
   }
 
   @Test
-  void testCreateHostnameVerifierRealCert() throws Exception {
+  public void testCreateHostnameVerifierRealCert() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     HostnameVerifier verifier = proxyCA.getHostnameVerifier();
@@ -543,11 +534,11 @@ public class TestProxyCA {
             return certChain;
           }
         });
-    assertTrue(verifier.verify("foo.com", sslSession));
+    Assert.assertTrue(verifier.verify("foo.com", sslSession));
   }
 
   @Test
-  void testCreateHostnameVerifierRealCertBad() throws Exception {
+  public void testCreateHostnameVerifierRealCertBad() throws Exception {
     ProxyCA proxyCA = new ProxyCA();
     proxyCA.init();
     HostnameVerifier verifier = proxyCA.getHostnameVerifier();
@@ -566,27 +557,27 @@ public class TestProxyCA {
             return certChain;
           }
         });
-    assertFalse(verifier.verify("bar.com", sslSession));
+    Assert.assertFalse(verifier.verify("bar.com", sslSession));
   }
 
   private void checkCACert(X509Certificate caCert) {
-    assertEquals(caCert.getSubjectX500Principal().toString(),
+    Assert.assertEquals(caCert.getSubjectX500Principal().toString(),
         caCert.getIssuerDN().toString());
-    assertEquals(caCert.getSubjectX500Principal().toString(),
+    Assert.assertEquals(caCert.getSubjectX500Principal().toString(),
         caCert.getSubjectDN().toString());
-    assertTrue(caCert.getSubjectX500Principal().toString().startsWith("OU=YARN-"),
-        "Expected CA certificate X500 Principal to start with" +
-            " 'OU=YARN-', but did not: " + caCert.getSubjectX500Principal());
-    assertFalse(caCert.getSubjectX500Principal().toString().contains(","),
-        "Found multiple fields in X500 Principal, when there " +
-            "should have only been one: " + caCert.getSubjectX500Principal());
-    assertEquals("SHA512withRSA", caCert.getSigAlgName());
-    assertEquals(
+    Assert.assertTrue("Expected CA certificate X500 Principal to start with" +
+            " 'OU=YARN-', but did not: " + caCert.getSubjectX500Principal(),
+        caCert.getSubjectX500Principal().toString().startsWith("OU=YARN-"));
+    Assert.assertFalse("Found multiple fields in X500 Principal, when there " +
+            "should have only been one: " + caCert.getSubjectX500Principal(),
+        caCert.getSubjectX500Principal().toString().contains(","));
+    Assert.assertEquals("SHA512withRSA", caCert.getSigAlgName());
+    Assert.assertEquals(
         new GregorianCalendar(2037, Calendar.DECEMBER, 31).getTime(),
         caCert.getNotAfter());
-    assertTrue(caCert.getNotBefore().before(new Date()),
-        "Expected certificate to have started but was not: " + caCert.getNotBefore());
-    assertEquals(0, caCert.getBasicConstraints());
+    Assert.assertTrue("Expected certificate to have started but was not: "
+        + caCert.getNotBefore(), caCert.getNotBefore().before(new Date()));
+    Assert.assertEquals(0, caCert.getBasicConstraints());
   }
 
   private void checkPrivatePublicKeys(PrivateKey privateKey,
@@ -601,7 +592,7 @@ public class TestProxyCA {
     signer = Signature.getInstance("SHA512withRSA");
     signer.initVerify(publicKey);
     signer.update(data);
-    assertTrue(signer.verify(sig));
+    Assert.assertTrue(signer.verify(sig));
   }
 
   private X509Certificate[] castCertificateArrayToX509CertificateArray(

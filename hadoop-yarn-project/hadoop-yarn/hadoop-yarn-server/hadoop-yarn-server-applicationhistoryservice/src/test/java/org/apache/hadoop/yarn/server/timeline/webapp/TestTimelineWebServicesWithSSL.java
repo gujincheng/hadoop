@@ -23,12 +23,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -41,13 +35,17 @@ import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
 import org.apache.hadoop.yarn.client.api.impl.TimelineWriter;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
 
 public class TestTimelineWebServicesWithSSL {
 
@@ -61,7 +59,7 @@ public class TestTimelineWebServicesWithSSL {
   private static TimelineStore store;
   private static Configuration conf;
 
-  @BeforeAll
+  @BeforeClass
   public static void setupServer() throws Exception {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
@@ -87,7 +85,7 @@ public class TestTimelineWebServicesWithSSL {
     store = timelineServer.getTimelineStore();
   }
 
-  @AfterAll
+  @AfterClass
   public static void tearDownServer() throws Exception {
     if (timelineServer != null) {
       timelineServer.stop();
@@ -95,7 +93,7 @@ public class TestTimelineWebServicesWithSSL {
   }
 
   @Test
-  void testPutEntities() throws Exception {
+  public void testPutEntities() throws Exception {
     TestTimelineClient client = new TestTimelineClient();
     try {
       client.init(conf);
@@ -110,16 +108,16 @@ public class TestTimelineWebServicesWithSSL {
       expectedEntity.addEvent(event);
 
       TimelinePutResponse response = client.putEntities(expectedEntity);
-      assertEquals(0, response.getErrors().size());
-      assertTrue(client.resp.toString().contains("https"));
+      Assert.assertEquals(0, response.getErrors().size());
+      Assert.assertTrue(client.resp.toString().contains("https"));
 
       TimelineEntity actualEntity = store.getEntity(
           expectedEntity.getEntityId(), expectedEntity.getEntityType(),
           EnumSet.allOf(Field.class));
-      assertNotNull(actualEntity);
-      assertEquals(
+      Assert.assertNotNull(actualEntity);
+      Assert.assertEquals(
           expectedEntity.getEntityId(), actualEntity.getEntityId());
-      assertEquals(
+      Assert.assertEquals(
           expectedEntity.getEntityType(), actualEntity.getEntityType());
     } finally {
       client.stop();

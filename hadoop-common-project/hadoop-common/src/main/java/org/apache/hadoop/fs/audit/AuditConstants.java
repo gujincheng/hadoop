@@ -91,16 +91,6 @@ public final class AuditConstants {
   public static final String PARAM_PROCESS = "ps";
 
   /**
-   * Header: Range for GET request data: {@value}.
-   */
-  public static final String PARAM_RANGE = "rg";
-
-  /**
-   * Task Attempt ID query header: {@value}.
-   */
-  public static final String PARAM_TASK_ATTEMPT_ID = "ta";
-
-  /**
    * Thread 0: the thread which created a span {@value}.
    */
   public static final String PARAM_THREAD0 = "t0";
@@ -114,10 +104,5 @@ public final class AuditConstants {
    * Timestamp of span creation: {@value}.
    */
   public static final String PARAM_TIMESTAMP = "ts";
-
-  /**
-   * Num of files to be deleted as part of the bulk delete request.
-   */
-  public static final String DELETE_KEYS_SIZE = "ks";
 
 }

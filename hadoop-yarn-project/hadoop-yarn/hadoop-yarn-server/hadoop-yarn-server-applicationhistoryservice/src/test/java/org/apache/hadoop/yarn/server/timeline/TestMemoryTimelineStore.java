@@ -18,17 +18,18 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-import java.io.IOException;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
+import org.apache.hadoop.yarn.server.timeline.TimelineStore;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.IOException;
 
 public class TestMemoryTimelineStore extends TimelineStoreTestUtils {
 
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     store = new MemoryTimelineStore();
     store.init(new YarnConfiguration());
@@ -38,7 +39,7 @@ public class TestMemoryTimelineStore extends TimelineStoreTestUtils {
     loadTestDomainData();
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     store.stop();
   }

@@ -379,38 +379,27 @@ public class ContainerLauncherImpl extends AbstractService implements
 
     @Override
     public void run() {
-      LOG.info("Processing the event {}", event);
+      LOG.info("Processing the event " + event.toString());
 
       // Load ContainerManager tokens before creating a connection.
       // TODO: Do it only once per NodeManager.
       ContainerId containerID = event.getContainerID();
 
+      Container c = getContainer(event);
       switch(event.getType()) {
 
       case CONTAINER_REMOTE_LAUNCH:
         ContainerRemoteLaunchEvent launchEvent
             = (ContainerRemoteLaunchEvent) event;
-        getContainer(event).launch(launchEvent);
+        c.launch(launchEvent);
         break;
 
       case CONTAINER_REMOTE_CLEANUP:
-        // If the container failed to launch earlier (due to dead node for example),
-        // it has been marked as FAILED and removed from containers during
-        // CONTAINER_REMOTE_LAUNCH event handling.
-        // Skip kill() such container during CONTAINER_REMOTE_CLEANUP as
-        // it is not necessary and could cost 15 minutes delay if the node is dead.
-        if (!containers.containsKey(containerID)) {
-          LOG.info("Skip cleanup of already-removed container {}", containerID);
-          // send killed event to task attempt regardless like in kill().
-          context.getEventHandler().handle(new TaskAttemptEvent(event.getTaskAttemptID(),
-              TaskAttemptEventType.TA_CONTAINER_CLEANED));
-          return;
-        }
-        getContainer(event).kill(event.getDumpContainerThreads());
+        c.kill(event.getDumpContainerThreads());
         break;
 
       case CONTAINER_COMPLETED:
-        getContainer(event).done();
+        c.done();
         break;
 
       }

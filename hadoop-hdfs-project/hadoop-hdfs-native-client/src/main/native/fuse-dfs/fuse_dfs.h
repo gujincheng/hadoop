@@ -25,6 +25,7 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <strings.h>
 #include <syslog.h>
 
 #include <fuse.h>

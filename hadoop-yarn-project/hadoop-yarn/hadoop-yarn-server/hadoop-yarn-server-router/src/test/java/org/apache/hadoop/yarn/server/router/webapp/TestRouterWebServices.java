@@ -132,7 +132,7 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
     Response response4 = addToClusterNodeLabels(user);
     Assert.assertNotNull(response4);
 
-    Response response5 = removeFromClusterNodeLabels(user);
+    Response response5 = removeFromCluserNodeLabels(user);
     Assert.assertNotNull(response5);
 
     NodeLabelsInfo nodeLabelsInfo2 = getLabelsOnNode(user);
@@ -200,12 +200,6 @@ public class TestRouterWebServices extends BaseRouterWebServicesTest {
 
     ContainerInfo containerInfo = getContainer(user);
     Assert.assertNotNull(containerInfo);
-
-    Response response19 = updateSchedulerConfiguration(user);
-    Assert.assertNotNull(response19);
-
-    Response response20 = getSchedulerConfiguration(user);
-    Assert.assertNotNull(response20);
   }
 
   /**

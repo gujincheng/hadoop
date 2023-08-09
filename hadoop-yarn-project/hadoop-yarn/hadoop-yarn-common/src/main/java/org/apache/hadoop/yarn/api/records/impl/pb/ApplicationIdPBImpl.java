@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 @Private
 @Unstable
 public class ApplicationIdPBImpl extends ApplicationId {
@@ -44,32 +46,24 @@ public class ApplicationIdPBImpl extends ApplicationId {
 
   @Override
   public int getId() {
-    if (proto == null) {
-      throw new NullPointerException("The argument object is NULL");
-    }
+    Preconditions.checkNotNull(proto);
     return proto.getId();
   }
 
   @Override
   protected void setId(int id) {
-    if (builder == null) {
-      throw new NullPointerException("The argument object is NULL");
-    }
+    Preconditions.checkNotNull(builder);
     builder.setId(id);
   }
   @Override
   public long getClusterTimestamp() {
-    if (proto == null) {
-      throw new NullPointerException("The argument object is NULL");
-    }
+    Preconditions.checkNotNull(proto);
     return proto.getClusterTimestamp();
   }
 
   @Override
   protected void setClusterTimestamp(long clusterTimestamp) {
-    if (builder == null) {
-      throw new NullPointerException("The argument object is NULL");
-    }
+    Preconditions.checkNotNull(builder);
     builder.setClusterTimestamp((clusterTimestamp));
   }
 

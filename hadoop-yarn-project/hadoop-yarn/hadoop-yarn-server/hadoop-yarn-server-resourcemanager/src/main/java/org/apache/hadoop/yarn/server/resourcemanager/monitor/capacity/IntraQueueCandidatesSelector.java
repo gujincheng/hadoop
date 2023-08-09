@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.IntraQueuePreemptionOrderPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.AbstractComparatorOrderingPolicy;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -146,7 +146,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
 
       // 4. Iterate from most under-served queue in order.
       for (String queueName : queueNames) {
-        AbstractLeafQueue leafQueue = preemptionContext.getQueueByPartition(queueName,
+        LeafQueue leafQueue = preemptionContext.getQueueByPartition(queueName,
             RMNodeLabelsManager.NO_LABEL).leafQueue;
 
         // skip if not a leafqueue
@@ -181,7 +181,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
         leafQueue.getReadLock().lock();
         try {
           for (FiCaSchedulerApp app : apps) {
-            preemptFromLeastStarvedApp(app, selectedCandidates,
+            preemptFromLeastStarvedApp(leafQueue, app, selectedCandidates,
                 curCandidates, clusterResource, totalPreemptedResourceAllowed,
                 resToObtainByPartition, rollingResourceUsagePerUser);
           }
@@ -195,7 +195,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
   }
 
   private void initializeUsageAndUserLimitForCompute(Resource clusterResource,
-      String partition, AbstractLeafQueue leafQueue,
+      String partition, LeafQueue leafQueue,
       Map<String, Resource> rollingResourceUsagePerUser) {
     for (String user : leafQueue.getAllUsers()) {
       // Initialize used resource of a given user for rolling computation.
@@ -206,7 +206,8 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
     }
   }
 
-  private void preemptFromLeastStarvedApp(FiCaSchedulerApp app,
+  private void preemptFromLeastStarvedApp(LeafQueue leafQueue,
+      FiCaSchedulerApp app,
       Map<ApplicationAttemptId, Set<RMContainer>> selectedCandidates,
       Map<ApplicationAttemptId, Set<RMContainer>> curCandidates,
       Resource clusterResource, Resource totalPreemptedResourceAllowed,
@@ -292,7 +293,7 @@ public class IntraQueueCandidatesSelector extends PreemptionCandidatesSelector {
       for (String queueName : queueNames) {
         TempQueuePerPartition tq = context.getQueueByPartition(queueName,
             partition);
-        AbstractLeafQueue leafQueue = tq.leafQueue;
+        LeafQueue leafQueue = tq.leafQueue;
 
         // skip if its parent queue
         if (null == leafQueue) {

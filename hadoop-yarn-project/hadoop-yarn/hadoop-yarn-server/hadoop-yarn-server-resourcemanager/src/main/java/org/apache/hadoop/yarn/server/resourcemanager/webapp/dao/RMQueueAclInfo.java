@@ -25,10 +25,9 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class RMQueueAclInfo {
-  private Boolean allowed;
-  private String user;
-  private String diagnostics;
-  private String subClusterId;
+  protected boolean allowed;
+  protected String user;
+  protected String diagnostics;
 
   public RMQueueAclInfo() {
     
@@ -38,13 +37,6 @@ public class RMQueueAclInfo {
     this.allowed = allowed;
     this.user = user;
     this.diagnostics = diagnostics;
-  }
-
-  public RMQueueAclInfo(boolean allowed, String user, String diagnostics, String subClusterId) {
-    this.allowed = allowed;
-    this.user = user;
-    this.diagnostics = diagnostics;
-    this.subClusterId = subClusterId;
   }
 
   public boolean isAllowed() {
@@ -69,13 +61,5 @@ public class RMQueueAclInfo {
 
   public void setDiagnostics(String diagnostics) {
     this.diagnostics = diagnostics;
-  }
-
-  public String getSubClusterId() {
-    return subClusterId;
-  }
-
-  public void setSubClusterId(String subClusterId) {
-    this.subClusterId = subClusterId;
   }
 }

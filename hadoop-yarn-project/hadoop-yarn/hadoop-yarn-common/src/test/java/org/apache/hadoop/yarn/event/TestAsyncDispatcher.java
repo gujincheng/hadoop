@@ -27,30 +27,23 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-import org.slf4j.Logger;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
+import org.slf4j.Logger;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
+import org.junit.Assert;
+import org.junit.Test;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.*;
 
 public class TestAsyncDispatcher {
 
@@ -59,10 +52,9 @@ public class TestAsyncDispatcher {
    * 1. A thread which was putting event to event queue is interrupted.
    * 2. Event queue is empty on close.
    */
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  @Test
-  @Timeout(10000)
-  void testDispatcherOnCloseIfQueueEmpty() throws Exception {
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  @Test(timeout=10000)
+  public void testDispatcherOnCloseIfQueueEmpty() throws Exception {
     BlockingQueue<Event> eventQueue = spy(new LinkedBlockingQueue<Event>());
     Event event = mock(Event.class);
     doThrow(new InterruptedException()).when(eventQueue).put(event);
@@ -74,20 +66,19 @@ public class TestAsyncDispatcher {
     disp.waitForEventThreadToWait();
     try {
       disp.getEventHandler().handle(event);
-      fail("Expected YarnRuntimeException");
+      Assert.fail("Expected YarnRuntimeException");
     } catch (YarnRuntimeException e) {
-      assertTrue(e.getCause() instanceof InterruptedException);
+      Assert.assertTrue(e.getCause() instanceof InterruptedException);
     }
     // Queue should be empty and dispatcher should not hang on close
-    assertTrue(eventQueue.isEmpty(),
-        "Event Queue should have been empty");
+    Assert.assertTrue("Event Queue should have been empty",
+        eventQueue.isEmpty());
     disp.close();
   }
 
   // Test dispatcher should timeout on draining events.
-  @Test
-  @Timeout(10000)
-  void testDispatchStopOnTimeout() throws Exception {
+  @Test(timeout=10000)
+  public void testDispatchStopOnTimeout() throws Exception {
     BlockingQueue<Event> eventQueue = new LinkedBlockingQueue<Event>();
     eventQueue = spy(eventQueue);
     // simulate dispatcher is not drained.
@@ -152,10 +143,9 @@ public class TestAsyncDispatcher {
   }
 
   // Test if drain dispatcher drains events on stop.
-  @SuppressWarnings({"rawtypes"})
-  @Test
-  @Timeout(10000)
-  void testDrainDispatcherDrainEventsOnStop() throws Exception {
+  @SuppressWarnings({ "rawtypes" })
+  @Test(timeout=10000)
+  public void testDrainDispatcherDrainEventsOnStop() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.DISPATCHER_DRAIN_EVENTS_TIMEOUT, 2000);
     BlockingQueue<Event> queue = new LinkedBlockingQueue<Event>();
@@ -171,12 +161,11 @@ public class TestAsyncDispatcher {
   }
 
   //Test print dispatcher details when the blocking queue is heavy
-  @Test
-  @Timeout(10000)
-  void testPrintDispatcherEventDetails() throws Exception {
+  @Test(timeout = 10000)
+  public void testPrintDispatcherEventDetails() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.
-        YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD, 5000);
+            YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD, 5000);
     Logger log = mock(Logger.class);
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(conf);
@@ -198,10 +187,12 @@ public class TestAsyncDispatcher {
         when(event.getType()).thenReturn(TestEnum.TestEventType);
         dispatcher.getEventHandler().handle(event);
       }
+      verify(log, atLeastOnce()).info("Event type: TestEventType, " +
+              "Event record counter: 5000");
       Thread.sleep(2000);
       //Make sure more than one event to take
       verify(log, atLeastOnce()).
-          info("Latest dispatch event type: TestEventType");
+              info("Latest dispatch event type: TestEventType");
     } finally {
       //... restore logger object
       logger.set(null, oldLog);
@@ -210,9 +201,8 @@ public class TestAsyncDispatcher {
   }
 
   //Test print dispatcher details when the blocking queue is heavy
-  @Test
-  @Timeout(60000)
-  void testPrintDispatcherEventDetailsAvoidDeadLoop() throws Exception {
+  @Test(timeout = 60000)
+  public void testPrintDispatcherEventDetailsAvoidDeadLoop() throws Exception {
     for (int i = 0; i < 5; i++) {
       testPrintDispatcherEventDetailsAvoidDeadLoopInternal();
     }
@@ -253,7 +243,7 @@ public class TestAsyncDispatcher {
   }
 
   @Test
-  void testMetricsForDispatcher() throws Exception {
+  public void testMetricsForDispatcher() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     AsyncDispatcher dispatcher = null;
 
@@ -264,7 +254,7 @@ public class TestAsyncDispatcher {
           new GenericEventTypeMetrics.EventTypeMetricsBuilder()
               .setMs(DefaultMetricsSystem.instance())
               .setInfo(info("GenericEventTypeMetrics for "
-                  + TestEnum.class.getName(),
+                      + TestEnum.class.getName(),
                   "Metrics for " + dispatcher.getName()))
               .setEnumClass(TestEnum.class)
               .setEnums(TestEnum.class.getEnumConstants())
@@ -299,34 +289,34 @@ public class TestAsyncDispatcher {
           get(TestEnum.TestEventType2) == 2, 1000, 10000);
 
       // Check time spend.
-      assertTrue(genericEventTypeMetrics.
+      Assert.assertTrue(genericEventTypeMetrics.
           getTotalProcessingTime(TestEnum.TestEventType)
-          >= 1500 * 3);
-      assertTrue(genericEventTypeMetrics.
+          >= 1500*3);
+      Assert.assertTrue(genericEventTypeMetrics.
           getTotalProcessingTime(TestEnum.TestEventType)
-          < 1500 * 4);
+          < 1500*4);
 
-      assertTrue(genericEventTypeMetrics.
+      Assert.assertTrue(genericEventTypeMetrics.
           getTotalProcessingTime(TestEnum.TestEventType2)
-          >= 1500 * 2);
-      assertTrue(genericEventTypeMetrics.
+          >= 1500*2);
+      Assert.assertTrue(genericEventTypeMetrics.
           getTotalProcessingTime(TestEnum.TestEventType2)
-          < 1500 * 3);
+          < 1500*3);
 
       // Make sure metrics consistent.
-      assertEquals(Long.toString(genericEventTypeMetrics.
+      Assert.assertEquals(Long.toString(genericEventTypeMetrics.
               get(TestEnum.TestEventType)),
           genericEventTypeMetrics.
               getRegistry().get("TestEventType_event_count").toString());
-      assertEquals(Long.toString(genericEventTypeMetrics.
+      Assert.assertEquals(Long.toString(genericEventTypeMetrics.
               get(TestEnum.TestEventType2)),
           genericEventTypeMetrics.
               getRegistry().get("TestEventType2_event_count").toString());
-      assertEquals(Long.toString(genericEventTypeMetrics.
+      Assert.assertEquals(Long.toString(genericEventTypeMetrics.
               getTotalProcessingTime(TestEnum.TestEventType)),
           genericEventTypeMetrics.
               getRegistry().get("TestEventType_processing_time").toString());
-      assertEquals(Long.toString(genericEventTypeMetrics.
+      Assert.assertEquals(Long.toString(genericEventTypeMetrics.
               getTotalProcessingTime(TestEnum.TestEventType2)),
           genericEventTypeMetrics.
               getRegistry().get("TestEventType2_processing_time").toString());
@@ -338,7 +328,7 @@ public class TestAsyncDispatcher {
   }
 
   @Test
-  void testDispatcherMetricsHistogram() throws Exception {
+  public void testDispatcherMetricsHistogram() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     AsyncDispatcher dispatcher = null;
 
@@ -349,7 +339,7 @@ public class TestAsyncDispatcher {
           new GenericEventTypeMetrics.EventTypeMetricsBuilder()
               .setMs(DefaultMetricsSystem.instance())
               .setInfo(info("GenericEventTypeMetrics for "
-                  + TestEnum.class.getName(),
+                      + TestEnum.class.getName(),
                   "Metrics for " + dispatcher.getName()))
               .setEnumClass(TestEnum.class)
               .setEnums(TestEnum.class.getEnumConstants())
@@ -405,13 +395,14 @@ public class TestAsyncDispatcher {
           String metricName = metric.name();
           if (expectedValues.containsKey(metricName)) {
             Long expectedValue = expectedValues.get(metricName);
-            assertEquals(expectedValue, metric.value(),
-                "Metric " + metricName + " doesn't have expected value");
+            Assert.assertEquals(
+                "Metric " + metricName + " doesn't have expected value",
+                expectedValue, metric.value());
             testResults.add(metricName);
           }
         }
       }
-      assertEquals(expectedValues.keySet(), testResults);
+      Assert.assertEquals(expectedValues.keySet(), testResults);
 
     } finally {
       dispatcher.close();

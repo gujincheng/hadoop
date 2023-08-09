@@ -116,9 +116,9 @@ import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Timer;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 
@@ -132,8 +132,7 @@ public class FSEditLogLoader {
   /** Limit logging about edit loading to every 5 seconds max. */
   @VisibleForTesting
   static final long LOAD_EDIT_LOG_INTERVAL_MS = 5000;
-  @VisibleForTesting
-  static final LogThrottlingHelper LOAD_EDITS_LOG_HELPER =
+  private final LogThrottlingHelper loadEditsLogHelper =
       new LogThrottlingHelper(LOAD_EDIT_LOG_INTERVAL_MS);
 
   private final FSNamesystem fsNamesys;
@@ -174,7 +173,7 @@ public class FSEditLogLoader {
     fsNamesys.writeLock();
     try {
       long startTime = timer.monotonicNow();
-      LogAction preLogAction = LOAD_EDITS_LOG_HELPER.record("pre", startTime);
+      LogAction preLogAction = loadEditsLogHelper.record("pre", startTime);
       if (preLogAction.shouldLog()) {
         FSImage.LOG.info("Start loading edits file " + edits.getName()
             + " maxTxnsToRead = " + maxTxnsToRead +
@@ -183,7 +182,7 @@ public class FSEditLogLoader {
       long numEdits = loadEditRecords(edits, false, expectedStartingTxId,
           maxTxnsToRead, startOpt, recovery);
       long endTime = timer.monotonicNow();
-      LogAction postLogAction = LOAD_EDITS_LOG_HELPER.record("post", endTime,
+      LogAction postLogAction = loadEditsLogHelper.record("post", endTime,
           numEdits, edits.length(), endTime - startTime);
       if (postLogAction.shouldLog()) {
         FSImage.LOG.info("Loaded {} edits file(s) (the last named {}) of " +
@@ -913,7 +912,6 @@ public class FSEditLogLoader {
       fsNamesys.getFSImage().updateStorageVersion();
       fsNamesys.getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
           NameNodeFile.IMAGE);
-      fsNamesys.setNeedRollbackFsImage(false);
       break;
     }
     case OP_ADD_CACHE_DIRECTIVE: {

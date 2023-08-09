@@ -35,13 +35,13 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
-import org.slf4j.event.Level;
 
 abstract public class BaseReplicationPolicyTest {
   {
-    GenericTestUtils.setLogLevel(BlockPlacementPolicy.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockPlacementPolicy.LOG, Level.ALL);
   }
 
   protected NetworkTopology cluster;
@@ -56,13 +56,13 @@ abstract public class BaseReplicationPolicyTest {
   protected String blockPlacementPolicy;
   protected NamenodeProtocols nameNodeRpc = null;
 
-  void updateHeartbeatWithUsage(DatanodeDescriptor dn,
+  static void updateHeartbeatWithUsage(DatanodeDescriptor dn,
     long capacity, long dfsUsed, long remaining, long blockPoolUsed,
     long dnCacheCapacity, long dnCacheUsed, int xceiverCount,
     int volFailures) {
     dn.getStorageInfos()[0].setUtilizationForTesting(
         capacity, dfsUsed, remaining, blockPoolUsed);
-    dnManager.getHeartbeatManager().updateHeartbeat(dn,
+    dn.updateHeartbeat(
         BlockManagerTestUtil.getStorageReportsForDatanode(dn),
         dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures, null);
   }

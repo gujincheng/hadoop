@@ -37,6 +37,7 @@ import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasStreamCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksStreamCapabilities;
 
@@ -190,13 +191,14 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
   public void testPageBlobCapabilities() throws IOException {
     Path path = getBlobPathWithTestName(PAGE_BLOB_DIR);
     try (FSDataOutputStream stream = fs.create(path)) {
-      assertHasStreamCapabilities(stream,
-          StreamCapabilities.HFLUSH,
-          StreamCapabilities.HSYNC);
-      assertLacksStreamCapabilities(stream,
-          StreamCapabilities.DROPBEHIND,
-          StreamCapabilities.READAHEAD,
-          StreamCapabilities.UNBUFFER);
+      assertCapabilities(stream,
+          new String[]{
+            StreamCapabilities.HFLUSH,
+            StreamCapabilities.HSYNC,
+            StreamCapabilities.DROPBEHIND,
+            StreamCapabilities.READAHEAD,
+            StreamCapabilities.UNBUFFER},
+          null);
       stream.write(getRandomBytes());
     }
   }
@@ -384,8 +386,7 @@ public class ITestOutputStreamSemantics extends AbstractWasbTestBase {
     try (FSDataOutputStream stream = fs.create(path)) {
       assertHasStreamCapabilities(stream,
           StreamCapabilities.HFLUSH,
-          StreamCapabilities.HSYNC);
-      assertLacksStreamCapabilities(stream,
+          StreamCapabilities.HSYNC,
           StreamCapabilities.DROPBEHIND,
           StreamCapabilities.READAHEAD,
           StreamCapabilities.UNBUFFER);

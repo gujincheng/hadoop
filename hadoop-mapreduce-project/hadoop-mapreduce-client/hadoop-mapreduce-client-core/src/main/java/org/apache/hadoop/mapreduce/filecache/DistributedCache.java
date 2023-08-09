@@ -23,7 +23,6 @@ import java.util.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
@@ -146,7 +145,8 @@ public class DistributedCache {
    */
   @Deprecated
   public static void setCacheArchives(URI[] archives, Configuration conf) {
-    Job.setCacheArchives(archives, conf);
+    String sarchives = StringUtils.uriToString(archives);
+    conf.set(MRJobConfig.CACHE_ARCHIVES, sarchives);
   }
 
   /**
@@ -159,7 +159,8 @@ public class DistributedCache {
    */
   @Deprecated
   public static void setCacheFiles(URI[] files, Configuration conf) {
-    Job.setCacheFiles(files, conf);
+    String sfiles = StringUtils.uriToString(files);
+    conf.set(MRJobConfig.CACHE_FILES, sfiles);
   }
 
   /**
@@ -173,7 +174,7 @@ public class DistributedCache {
    */
   @Deprecated
   public static URI[] getCacheArchives(Configuration conf) throws IOException {
-    return JobContextImpl.getCacheArchives(conf);
+    return StringUtils.stringToURI(conf.getStrings(MRJobConfig.CACHE_ARCHIVES));
   }
 
   /**
@@ -187,7 +188,7 @@ public class DistributedCache {
    */
   @Deprecated
   public static URI[] getCacheFiles(Configuration conf) throws IOException {
-    return JobContextImpl.getCacheFiles(conf);
+    return StringUtils.stringToURI(conf.getStrings(MRJobConfig.CACHE_FILES));
   }
 
   /**
@@ -200,8 +201,10 @@ public class DistributedCache {
    * @see JobContext#getLocalCacheArchives()
    */
   @Deprecated
-  public static Path[] getLocalCacheArchives(Configuration conf) throws IOException {
-    return JobContextImpl.getLocalCacheArchives(conf);
+  public static Path[] getLocalCacheArchives(Configuration conf)
+    throws IOException {
+    return StringUtils.stringToPath(conf
+                                    .getStrings(MRJobConfig.CACHE_LOCALARCHIVES));
   }
 
   /**
@@ -216,7 +219,23 @@ public class DistributedCache {
   @Deprecated
   public static Path[] getLocalCacheFiles(Configuration conf)
     throws IOException {
-    return JobContextImpl.getLocalCacheFiles(conf);
+    return StringUtils.stringToPath(conf.getStrings(MRJobConfig.CACHE_LOCALFILES));
+  }
+
+  /**
+   * Parse a list of strings into longs.
+   * @param strs the list of strings to parse
+   * @return a list of longs that were parsed. same length as strs.
+   */
+  private static long[] parseTimestamps(String[] strs) {
+    if (strs == null) {
+      return null;
+    }
+    long[] result = new long[strs.length];
+    for(int i=0; i < strs.length; ++i) {
+      result[i] = Long.parseLong(strs[i]);
+    }
+    return result;
   }
 
   /**
@@ -229,7 +248,8 @@ public class DistributedCache {
    */
   @Deprecated
   public static long[] getArchiveTimestamps(Configuration conf) {
-    return JobContextImpl.getArchiveTimestamps(conf);
+    return parseTimestamps(
+        conf.getStrings(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS));
   }
 
 
@@ -243,7 +263,8 @@ public class DistributedCache {
    */
   @Deprecated
   public static long[] getFileTimestamps(Configuration conf) {
-    return JobContextImpl.getFileTimestamps(conf);
+    return parseTimestamps(
+        conf.getStrings(MRJobConfig.CACHE_FILE_TIMESTAMPS));
   }
 
   /**
@@ -256,7 +277,9 @@ public class DistributedCache {
    */
   @Deprecated
   public static void addCacheArchive(URI uri, Configuration conf) {
-    Job.addCacheArchive(uri, conf);
+    String archives = conf.get(MRJobConfig.CACHE_ARCHIVES);
+    conf.set(MRJobConfig.CACHE_ARCHIVES, archives == null ? uri.toString()
+             : archives + "," + uri.toString());
   }
 
   /**
@@ -284,7 +307,9 @@ public class DistributedCache {
    */
   @Deprecated
   public static void addCacheFile(URI uri, Configuration conf) {
-    Job.addCacheFile(uri, conf);
+    String files = conf.get(MRJobConfig.CACHE_FILES);
+    conf.set(MRJobConfig.CACHE_FILES, files == null ? uri.toString() : files + ","
+             + uri.toString());
   }
 
   /**
@@ -298,8 +323,9 @@ public class DistributedCache {
    * @see Job#addFileToClassPath(Path)
    */
   @Deprecated
-  public static void addFileToClassPath(Path file, Configuration conf) throws IOException {
-    Job.addFileToClassPath(file, conf, file.getFileSystem(conf));
+  public static void addFileToClassPath(Path file, Configuration conf)
+    throws IOException {
+	  addFileToClassPath(file, conf, file.getFileSystem(conf));
   }
 
   /**
@@ -314,7 +340,7 @@ public class DistributedCache {
    */
   public static void addFileToClassPath(Path file, Configuration conf,
       FileSystem fs) {
-    Job.addFileToClassPath(file, conf, fs, true);
+    addFileToClassPath(file, conf, fs, true);
   }
 
   /**
@@ -331,7 +357,14 @@ public class DistributedCache {
    */
   public static void addFileToClassPath(Path file, Configuration conf,
       FileSystem fs, boolean addToCache) {
-    Job.addFileToClassPath(file, conf, fs, addToCache);
+    String classpath = conf.get(MRJobConfig.CLASSPATH_FILES);
+    conf.set(MRJobConfig.CLASSPATH_FILES, classpath == null ? file.toString()
+             : classpath + "," + file.toString());
+
+    if (addToCache) {
+      URI uri = fs.makeQualified(file).toUri();
+      addCacheFile(uri, conf);
+    }
   }
 
   /**
@@ -344,7 +377,16 @@ public class DistributedCache {
    */
   @Deprecated
   public static Path[] getFileClassPaths(Configuration conf) {
-    return JobContextImpl.getFileClassPaths(conf);
+    ArrayList<String> list = (ArrayList<String>)conf.getStringCollection(
+                                MRJobConfig.CLASSPATH_FILES);
+    if (list.size() == 0) {
+      return null;
+    }
+    Path[] paths = new Path[list.size()];
+    for (int i = 0; i < list.size(); i++) {
+      paths[i] = new Path(list.get(i));
+    }
+    return paths;
   }
 
   /**
@@ -359,7 +401,7 @@ public class DistributedCache {
   @Deprecated
   public static void addArchiveToClassPath(Path archive, Configuration conf)
     throws IOException {
-    Job.addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
+    addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
   }
 
   /**
@@ -373,7 +415,12 @@ public class DistributedCache {
   public static void addArchiveToClassPath
          (Path archive, Configuration conf, FileSystem fs)
       throws IOException {
-    Job.addArchiveToClassPath(archive, conf, fs);
+    String classpath = conf.get(MRJobConfig.CLASSPATH_ARCHIVES);
+    conf.set(MRJobConfig.CLASSPATH_ARCHIVES, classpath == null ? archive
+             .toString() : classpath + "," + archive.toString());
+    URI uri = fs.makeQualified(archive).toUri();
+
+    addCacheArchive(uri, conf);
   }
 
   /**
@@ -386,7 +433,16 @@ public class DistributedCache {
    */
   @Deprecated
   public static Path[] getArchiveClassPaths(Configuration conf) {
-    return JobContextImpl.getArchiveClassPaths(conf);
+    ArrayList<String> list = (ArrayList<String>)conf.getStringCollection(
+                                MRJobConfig.CLASSPATH_ARCHIVES);
+    if (list.size() == 0) {
+      return null;
+    }
+    Path[] paths = new Path[list.size()];
+    for (int i = 0; i < list.size(); i++) {
+      paths[i] = new Path(list.get(i));
+    }
+    return paths;
   }
 
   /**

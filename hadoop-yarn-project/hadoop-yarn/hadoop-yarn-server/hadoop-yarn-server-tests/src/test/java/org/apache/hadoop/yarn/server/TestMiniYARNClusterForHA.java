@@ -18,21 +18,22 @@
 
 package org.apache.hadoop.yarn.server;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestMiniYARNClusterForHA {
   MiniYARNCluster cluster;
 
-  @BeforeEach
+  @Before
   public void setup() throws IOException, InterruptedException {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
@@ -43,12 +44,12 @@ public class TestMiniYARNClusterForHA {
     cluster.init(conf);
     cluster.start();
 
-    assertFalse(-1 == cluster.getActiveRMIndex(), "RM never turned active");
+    assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
   }
 
   @Test
-  void testClusterWorks() throws YarnException, InterruptedException {
-    assertTrue(cluster.waitForNodeManagersToConnect(5000),
-        "NMs fail to connect to the RM");
+  public void testClusterWorks() throws YarnException, InterruptedException {
+    assertTrue("NMs fail to connect to the RM",
+        cluster.waitForNodeManagersToConnect(5000));
   }
 }

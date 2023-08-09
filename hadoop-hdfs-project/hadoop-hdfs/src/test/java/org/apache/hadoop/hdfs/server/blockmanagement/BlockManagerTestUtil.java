@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 public class BlockManagerTestUtil {
 
@@ -44,7 +44,7 @@ public class BlockManagerTestUtil {
 
   public static void setNodeReplicationLimit(final BlockManager blockManager,
       final int limit) {
-    blockManager.setMaxReplicationStreams(limit, false);
+    blockManager.maxReplicationStreams = limit;
   }
 
   /** @return the datanode descriptor for the given the given storageID. */
@@ -381,16 +381,6 @@ public class BlockManagerTestUtil {
   public static void recheckDecommissionState(DatanodeManager dm)
       throws ExecutionException, InterruptedException {
     dm.getDatanodeAdminManager().runMonitorForTest();
-  }
-
-  /**
-   * Have BlockManager check isNodeHealthyForDecommissionOrMaintenance for a given datanode.
-   * @param blockManager the BlockManager to check against
-   * @param dn the datanode to check
-   */
-  public static boolean isNodeHealthyForDecommissionOrMaintenance(BlockManager blockManager,
-      DatanodeDescriptor dn) {
-    return blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
   }
 
   /**

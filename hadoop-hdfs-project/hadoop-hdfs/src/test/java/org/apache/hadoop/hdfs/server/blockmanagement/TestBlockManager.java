@@ -17,17 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.LinkedListMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.util.Lists;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -117,7 +114,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
-import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -681,8 +677,8 @@ public class TestBlockManager {
    */
   @Test
   public void testHighestPriReplSrcChosenDespiteMaxReplLimit() throws Exception {
-    bm.setMaxReplicationStreams(0, false);
-    bm.setReplicationStreamsHardLimit(1);
+    bm.maxReplicationStreams = 0;
+    bm.replicationStreamsHardLimit = 1;
 
     long blockId = 42;         // arbitrary
     Block aBlock = new Block(blockId, 0, 0);
@@ -704,7 +700,6 @@ public class TestBlockManager {
             new NumberReplicas(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY)[0]);
 
     assertEquals("Does not choose a source node for a less-than-highest-priority"
@@ -715,7 +710,6 @@ public class TestBlockManager {
             cntNodes,
             liveNodes,
             new NumberReplicas(),
-            new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY).length);
@@ -733,13 +727,12 @@ public class TestBlockManager {
             new NumberReplicas(),
             new ArrayList<Byte>(),
             new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY).length);
   }
 
   @Test
   public void testChooseSrcDatanodesWithDupEC() throws Exception {
-    bm.setMaxReplicationStreams(4, false);
+    bm.maxReplicationStreams = 4;
 
     long blockId = -9223372036854775776L; // real ec block id
     Block aBlock = new Block(blockId, 0, 0);
@@ -780,7 +773,6 @@ public class TestBlockManager {
     NumberReplicas numReplicas = new NumberReplicas();
     List<Byte> liveBlockIndices = new ArrayList<>();
     List<Byte> liveBusyBlockIndices = new ArrayList<>();
-    List<Byte> excludeReconstructedIndices = new ArrayList<>();
 
     bm.chooseSourceDatanodes(
             aBlockInfoStriped,
@@ -788,7 +780,6 @@ public class TestBlockManager {
             liveNodes,
             numReplicas, liveBlockIndices,
             liveBusyBlockIndices,
-            excludeReconstructedIndices,
             LowRedundancyBlocks.QUEUE_VERY_LOW_REDUNDANCY);
 
     assertEquals("Choose the source node for reconstruction with one node reach"
@@ -845,7 +836,6 @@ public class TestBlockManager {
     NumberReplicas numReplicas = new NumberReplicas();
     List<Byte> liveBlockIndices = new ArrayList<>();
     List<Byte> liveBusyBlockIndices = new ArrayList<>();
-    List<Byte> excludeReconstructedIndices = new ArrayList<>();
 
     bm.chooseSourceDatanodes(
         aBlockInfoStriped,
@@ -853,7 +843,6 @@ public class TestBlockManager {
         nodesContainingLiveReplicas,
         numReplicas, liveBlockIndices,
         liveBusyBlockIndices,
-        excludeReconstructedIndices,
         LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY);
     assertEquals("There are 5 live replicas in " +
             "[ds2, ds3, ds4, ds5, ds6] datanodes ",
@@ -864,159 +853,9 @@ public class TestBlockManager {
   }
 
   @Test
-  public void testSkipReconstructionWithManyBusyNodes() {
-    NameNode.initMetrics(new Configuration(), HdfsServerConstants.NamenodeRole.NAMENODE);
-    long blockId = -9223372036854775776L; // real ec block id
-    // RS-3-2 EC policy
-    ErasureCodingPolicy ecPolicy =
-        SystemErasureCodingPolicies.getPolicies().get(1);
-
-    // create an EC block group: 3 data blocks + 2 parity blocks
-    Block aBlockGroup = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
-    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlockGroup, ecPolicy);
-
-    // create 4 storageInfo, which means 1 block is missing
-    DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
-        "storage1", "1.1.1.1", "rack1", "host1");
-    DatanodeStorageInfo ds2 = DFSTestUtil.createDatanodeStorageInfo(
-        "storage2", "2.2.2.2", "rack2", "host2");
-    DatanodeStorageInfo ds3 = DFSTestUtil.createDatanodeStorageInfo(
-        "storage3", "3.3.3.3", "rack3", "host3");
-    DatanodeStorageInfo ds4 = DFSTestUtil.createDatanodeStorageInfo(
-        "storage4", "4.4.4.4", "rack4", "host4");
-
-    // link block with storage
-    aBlockInfoStriped.addStorage(ds1, aBlockGroup);
-    aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
-    aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
-    aBlockInfoStriped.addStorage(ds4, new Block(blockId + 3, 0, 0));
-
-    addEcBlockToBM(blockId, ecPolicy);
-    aBlockInfoStriped.setBlockCollectionId(mockINodeId);
-
-    // reconstruction should be scheduled
-    BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
-    assertNotNull(work);
-
-    // simulate the 2 nodes reach maxReplicationStreams
-    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
-      ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
-      ds4.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
-    }
-
-    // reconstruction should be skipped since the number of non-busy nodes are not enough
-    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
-    assertNull(work);
-  }
-
-  @Test
-  public void testSkipReconstructionWithManyBusyNodes2() {
-    NameNode.initMetrics(new Configuration(), HdfsServerConstants.NamenodeRole.NAMENODE);
-    long blockId = -9223372036854775776L; // real ec block id
-    // RS-3-2 EC policy
-    ErasureCodingPolicy ecPolicy =
-        SystemErasureCodingPolicies.getPolicies().get(1);
-
-    // create an EC block group: 2 data blocks + 2 parity blocks
-    Block aBlockGroup = new Block(blockId,
-        ecPolicy.getCellSize() * (ecPolicy.getNumDataUnits() - 1), 0);
-    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlockGroup, ecPolicy);
-
-    // create 3 storageInfo, which means 1 block is missing
-    DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
-        "storage1", "1.1.1.1", "rack1", "host1");
-    DatanodeStorageInfo ds2 = DFSTestUtil.createDatanodeStorageInfo(
-        "storage2", "2.2.2.2", "rack2", "host2");
-    DatanodeStorageInfo ds3 = DFSTestUtil.createDatanodeStorageInfo(
-        "storage3", "3.3.3.3", "rack3", "host3");
-
-    // link block with storage
-    aBlockInfoStriped.addStorage(ds1, aBlockGroup);
-    aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
-    aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
-
-    addEcBlockToBM(blockId, ecPolicy);
-    aBlockInfoStriped.setBlockCollectionId(mockINodeId);
-
-    // reconstruction should be scheduled
-    BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
-    assertNotNull(work);
-
-    // simulate the 1 node reaches maxReplicationStreams
-    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
-      ds2.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
-    }
-
-    // reconstruction should still be scheduled since there are 2 source nodes to create 2 blocks
-    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
-    assertNotNull(work);
-
-    // simulate the 1 more node reaches maxReplicationStreams
-    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
-      ds3.getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
-    }
-
-    // reconstruction should be skipped since the number of non-busy nodes are not enough
-    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
-    assertNull(work);
-  }
-
-  @Test
-  public void testSkipReconstructionWithManyBusyNodes3() {
-    NameNode.initMetrics(new Configuration(), HdfsServerConstants.NamenodeRole.NAMENODE);
-    long blockId = -9223372036854775776L; // Real ec block id
-    // RS-3-2 EC policy
-    ErasureCodingPolicy ecPolicy =
-            SystemErasureCodingPolicies.getPolicies().get(1);
-
-    // Create an EC block group: 3 data blocks + 2 parity blocks.
-    Block aBlockGroup = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
-    BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlockGroup, ecPolicy);
-
-    // Create 4 storageInfo, which means 1 block is missing.
-    DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
-            "storage1", "1.1.1.1", "rack1", "host1");
-    DatanodeStorageInfo ds2 = DFSTestUtil.createDatanodeStorageInfo(
-            "storage2", "2.2.2.2", "rack2", "host2");
-    DatanodeStorageInfo ds3 = DFSTestUtil.createDatanodeStorageInfo(
-            "storage3", "3.3.3.3", "rack3", "host3");
-    DatanodeStorageInfo ds4 = DFSTestUtil.createDatanodeStorageInfo(
-            "storage4", "4.4.4.4", "rack4", "host4");
-
-    // Link block with storage.
-    aBlockInfoStriped.addStorage(ds1, aBlockGroup);
-    aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
-    aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
-    aBlockInfoStriped.addStorage(ds4, new Block(blockId + 3, 0, 0));
-
-    addEcBlockToBM(blockId, ecPolicy);
-    aBlockInfoStriped.setBlockCollectionId(mockINodeId);
-
-    // Reconstruction should be scheduled.
-    BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
-    assertNotNull(work);
-
-    ExtendedBlock dummyBlock = new ExtendedBlock("bpid", 1, 1, 1);
-    DatanodeDescriptor dummyDD = ds1.getDatanodeDescriptor();
-    DatanodeDescriptor[] dummyDDArray = new DatanodeDescriptor[]{dummyDD};
-    DatanodeStorageInfo[] dummyDSArray = new DatanodeStorageInfo[]{ds1};
-    // Simulate the 2 nodes reach maxReplicationStreams.
-    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){ //Add some dummy EC reconstruction task.
-      ds3.getDatanodeDescriptor().addBlockToBeErasureCoded(dummyBlock, dummyDDArray,
-              dummyDSArray, new byte[0], new byte[0], ecPolicy);
-      ds4.getDatanodeDescriptor().addBlockToBeErasureCoded(dummyBlock, dummyDDArray,
-              dummyDSArray, new byte[0], new byte[0], ecPolicy);
-    }
-
-    // Reconstruction should be skipped since the number of non-busy nodes are not enough.
-    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
-    assertNull(work);
-  }
-
-  @Test
   public void testFavorDecomUntilHardLimit() throws Exception {
-    bm.setMaxReplicationStreams(0, false);
-    bm.setReplicationStreamsHardLimit(1);
+    bm.maxReplicationStreams = 0;
+    bm.replicationStreamsHardLimit = 1;
 
     long blockId = 42;         // arbitrary
     Block aBlock = new Block(blockId, 0, 0);
@@ -1038,7 +877,6 @@ public class TestBlockManager {
             new NumberReplicas(),
             new LinkedList<Byte>(),
             new ArrayList<Byte>(),
-            new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY)[0]);
 
 
@@ -1054,7 +892,6 @@ public class TestBlockManager {
             liveNodes,
             new NumberReplicas(),
             new LinkedList<Byte>(),
-            new ArrayList<Byte>(),
             new ArrayList<Byte>(),
             LowRedundancyBlocks.QUEUE_LOW_REDUNDANCY).length);
   }
@@ -2047,158 +1884,5 @@ public class TestBlockManager {
     ibs.remove(stripedDnInfo);
     assertEquals(0, ibs.getBlocks());
     assertEquals(0, ibs.getECBlocks());
-  }
-
-  @Test
-  public void testValidateReconstructionWorkAndRacksNotEnough() {
-    addNodes(nodes);
-    // Originally on only nodes in rack A.
-    List<DatanodeDescriptor> origNodes = rackA;
-    BlockInfo blockInfo = addBlockOnNodes(0, origNodes);
-    BlockPlacementStatus status = bm.getBlockPlacementStatus(blockInfo);
-    // Block has enough copies, but not enough racks.
-    assertFalse(status.isPlacementPolicySatisfied());
-    DatanodeStorageInfo newNode = DFSTestUtil.createDatanodeStorageInfo(
-            "storage8", "8.8.8.8", "/rackA", "host8");
-    BlockReconstructionWork work = bm.scheduleReconstruction(blockInfo, 3);
-    assertNotNull(work);
-    assertEquals(1, work.getAdditionalReplRequired());
-    // the new targets in rack A.
-    work.setTargets(new DatanodeStorageInfo[]{newNode});
-    // the new targets do not meet the placement policy return false.
-    assertFalse(bm.validateReconstructionWork(work));
-    // validateReconstructionWork return false, need to perform resetTargets().
-    assertNull(work.getTargets());
-  }
-
-  /**
-   * Test whether the first block report after DataNode restart is completely
-   * processed.
-   */
-  @Test
-  public void testBlockReportAfterDataNodeRestart() throws Exception {
-    Configuration conf = new HdfsConfiguration();
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-           .numDataNodes(3).storagesPerDatanode(1).build()) {
-      cluster.waitActive();
-      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-      DistributedFileSystem fs = cluster.getFileSystem();
-      final Path filePath = new Path("/tmp.txt");
-      final long fileLen = 1L;
-      DFSTestUtil.createFile(fs, filePath, fileLen, (short) 3, 1L);
-      DFSTestUtil.waitForReplication(fs, filePath, (short) 3, 60000);
-      ArrayList<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(datanodes.size(), 3);
-
-      // Stop RedundancyMonitor.
-      blockManager.setInitializedReplQueues(false);
-
-      // Delete the replica on the first datanode.
-      DataNode dn = datanodes.get(0);
-      int dnIpcPort = dn.getIpcPort();
-      File dnDir = dn.getFSDataset().getVolumeList().get(0).getCurrentDir();
-      String[] children = FileUtil.list(dnDir);
-      for (String s : children) {
-        if (!s.equals("VERSION")) {
-          FileUtil.fullyDeleteContents(new File(dnDir, s));
-        }
-      }
-
-      // The number of replicas is still 3 because the datanode has not sent
-      // a new block report.
-      FileStatus stat = fs.getFileStatus(filePath);
-      BlockLocation[] locs = fs.getFileBlockLocations(stat, 0, stat.getLen());
-      assertEquals(3, locs[0].getHosts().length);
-
-      // Restart the first datanode.
-      cluster.restartDataNode(0, true);
-
-      // Wait for the block report to be processed.
-      cluster.waitDatanodeFullyStarted(cluster.getDataNode(dnIpcPort), 10000);
-      cluster.waitFirstBRCompleted(0, 10000);
-
-      // The replica num should be 2.
-      locs = fs.getFileBlockLocations(stat, 0, stat.getLen());
-      assertEquals(2, locs[0].getHosts().length);
-    }
-  }
-
-  /**
-   * Test processing toInvalidate in block reported, if the block not exists need
-   * to set the numBytes of the block to NO_ACK,
-   * the DataNode processing will not report incremental blocks.
-   */
-  @Test(timeout = 360000)
-  public void testBlockReportSetNoAckBlockToInvalidate() throws Exception {
-    Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 10);
-    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
-    try (MiniDFSCluster cluster =
-             new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
-      cluster.waitActive();
-      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-      DistributedFileSystem fs = cluster.getFileSystem();
-      // Write file.
-      Path file = new Path("/test");
-      DFSTestUtil.createFile(fs, file, 10240L, (short)1, 0L);
-      DFSTestUtil.waitReplication(fs, file, (short) 1);
-      LocatedBlock lb = DFSTestUtil.getAllBlocks(fs, file).get(0);
-      DatanodeInfo[] loc = lb.getLocations();
-      assertEquals(1, loc.length);
-      List<DataNode> datanodes = cluster.getDataNodes();
-      assertEquals(1, datanodes.size());
-      DataNode datanode = datanodes.get(0);
-      assertEquals(datanode.getDatanodeUuid(), loc[0].getDatanodeUuid());
-
-      MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
-      // Check the IncrementalBlockReportsNumOps of DataNode, it will be 0.
-      assertEquals(1, getLongCounter("IncrementalBlockReportsNumOps", rb));
-
-      // Delete file and remove block.
-      fs.delete(file, false);
-
-      // Wait for the processing of the marked deleted block to complete.
-      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(blockManager);
-      assertNull(blockManager.getStoredBlock(lb.getBlock().getLocalBlock()));
-
-      // Expire heartbeat on the NameNode,and datanode to be marked dead.
-      datanode.setHeartbeatsDisabledForTests(true);
-      cluster.setDataNodeDead(datanode.getDatanodeId());
-      assertFalse(blockManager.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
-
-      // Wait for re-registration and heartbeat.
-      datanode.setHeartbeatsDisabledForTests(false);
-      final DatanodeDescriptor dn1Desc = cluster.getNamesystem(0)
-          .getBlockManager().getDatanodeManager()
-          .getDatanode(datanode.getDatanodeId());
-      GenericTestUtils.waitFor(
-          () -> dn1Desc.isAlive() && dn1Desc.isHeartbeatedSinceRegistration(),
-          100, 5000);
-
-      // Trigger BlockReports and block is not exists,
-      // it will add invalidateBlocks and set block numBytes be NO_ACK.
-      cluster.triggerBlockReports();
-      GenericTestUtils.waitFor(
-          () -> blockManager.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()),
-          100, 1000);
-
-      // Trigger schedule blocks for deletion at datanode.
-      int workCount = blockManager.computeInvalidateWork(1);
-      assertEquals(1, workCount);
-      assertFalse(blockManager.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
-
-      // Wait for the blocksRemoved value in DataNode to be 1.
-      GenericTestUtils.waitFor(
-          () -> datanode.getMetrics().getBlocksRemoved()  == 1,
-          100, 5000);
-
-      // Trigger immediate deletion report at datanode.
-      cluster.triggerDeletionReports();
-
-      // Delete block numBytes be NO_ACK and will not deletion block report,
-      // so check the IncrementalBlockReportsNumOps of DataNode still 1.
-      assertEquals(1, getLongCounter("IncrementalBlockReportsNumOps", rb));
-    }
   }
 }

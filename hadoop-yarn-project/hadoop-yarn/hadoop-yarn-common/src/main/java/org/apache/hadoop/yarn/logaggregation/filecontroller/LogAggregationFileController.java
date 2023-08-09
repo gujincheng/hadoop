@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.logaggregation.filecontroller;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -42,7 +42,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -55,9 +54,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
-import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.webapp.View.ViewContext;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 import org.slf4j.Logger;
@@ -162,14 +159,6 @@ public abstract class LogAggregationFileController {
   }
 
   /**
-   * Get the name of the file controller.
-   * @return name of the file controller.
-   */
-  public String getFileControllerName() {
-    return this.fileControllerName;
-  }
-
-  /**
    * Initialize the writer.
    * @param context the {@link LogAggregationFileControllerContext}
    * @throws IOException if fails to initialize the writer
@@ -227,49 +216,6 @@ public abstract class LogAggregationFileController {
    */
   public abstract List<ContainerLogMeta> readAggregatedLogsMeta(
       ContainerLogsRequest logRequest) throws IOException;
-
-  /**
-   * Returns log file metadata for a node grouped by containers.
-   *
-   * @param logRequest extended query information holder
-   * @param currentNodeFile file status of a node in an application directory
-   * @param appId id of the application, which is the same as in node path
-   * @return log file metadata
-   * @throws IOException if there is no node file
-   */
-  public Map<String, List<ContainerLogFileInfo>> getLogMetaFilesOfNode(
-      ExtendedLogMetaRequest logRequest, FileStatus currentNodeFile,
-      ApplicationId appId) throws IOException {
-    LOG.info("User aggregated complex log queries " +
-        "are not implemented for this file controller");
-    return Collections.emptyMap();
-  }
-
-  /**
-   * Gets all application directories of a user.
-   *
-   * @param user name of the user
-   * @return a lazy iterator of directories
-   * @throws IOException if user directory does not exist
-   */
-  public RemoteIterator<FileStatus> getApplicationDirectoriesOfUser(
-      String user) throws IOException {
-    return LogAggregationUtils.getUserRemoteLogDir(
-        conf, user, getRemoteRootLogDir(), getRemoteRootLogDirSuffix());
-  }
-
-  /**
-   * Gets all node files in an application directory.
-   *
-   * @param appDir application directory
-   * @return a lazy iterator of files
-   * @throws IOException if file context is not reachable
-   */
-  public RemoteIterator<FileStatus> getNodeFilesOfApplicationDirectory(
-      FileStatus appDir) throws IOException {
-    return LogAggregationUtils
-        .getRemoteFiles(conf, appDir.getPath());
-  }
 
   /**
    * Render Aggregated Logs block.
@@ -390,7 +336,7 @@ public abstract class LogAggregationFileController {
           remoteFS.setPermission(qualified, new FsPermission(TLDIR_PERMISSIONS));
         } catch ( UnsupportedOperationException use) {
           LOG.info("Unable to set permissions for configured filesystem since"
-              + " it does not support this {}", remoteFS.getScheme());
+              + " it does not support this", remoteFS.getScheme());
           fsSupportsChmod = false;
         }
 
@@ -437,10 +383,10 @@ public abstract class LogAggregationFileController {
         remoteFS.setPermission(permissionCheckFile, new FsPermission(TLDIR_PERMISSIONS));
       } catch (UnsupportedOperationException use) {
         LOG.info("Unable to set permissions for configured filesystem since"
-            + " it does not support this {}", remoteFS.getScheme());
+            + " it does not support this", remoteFS.getScheme());
         fsSupportsChmod = false;
       } catch (IOException e) {
-        LOG.warn("Failed to check if FileSystem supports permissions on "
+        LOG.warn("Failed to check if FileSystem suppports permissions on "
             + "remoteLogDir [" + remoteRootLogDir + "]", e);
       } finally {
         try {

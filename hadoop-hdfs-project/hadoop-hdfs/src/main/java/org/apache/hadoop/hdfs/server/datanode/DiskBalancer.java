@@ -18,13 +18,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi
     .FsVolumeReferences;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus
@@ -82,14 +83,14 @@ public class DiskBalancer {
   private final BlockMover blockMover;
   private final ReentrantLock lock;
   private final ConcurrentHashMap<VolumePair, DiskBalancerWorkItem> workMap;
-  private volatile boolean isDiskBalancerEnabled = false;
+  private boolean isDiskBalancerEnabled = false;
   private ExecutorService scheduler;
   private Future future;
   private String planID;
   private String planFile;
   private DiskBalancerWorkStatus.Result currentResult;
   private long bandwidth;
-  private volatile long planValidityInterval;
+  private long planValidityInterval;
   private final Configuration config;
 
   /**
@@ -342,58 +343,6 @@ public class DiskBalancer {
   }
 
   /**
-   * Sets Disk balancer is to enable or not to enable.
-   *
-   * @param diskBalancerEnabled
-   *          true, enable diskBalancer, otherwise false to disable it.
-   */
-  public void setDiskBalancerEnabled(boolean diskBalancerEnabled) {
-    isDiskBalancerEnabled = diskBalancerEnabled;
-  }
-
-  /**
-   * Returns the value indicating if diskBalancer is enabled.
-   *
-   * @return boolean.
-   */
-  @VisibleForTesting
-  public boolean isDiskBalancerEnabled() {
-    return isDiskBalancerEnabled;
-  }
-
-  /**
-   * Sets maximum amount of time disk balancer plan is valid.
-   *
-   * @param planValidityInterval - maximum amount of time in the unit of milliseconds.
-   */
-  public void setPlanValidityInterval(long planValidityInterval) {
-    this.config.setTimeDuration(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
-        planValidityInterval, TimeUnit.MILLISECONDS);
-    this.planValidityInterval = planValidityInterval;
-  }
-
-  /**
-   * Gets maximum amount of time disk balancer plan is valid.
-   *
-   * @return the maximum amount of time in milliseconds.
-   */
-  @VisibleForTesting
-  public long getPlanValidityInterval() {
-    return planValidityInterval;
-  }
-
-  /**
-   * Gets maximum amount of time disk balancer plan is valid in config.
-   *
-   * @return the maximum amount of time in milliseconds.
-   */
-  @VisibleForTesting
-  public long getPlanValidityIntervalInConfig() {
-    return config.getTimeDuration(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
-        DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
-  }
-
-  /**
    * Verifies that user provided plan is valid.
    *
    * @param planID      - SHA-1 of the plan.
@@ -450,7 +399,7 @@ public class DiskBalancer {
 
     if ((planID == null) ||
         (planID.length() != sha1Length) ||
-        !DigestUtils.sha1Hex(plan.getBytes(Charset.forName("UTF-8")))
+        !DigestUtils.shaHex(plan.getBytes(Charset.forName("UTF-8")))
             .equalsIgnoreCase(planID)) {
       LOG.error("Disk Balancer - Invalid plan hash.");
       throw new DiskBalancerException("Invalid or mis-matched hash.",
@@ -553,13 +502,16 @@ public class DiskBalancer {
   private Map<String, String> getStorageIDToVolumeBasePathMap()
       throws DiskBalancerException {
     Map<String, String> storageIDToVolBasePathMap = new HashMap<>();
-    // Get volumes snapshot so no need to acquire dataset lock.
-    try (FsDatasetSpi.FsVolumeReferences references = dataset.
-        getFsVolumeReferences()) {
-      for (int ndx = 0; ndx < references.size(); ndx++) {
-        FsVolumeSpi vol = references.get(ndx);
-        storageIDToVolBasePathMap.put(vol.getStorageID(),
-            vol.getBaseURI().getPath());
+    FsDatasetSpi.FsVolumeReferences references;
+    try {
+      try(AutoCloseableLock lock = this.dataset.acquireDatasetReadLock()) {
+        references = this.dataset.getFsVolumeReferences();
+        for (int ndx = 0; ndx < references.size(); ndx++) {
+          FsVolumeSpi vol = references.get(ndx);
+          storageIDToVolBasePathMap.put(vol.getStorageID(),
+              vol.getBaseURI().getPath());
+        }
+        references.close();
       }
     } catch (IOException ex) {
       LOG.error("Disk Balancer - Internal Error.", ex);

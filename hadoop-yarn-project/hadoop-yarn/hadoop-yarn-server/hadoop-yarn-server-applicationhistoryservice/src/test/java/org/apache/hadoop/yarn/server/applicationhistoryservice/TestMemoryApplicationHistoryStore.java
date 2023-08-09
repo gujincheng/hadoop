@@ -20,8 +20,7 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
 import java.io.IOException;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -30,30 +29,27 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptHistoryData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationHistoryData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerHistoryData;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestMemoryApplicationHistoryStore extends
     ApplicationHistoryStoreTestUtils {
 
-  @BeforeEach
+  @Before
   public void setup() {
     store = new MemoryApplicationHistoryStore();
   }
 
   @Test
-  void testReadWriteApplicationHistory() throws Exception {
+  public void testReadWriteApplicationHistory() throws Exception {
     // Out of order
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     try {
       writeApplicationFinishData(appId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains(
-          "is stored before the start information"));
+      Assert.assertTrue(e.getMessage().contains(
+        "is stored before the start information"));
     }
     // Normal
     int numApps = 5;
@@ -62,42 +58,42 @@ public class TestMemoryApplicationHistoryStore extends
       writeApplicationStartData(appId);
       writeApplicationFinishData(appId);
     }
-    assertEquals(numApps, store.getAllApplications().size());
+    Assert.assertEquals(numApps, store.getAllApplications().size());
     for (int i = 1; i <= numApps; ++i) {
       appId = ApplicationId.newInstance(0, i);
       ApplicationHistoryData data = store.getApplication(appId);
-      assertNotNull(data);
-      assertEquals(appId.toString(), data.getApplicationName());
-      assertEquals(appId.toString(), data.getDiagnosticsInfo());
+      Assert.assertNotNull(data);
+      Assert.assertEquals(appId.toString(), data.getApplicationName());
+      Assert.assertEquals(appId.toString(), data.getDiagnosticsInfo());
     }
     // Write again
     appId = ApplicationId.newInstance(0, 1);
     try {
       writeApplicationStartData(appId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains("is already stored"));
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
     }
     try {
       writeApplicationFinishData(appId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains("is already stored"));
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
     }
   }
 
   @Test
-  void testReadWriteApplicationAttemptHistory() throws Exception {
+  public void testReadWriteApplicationAttemptHistory() throws Exception {
     // Out of order
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     try {
       writeApplicationAttemptFinishData(appAttemptId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains(
-          "is stored before the start information"));
+      Assert.assertTrue(e.getMessage().contains(
+        "is stored before the start information"));
     }
     // Normal
     int numAppAttempts = 5;
@@ -107,36 +103,36 @@ public class TestMemoryApplicationHistoryStore extends
       writeApplicationAttemptStartData(appAttemptId);
       writeApplicationAttemptFinishData(appAttemptId);
     }
-    assertEquals(numAppAttempts, store.getApplicationAttempts(appId)
-        .size());
+    Assert.assertEquals(numAppAttempts, store.getApplicationAttempts(appId)
+      .size());
     for (int i = 1; i <= numAppAttempts; ++i) {
       appAttemptId = ApplicationAttemptId.newInstance(appId, i);
       ApplicationAttemptHistoryData data =
           store.getApplicationAttempt(appAttemptId);
-      assertNotNull(data);
-      assertEquals(appAttemptId.toString(), data.getHost());
-      assertEquals(appAttemptId.toString(), data.getDiagnosticsInfo());
+      Assert.assertNotNull(data);
+      Assert.assertEquals(appAttemptId.toString(), data.getHost());
+      Assert.assertEquals(appAttemptId.toString(), data.getDiagnosticsInfo());
     }
     writeApplicationFinishData(appId);
     // Write again
     appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
     try {
       writeApplicationAttemptStartData(appAttemptId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains("is already stored"));
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
     }
     try {
       writeApplicationAttemptFinishData(appAttemptId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains("is already stored"));
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
     }
   }
 
   @SuppressWarnings("deprecation")
   @Test
-  void testReadWriteContainerHistory() throws Exception {
+  public void testReadWriteContainerHistory() throws Exception {
     // Out of order
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     ApplicationAttemptId appAttemptId =
@@ -144,10 +140,10 @@ public class TestMemoryApplicationHistoryStore extends
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     try {
       writeContainerFinishData(containerId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains(
-          "is stored before the start information"));
+      Assert.assertTrue(e.getMessage().contains(
+        "is stored before the start information"));
     }
     // Normal
     writeApplicationAttemptStartData(appAttemptId);
@@ -157,38 +153,39 @@ public class TestMemoryApplicationHistoryStore extends
       writeContainerStartData(containerId);
       writeContainerFinishData(containerId);
     }
-    assertEquals(numContainers, store.getContainers(appAttemptId).size());
+    Assert
+      .assertEquals(numContainers, store.getContainers(appAttemptId).size());
     for (int i = 1; i <= numContainers; ++i) {
       containerId = ContainerId.newContainerId(appAttemptId, i);
       ContainerHistoryData data = store.getContainer(containerId);
-      assertNotNull(data);
-      assertEquals(Priority.newInstance(containerId.getId()),
-          data.getPriority());
-      assertEquals(containerId.toString(), data.getDiagnosticsInfo());
+      Assert.assertNotNull(data);
+      Assert.assertEquals(Priority.newInstance(containerId.getId()),
+        data.getPriority());
+      Assert.assertEquals(containerId.toString(), data.getDiagnosticsInfo());
     }
     ContainerHistoryData masterContainer = store.getAMContainer(appAttemptId);
-    assertNotNull(masterContainer);
-    assertEquals(ContainerId.newContainerId(appAttemptId, 1),
-        masterContainer.getContainerId());
+    Assert.assertNotNull(masterContainer);
+    Assert.assertEquals(ContainerId.newContainerId(appAttemptId, 1),
+      masterContainer.getContainerId());
     writeApplicationAttemptFinishData(appAttemptId);
     // Write again
     containerId = ContainerId.newContainerId(appAttemptId, 1);
     try {
       writeContainerStartData(containerId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains("is already stored"));
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
     }
     try {
       writeContainerFinishData(containerId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains("is already stored"));
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
     }
   }
 
   @Test
-  void testMassiveWriteContainerHistory() throws IOException {
+  public void testMassiveWriteContainerHistory() throws IOException {
     long mb = 1024 * 1024;
     Runtime runtime = Runtime.getRuntime();
     long usedMemoryBefore = (runtime.totalMemory() - runtime.freeMemory()) / mb;
@@ -202,7 +199,7 @@ public class TestMemoryApplicationHistoryStore extends
       writeContainerFinishData(containerId);
     }
     long usedMemoryAfter = (runtime.totalMemory() - runtime.freeMemory()) / mb;
-    assertTrue((usedMemoryAfter - usedMemoryBefore) < 400);
+    Assert.assertTrue((usedMemoryAfter - usedMemoryBefore) < 400);
   }
 
 }

@@ -26,23 +26,20 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
-import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
@@ -87,7 +84,6 @@ public abstract class AbstractAbfsIntegrationTest extends
   private AuthType authType;
   private boolean useConfiguredFileSystem = false;
   private boolean usingFilesystemForSASTests = false;
-  private static final int SHORTENED_GUID_LEN = 12;
 
   protected AbstractAbfsIntegrationTest() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
@@ -151,17 +147,6 @@ public abstract class AbstractAbfsIntegrationTest extends
     return fs.getIsNamespaceEnabled(getTestTracingContext(fs, false));
   }
 
-  public static TracingContext getSampleTracingContext(AzureBlobFileSystem fs,
-      boolean needsPrimaryReqId) {
-    String correlationId, fsId;
-    TracingHeaderFormat format;
-    correlationId = "test-corr-id";
-    fsId = "test-filesystem-id";
-    format = TracingHeaderFormat.ALL_ID_FORMAT;
-    return new TracingContext(correlationId, fsId,
-        FSOperationType.TEST_OP, needsPrimaryReqId, format, null);
-  }
-
   public TracingContext getTestTracingContext(AzureBlobFileSystem fs,
       boolean needsPrimaryReqId) {
     String correlationId, fsId;
@@ -179,6 +164,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     return new TracingContext(correlationId, fsId,
         FSOperationType.TEST_OP, needsPrimaryReqId, format, null);
   }
+
 
   @Before
   public void setup() throws Exception {
@@ -253,9 +239,6 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
-  public AccessTokenProvider getAccessTokenProvider(final AzureBlobFileSystem fs) {
-    return ITestAbfsClient.getAccessTokenProvider(fs.getAbfsStore().getClient());
-  }
 
   public void loadConfiguredFileSystem() throws Exception {
       // disable auto-creation of filesystem
@@ -286,12 +269,10 @@ public abstract class AbstractAbfsIntegrationTest extends
     // The SAS tests do not have permission to create a filesystem
     // so first create temporary instance of the filesystem using SharedKey
     // then re-use the filesystem it creates with SAS auth instead of SharedKey.
-    try (AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig)){
-      ContractTestUtils.assertPathExists(tempFs, "This path should exist",
-          new Path("/"));
-      abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.name());
-      usingFilesystemForSASTests = true;
-    }
+    AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+    Assert.assertTrue(tempFs.exists(new Path("/")));
+    abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.name());
+    usingFilesystemForSASTests = true;
   }
 
   public AzureBlobFileSystem getFileSystem() throws IOException {
@@ -446,15 +427,6 @@ public abstract class AbstractAbfsIntegrationTest extends
     return fs.getAbfsStore();
   }
 
-  public AbfsClient getAbfsClient(final AzureBlobFileSystemStore abfsStore) {
-    return abfsStore.getClient();
-  }
-
-  public void setAbfsClient(AzureBlobFileSystemStore abfsStore,
-      AbfsClient client) {
-    abfsStore.setClient(client);
-  }
-
   public Path makeQualified(Path path) throws java.io.IOException {
     return getFileSystem().makeQualified(path);
   }
@@ -468,20 +440,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    */
   protected Path path(String filepath) throws IOException {
     return getFileSystem().makeQualified(
-        new Path(getTestPath(), getUniquePath(filepath)));
-  }
-
-  /**
-   * Generate a unique path using the given filepath.
-   * @param filepath path string
-   * @return unique path created from filepath and a GUID
-   */
-  protected Path getUniquePath(String filepath) {
-    if (filepath.equals("/")) {
-      return new Path(filepath);
-    }
-    return new Path(filepath + StringUtils
-        .right(UUID.randomUUID().toString(), SHORTENED_GUID_LEN));
+        new Path(getTestPath(), filepath));
   }
 
   /**

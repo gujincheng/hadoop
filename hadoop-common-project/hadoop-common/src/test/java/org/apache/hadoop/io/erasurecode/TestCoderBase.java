@@ -66,6 +66,10 @@ public abstract class TestCoderBase {
 
   protected boolean allowChangeInputs;
 
+  protected int getChunkSize() {
+    return chunkSize;
+  }
+
   protected void setChunkSize(int chunkSize) {
     this.chunkSize = chunkSize;
     this.zeroChunkBytes = new byte[chunkSize]; // With ZERO by default
@@ -84,6 +88,10 @@ public abstract class TestCoderBase {
     } else {
       allocator = new SimpleBufferAllocator(usingDirectBuffer);
     }
+  }
+
+  protected boolean isAllowDump() {
+    return allowDump;
   }
 
   /**

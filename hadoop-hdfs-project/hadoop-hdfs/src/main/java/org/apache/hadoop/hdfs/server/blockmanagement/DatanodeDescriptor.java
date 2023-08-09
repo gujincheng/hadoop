@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -197,10 +197,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /** A queue of blocks to be replicated by this datanode */
   private final BlockQueue<BlockTargetPair> replicateBlocks =
       new BlockQueue<>();
-  /** A queue of ec blocks to be replicated by this datanode. */
-  private final BlockQueue<BlockTargetPair> ecBlocksToBeReplicated = new BlockQueue<>();
-  /** A queue of ec blocks to be erasure coded by this datanode. */
-  private final BlockQueue<BlockECReconstructionInfo> ecBlocksToBeErasureCoded =
+  /** A queue of blocks to be erasure coded by this datanode */
+  private final BlockQueue<BlockECReconstructionInfo> erasurecodeBlocks =
       new BlockQueue<>();
   /** A queue of blocks to be recovered by this datanode */
   private final BlockQueue<BlockInfo> recoverBlocks = new BlockQueue<>();
@@ -232,9 +230,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   // HB processing can use it to tell if it is the first HB since DN restarted
   private boolean heartbeatedSinceRegistration = false;
-
-  /** The number of volumes that can be written.*/
-  private int numVolumesAvailable = 0;
 
   /**
    * DatanodeDescriptor constructor
@@ -363,8 +358,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
     this.recoverBlocks.clear();
     this.replicateBlocks.clear();
-    this.ecBlocksToBeReplicated.clear();
-    this.ecBlocksToBeErasureCoded.clear();
+    this.erasurecodeBlocks.clear();
     // pendingCached, cached, and pendingUncached are protected by the
     // FSN lock.
     this.pendingCached.clear();
@@ -412,9 +406,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     long totalBlockPoolUsed = 0;
     long totalDfsUsed = 0;
     long totalNonDfsUsed = 0;
-    Set<String> visitedMount = new HashSet<>();
     Set<DatanodeStorageInfo> failedStorageInfos = null;
-    int volumesAvailable = 0;
 
     // Decide if we should check for any missing StorageReport and mark it as
     // failed. There are different scenarios.
@@ -482,22 +474,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
       totalRemaining += report.getRemaining();
       totalBlockPoolUsed += report.getBlockPoolUsed();
       totalDfsUsed += report.getDfsUsed();
-      String mount = report.getMount();
-      // For volumes on the same mount,
-      // ignore duplicated volumes for nonDfsUsed.
-      if (mount == null || mount.isEmpty()) {
-        totalNonDfsUsed += report.getNonDfsUsed();
-      } else {
-        if (!visitedMount.contains(mount)) {
-          totalNonDfsUsed += report.getNonDfsUsed();
-          visitedMount.add(mount);
-        }
-      }
-      if (report.getRemaining() > 0 && storage.getState() != State.FAILED) {
-        volumesAvailable += 1;
-      }
+      totalNonDfsUsed += report.getNonDfsUsed();
     }
-    this.numVolumesAvailable = volumesAvailable;
 
     // Update total metrics for the node.
     setCapacity(totalCapacity);
@@ -658,17 +636,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return new BlockIterator(startBlock, getStorageInfos());
   }
 
-  /**
-   * Get iterator, which starts iterating from the specified block and storages.
-   *
-   * @param startBlock on which blocks are start iterating
-   * @param storageInfos specified storages
-   */
-  Iterator<BlockInfo> getBlockIterator(
-      final int startBlock, final DatanodeStorageInfo[] storageInfos) {
-    return new BlockIterator(startBlock, storageInfos);
-  }
-
   @VisibleForTesting
   public void incrementPendingReplicationWithoutTargets() {
     pendingReplicationWithoutTargets++;
@@ -690,26 +657,17 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * Store ec block to be replicated work.
-   */
-  @VisibleForTesting
-  public void addECBlockToBeReplicated(Block block, DatanodeStorageInfo[] targets) {
-    assert (block != null && targets != null && targets.length > 0);
-    ecBlocksToBeReplicated.offer(new BlockTargetPair(block, targets));
-  }
-
-  /**
    * Store block erasure coding work.
    */
   void addBlockToBeErasureCoded(ExtendedBlock block,
       DatanodeDescriptor[] sources, DatanodeStorageInfo[] targets,
-      byte[] liveBlockIndices, byte[] excludeReconstrutedIndices, ErasureCodingPolicy ecPolicy) {
+      byte[] liveBlockIndices, ErasureCodingPolicy ecPolicy) {
     assert (block != null && sources != null && sources.length > 0);
     BlockECReconstructionInfo task = new BlockECReconstructionInfo(block,
-        sources, targets, liveBlockIndices, excludeReconstrutedIndices, ecPolicy);
-    ecBlocksToBeErasureCoded.offer(task);
+        sources, targets, liveBlockIndices, ecPolicy);
+    erasurecodeBlocks.offer(task);
     BlockManager.LOG.debug("Adding block reconstruction task " + task + "to "
-        + getName() + ", current queue size is " + ecBlocksToBeErasureCoded.size());
+        + getName() + ", current queue size is " + erasurecodeBlocks.size());
   }
 
   /**
@@ -740,8 +698,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * The number of work items that are pending to be replicated.
    */
   int getNumberOfBlocksToBeReplicated() {
-    return pendingReplicationWithoutTargets + replicateBlocks.size()
-        + ecBlocksToBeReplicated.size();
+    return pendingReplicationWithoutTargets + replicateBlocks.size();
   }
 
   /**
@@ -749,15 +706,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   @VisibleForTesting
   public int getNumberOfBlocksToBeErasureCoded() {
-    return ecBlocksToBeErasureCoded.size();
-  }
-
-  /**
-   * The number of ec work items that are pending to be replicated.
-   */
-  @VisibleForTesting
-  public int getNumberOfECBlocksToBeReplicated() {
-    return ecBlocksToBeReplicated.size();
+    return erasurecodeBlocks.size();
   }
 
   @VisibleForTesting
@@ -769,13 +718,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return replicateBlocks.poll(maxTransfers);
   }
 
-  List<BlockTargetPair> getECReplicatedCommand(int maxTransfers) {
-    return ecBlocksToBeReplicated.poll(maxTransfers);
-  }
-
   public List<BlockECReconstructionInfo> getErasureCodeCommand(
       int maxTransfers) {
-    return ecBlocksToBeErasureCoded.poll(maxTransfers);
+    return erasurecodeBlocks.poll(maxTransfers);
   }
 
   public BlockInfo[] getLeaseRecoveryCommand(int maxTransfers) {
@@ -990,14 +935,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * Return the number of volumes that can be written.
-   * @return the number of volumes that can be written.
-   */
-  public int getNumVolumesAvailable() {
-    return numVolumesAvailable;
-  }
-
-  /**
    * @param nodeReg DatanodeID to update registration for.
    */
   @Override
@@ -1035,11 +972,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     if (repl > 0) {
       sb.append(" ").append(repl).append(" blocks to be replicated;");
     }
-    int ecRepl = ecBlocksToBeReplicated.size();
-    if (ecRepl > 0) {
-      sb.append(" ").append(ecRepl).append(" ec blocks to be replicated;");
-    }
-    int ec = ecBlocksToBeErasureCoded.size();
+    int ec = erasurecodeBlocks.size();
     if(ec > 0) {
       sb.append(" ").append(ec).append(" blocks to be erasure coded;");
     }

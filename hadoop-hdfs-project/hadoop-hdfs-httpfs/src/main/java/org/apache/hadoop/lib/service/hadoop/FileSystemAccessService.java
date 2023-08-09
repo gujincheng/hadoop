@@ -343,9 +343,8 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     }
     try {
       validateNamenode(
-          new URI(conf.getTrimmed(
-              CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY)).
-                  getAuthority());
+        new URI(conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY)).
+          getAuthority());
       UserGroupInformation ugi = getUGI(user);
       return ugi.doAs(new PrivilegedExceptionAction<T>() {
         @Override
@@ -380,9 +379,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     }
     try {
       validateNamenode(
-          new URI(conf.getTrimmed(
-              CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY)).
-                  getAuthority());
+        new URI(conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY)).getAuthority());
       UserGroupInformation ugi = getUGI(user);
       return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override

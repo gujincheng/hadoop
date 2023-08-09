@@ -18,36 +18,32 @@
 
 package org.apache.hadoop.yarn.api;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.Test;
 
 public class TestNodeId {
   @Test
-  void testNodeId() {
+  public void testNodeId() {
     NodeId nodeId1 = NodeId.newInstance("10.18.52.124", 8041);
     NodeId nodeId2 = NodeId.newInstance("10.18.52.125", 8038);
     NodeId nodeId3 = NodeId.newInstance("10.18.52.124", 8041);
     NodeId nodeId4 = NodeId.newInstance("10.18.52.124", 8039);
 
-    assertEquals(nodeId1, nodeId3);
-    assertNotEquals(nodeId1, nodeId2);
-    assertNotEquals(nodeId3, nodeId4);
+    Assert.assertTrue(nodeId1.equals(nodeId3));
+    Assert.assertFalse(nodeId1.equals(nodeId2));
+    Assert.assertFalse(nodeId3.equals(nodeId4));
 
-    assertTrue(nodeId1.compareTo(nodeId3) == 0);
-    assertTrue(nodeId1.compareTo(nodeId2) < 0);
-    assertTrue(nodeId3.compareTo(nodeId4) > 0);
+    Assert.assertTrue(nodeId1.compareTo(nodeId3) == 0);
+    Assert.assertTrue(nodeId1.compareTo(nodeId2) < 0);
+    Assert.assertTrue(nodeId3.compareTo(nodeId4) > 0);
 
-    assertTrue(nodeId1.hashCode() == nodeId3.hashCode());
-    assertFalse(nodeId1.hashCode() == nodeId2.hashCode());
-    assertFalse(nodeId3.hashCode() == nodeId4.hashCode());
+    Assert.assertTrue(nodeId1.hashCode() == nodeId3.hashCode());
+    Assert.assertFalse(nodeId1.hashCode() == nodeId2.hashCode());
+    Assert.assertFalse(nodeId3.hashCode() == nodeId4.hashCode());
 
-    assertEquals("10.18.52.124:8041", nodeId1.toString());
+    Assert.assertEquals("10.18.52.124:8041", nodeId1.toString());
   }
 
 }

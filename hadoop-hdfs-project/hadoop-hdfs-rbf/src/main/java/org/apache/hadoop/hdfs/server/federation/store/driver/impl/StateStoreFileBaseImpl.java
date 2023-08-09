@@ -25,29 +25,18 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUnavailableException;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
-import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreOperationResult;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.Query;
 import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
@@ -55,7 +44,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * {@link StateStoreDriver} implementation based on files. In this approach, we
@@ -80,13 +69,11 @@ public abstract class StateStoreFileBaseImpl
   /** If it is initialized. */
   private boolean initialized = false;
 
-  private ExecutorService concurrentStoreAccessPool;
 
   /**
    * Get the reader of a record for the file system.
    *
    * @param path Path of the record to read.
-   * @param <T> Type of the state store record.
    * @return Reader for the record.
    */
   protected abstract <T extends BaseRecord> BufferedReader getReader(
@@ -96,11 +83,9 @@ public abstract class StateStoreFileBaseImpl
    * Get the writer of a record for the file system.
    *
    * @param path Path of the record to write.
-   * @param <T> Type of the state store record.
    * @return Writer for the record.
    */
-  @VisibleForTesting
-  public abstract <T extends BaseRecord> BufferedWriter getWriter(
+  protected abstract <T extends BaseRecord> BufferedWriter getWriter(
       String path);
 
   /**
@@ -151,8 +136,6 @@ public abstract class StateStoreFileBaseImpl
    */
   protected abstract String getRootDir();
 
-  protected abstract int getConcurrentFilesAccessNumThreads();
-
   /**
    * Set the driver as initialized.
    *
@@ -184,29 +167,7 @@ public abstract class StateStoreFileBaseImpl
       return false;
     }
     setInitialized(true);
-    int threads = getConcurrentFilesAccessNumThreads();
-    if (threads > 1) {
-      this.concurrentStoreAccessPool =
-          new ThreadPoolExecutor(threads, threads, 0L, TimeUnit.MILLISECONDS,
-              new LinkedBlockingQueue<>(),
-              new ThreadFactoryBuilder()
-                  .setNameFormat("state-store-file-based-concurrent-%d")
-                  .setDaemon(true).build());
-      LOG.info("File based state store will be accessed concurrently with {} max threads", threads);
-    } else {
-      LOG.info("File based state store will be accessed serially");
-    }
     return true;
-  }
-
-  @Override
-  public void close() throws Exception {
-    if (this.concurrentStoreAccessPool != null) {
-      this.concurrentStoreAccessPool.shutdown();
-      boolean isTerminated = this.concurrentStoreAccessPool.awaitTermination(5, TimeUnit.SECONDS);
-      LOG.info("Concurrent store access pool is terminated: {}", isTerminated);
-      this.concurrentStoreAccessPool = null;
-    }
   }
 
   @Override
@@ -236,29 +197,22 @@ public abstract class StateStoreFileBaseImpl
     verifyDriverReady();
     long start = monotonicNow();
     StateStoreMetrics metrics = getMetrics();
-    List<T> result = Collections.synchronizedList(new ArrayList<>());
+    List<T> ret = new ArrayList<>();
     try {
       String path = getPathForClass(clazz);
       List<String> children = getChildren(path);
-      List<Callable<Void>> callables = new ArrayList<>();
-      children.forEach(child -> callables.add(
-          () -> getRecordsFromFileAndRemoveOldTmpRecords(clazz, result, path, child)));
-      if (this.concurrentStoreAccessPool != null) {
-        // Read records concurrently
-        List<Future<Void>> futures = this.concurrentStoreAccessPool.invokeAll(callables);
-        for (Future<Void> future : futures) {
-          future.get();
-        }
-      } else {
-        // Read records serially
-        callables.forEach(e -> {
-          try {
-            e.call();
-          } catch (Exception ex) {
-            LOG.error("Failed to retrieve record using file operations.", ex);
-            throw new RuntimeException(ex);
+      for (String child : children) {
+        String pathRecord = path + "/" + child;
+        if (child.endsWith(TMP_MARK)) {
+          LOG.debug("There is a temporary file {} in {}", child, path);
+          if (isOldTempRecord(child)) {
+            LOG.warn("Removing {} as it's an old temporary record", child);
+            remove(pathRecord);
           }
-        });
+        } else {
+          T record = getRecord(pathRecord, clazz);
+          ret.add(record);
+        }
       }
     } catch (Exception e) {
       if (metrics != null) {
@@ -272,37 +226,7 @@ public abstract class StateStoreFileBaseImpl
     if (metrics != null) {
       metrics.addRead(monotonicNow() - start);
     }
-    return new QueryResult<>(result, getTime());
-  }
-
-  /**
-   * Get the state store record from the given path (path/child) and add the record to the
-   * result list.
-   *
-   * @param clazz Class of the record.
-   * @param result The list of results record. The records would be added to it unless the given
-   * path represents old temp file.
-   * @param path The parent path.
-   * @param child The child path under the parent path. Both path and child completes the file
-   * location for the given record.
-   * @param <T> Record class of the records.
-   * @return Void.
-   * @throws IOException If the file read operation fails.
-   */
-  private <T extends BaseRecord> Void getRecordsFromFileAndRemoveOldTmpRecords(Class<T> clazz,
-      List<T> result, String path, String child) throws IOException {
-    String pathRecord = path + "/" + child;
-    if (child.endsWith(TMP_MARK)) {
-      LOG.debug("There is a temporary file {} in {}", child, path);
-      if (isOldTempRecord(child)) {
-        LOG.warn("Removing {} as it's an old temporary record", child);
-        remove(pathRecord);
-      }
-    } else {
-      T record = getRecord(pathRecord, clazz);
-      result.add(record);
-    }
-    return null;
+    return new QueryResult<T>(ret, getTime());
   }
 
   /**
@@ -335,16 +259,22 @@ public abstract class StateStoreFileBaseImpl
    */
   private <T extends BaseRecord> T getRecord(
       final String path, final Class<T> clazz) throws IOException {
-    try (BufferedReader reader = getReader(path)) {
+    BufferedReader reader = getReader(path);
+    try {
       String line;
       while ((line = reader.readLine()) != null) {
         if (!line.startsWith("#") && line.length() > 0) {
           try {
-            return newRecord(line, clazz, false);
+            T record = newRecord(line, clazz, false);
+            return record;
           } catch (Exception ex) {
             LOG.error("Cannot parse line {} in file {}", line, path, ex);
           }
         }
+      }
+    } finally {
+      if (reader != null) {
+        reader.close();
       }
     }
     throw new IOException("Cannot read " + path + " for record " +
@@ -373,12 +303,12 @@ public abstract class StateStoreFileBaseImpl
   }
 
   @Override
-  public <T extends BaseRecord> StateStoreOperationResult putAll(
+  public <T extends BaseRecord> boolean putAll(
       List<T> records, boolean allowUpdate, boolean errorIfExists)
           throws StateStoreUnavailableException {
     verifyDriverReady();
     if (records.isEmpty()) {
-      return StateStoreOperationResult.getDefaultSuccessResult();
+      return true;
     }
 
     long start = monotonicNow();
@@ -386,9 +316,6 @@ public abstract class StateStoreFileBaseImpl
 
     // Check if any record exists
     Map<String, T> toWrite = new HashMap<>();
-    final List<String> failedRecordsKeys = Collections.synchronizedList(new ArrayList<>());
-    final AtomicBoolean success = new AtomicBoolean(true);
-
     for (T record : records) {
       Class<? extends BaseRecord> recordClass = record.getClass();
       String path = getPathForClass(recordClass);
@@ -402,10 +329,13 @@ public abstract class StateStoreFileBaseImpl
           record.setDateModified(this.getTime());
           toWrite.put(recordPath, record);
         } else if (errorIfExists) {
-          LOG.error("Attempt to insert record {} that already exists", recordPath);
-          failedRecordsKeys.add(getOriginalPrimaryKey(primaryKey));
-          success.set(false);
-        } else {
+          LOG.error("Attempt to insert record {} that already exists",
+              recordPath);
+          if (metrics != null) {
+            metrics.addFailure(monotonicNow() - start);
+          }
+          return false;
+        } else  {
           LOG.debug("Not updating {}", record);
         }
       } else {
@@ -414,85 +344,43 @@ public abstract class StateStoreFileBaseImpl
     }
 
     // Write the records
-    final List<Callable<Void>> callables = new ArrayList<>();
-    toWrite.entrySet().forEach(
-        entry -> callables.add(() -> writeRecordToFile(success, entry, failedRecordsKeys)));
-    if (this.concurrentStoreAccessPool != null) {
-      // Write records concurrently
-      List<Future<Void>> futures = null;
+    boolean success = true;
+    for (Entry<String, T> entry : toWrite.entrySet()) {
+      String recordPath = entry.getKey();
+      String recordPathTemp = recordPath + "." + now() + TMP_MARK;
+      BufferedWriter writer = getWriter(recordPathTemp);
       try {
-        futures = this.concurrentStoreAccessPool.invokeAll(callables);
-      } catch (InterruptedException e) {
-        success.set(false);
-        LOG.error("Failed to put record concurrently.", e);
-      }
-      if (futures != null) {
-        for (Future<Void> future : futures) {
+        T record = entry.getValue();
+        String line = serializeString(record);
+        writer.write(line);
+      } catch (IOException e) {
+        LOG.error("Cannot write {}", recordPathTemp, e);
+        success = false;
+      } finally {
+        if (writer != null) {
           try {
-            future.get();
-          } catch (InterruptedException | ExecutionException e) {
-            success.set(false);
-            LOG.error("Failed to retrieve results from concurrent record put runs.", e);
+            writer.close();
+          } catch (IOException e) {
+            LOG.error("Cannot close the writer for {}", recordPathTemp, e);
           }
         }
       }
-    } else {
-      // Write records serially
-      callables.forEach(callable -> {
-        try {
-          callable.call();
-        } catch (Exception e) {
-          success.set(false);
-          LOG.error("Failed to put record.", e);
-        }
-      });
+      // Commit
+      if (!rename(recordPathTemp, recordPath)) {
+        LOG.error("Failed committing record into {}", recordPath);
+        success = false;
+      }
     }
 
     long end = monotonicNow();
     if (metrics != null) {
-      if (success.get()) {
+      if (success) {
         metrics.addWrite(end - start);
       } else {
         metrics.addFailure(end - start);
       }
     }
-    return new StateStoreOperationResult(failedRecordsKeys, success.get());
-  }
-
-  /**
-   * Writes the state store record to the file. At first, the record is written to a temp location
-   * and then later renamed to the final location that is passed with the entry key.
-   *
-   * @param <T> Record class of the records.
-   * @param success The atomic boolean that gets updated to false if the file write operation fails.
-   * @param entry The entry of the record path and the state store record to be written to the file
-   * by first writing to a temp location and then renaming it to the record path.
-   * @param failedRecordsList The list of paths of the failed records.
-   * @return Void.
-   */
-  private <T extends BaseRecord> Void writeRecordToFile(AtomicBoolean success,
-      Entry<String, T> entry, List<String> failedRecordsList) {
-    final String recordPath = entry.getKey();
-    final T record = entry.getValue();
-    final String primaryKey = getPrimaryKey(record);
-    final String recordPathTemp = recordPath + "." + now() + TMP_MARK;
-    boolean recordWrittenSuccessfully = true;
-    try (BufferedWriter writer = getWriter(recordPathTemp)) {
-      String line = serializeString(record);
-      writer.write(line);
-    } catch (IOException e) {
-      LOG.error("Cannot write {}", recordPathTemp, e);
-      recordWrittenSuccessfully = false;
-      failedRecordsList.add(getOriginalPrimaryKey(primaryKey));
-      success.set(false);
-    }
-    // Commit
-    if (recordWrittenSuccessfully && !rename(recordPathTemp, recordPath)) {
-      LOG.error("Failed committing record into {}", recordPath);
-      failedRecordsList.add(getOriginalPrimaryKey(primaryKey));
-      success.set(false);
-    }
-    return null;
+    return success;
   }
 
   @Override

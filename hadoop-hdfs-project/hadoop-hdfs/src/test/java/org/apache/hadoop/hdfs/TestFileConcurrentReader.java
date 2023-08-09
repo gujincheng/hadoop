@@ -38,12 +38,11 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
 
@@ -60,7 +59,7 @@ public class TestFileConcurrentReader {
 
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestFileConcurrentReader.class);
+    Logger.getLogger(TestFileConcurrentReader.class);
 
   {
     GenericTestUtils.setLogLevel(LeaseManager.LOG, Level.TRACE);

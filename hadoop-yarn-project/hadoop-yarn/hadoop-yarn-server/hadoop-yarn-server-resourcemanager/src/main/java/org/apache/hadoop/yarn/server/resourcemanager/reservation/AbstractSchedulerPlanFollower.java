@@ -380,10 +380,6 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
 
   /**
    * Add a new reservation queue for reservation currResId for this planQueue.
-   *
-   * @param planQueueName name of the reservable queue.
-   * @param queue the queue for the current {@link Plan}.
-   * @param currResId curr reservationId.
    */
   protected abstract void addReservationQueue(String planQueueName, Queue queue,
       String currResId);
@@ -403,7 +399,6 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
    * Get plan resources for this planQueue.
    *
    * @param plan the current {@link Plan} being considered
-   * @param queue the queue for the current {@link Plan}
    * @param clusterResources the resources available in the cluster
    *
    * @return the resources allocated to the specified {@link Plan}

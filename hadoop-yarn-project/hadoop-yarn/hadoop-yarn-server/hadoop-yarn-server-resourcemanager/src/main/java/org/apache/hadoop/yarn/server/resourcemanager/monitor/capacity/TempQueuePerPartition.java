@@ -25,9 +25,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -57,8 +56,8 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
 
   final ArrayList<TempQueuePerPartition> children;
   private Collection<TempAppPerPartition> apps;
-  AbstractLeafQueue leafQueue;
-  AbstractParentQueue parentQueue;
+  LeafQueue leafQueue;
+  ParentQueue parentQueue;
   boolean preemptionDisabled;
 
   protected Resource pendingDeductReserved;
@@ -82,8 +81,8 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     super(queueName, current, Resource.newInstance(0, 0), reserved,
         Resource.newInstance(0, 0));
 
-    if (queue instanceof AbstractLeafQueue) {
-      AbstractLeafQueue l = (AbstractLeafQueue) queue;
+    if (queue instanceof LeafQueue) {
+      LeafQueue l = (LeafQueue) queue;
       pending = l.getTotalPendingResourcesConsideringUserLimit(
           totalPartitionResource, partition, false);
       pendingDeductReserved = l.getTotalPendingResourcesConsideringUserLimit(
@@ -114,7 +113,7 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     this.effMaxRes = effMaxRes;
   }
 
-  public void setLeafQueue(AbstractLeafQueue l) {
+  public void setLeafQueue(LeafQueue l) {
     assert children.size() == 0;
     this.leafQueue = l;
   }
@@ -200,10 +199,6 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     Resource remain = Resources.subtract(avail, accepted);
     Resources.addTo(idealAssigned, accepted);
     return remain;
-  }
-
-  public float getAbsCapacity() {
-    return absCapacity;
   }
 
   public Resource getGuaranteed() {

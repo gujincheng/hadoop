@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.net;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
@@ -173,7 +173,6 @@ public class DFSNetworkTopology extends NetworkTopology {
    * @param scope the scope where we look for node.
    * @param excludedScope the scope where the node must NOT be from.
    * @param excludedNodes the returned node must not be in this set
-   * @param type the storage type we search for
    * @return a node with required storage type
    */
   @VisibleForTesting
@@ -181,10 +180,10 @@ public class DFSNetworkTopology extends NetworkTopology {
       String excludedScope, final Collection<Node> excludedNodes,
       StorageType type) {
     if (excludedScope != null) {
-      if (isChildScope(scope, excludedScope)) {
+      if (scope.startsWith(excludedScope)) {
         return null;
       }
-      if (!isChildScope(excludedScope, scope)) {
+      if (!excludedScope.startsWith(scope)) {
         excludedScope = null;
       }
     }
@@ -256,6 +255,15 @@ public class DFSNetworkTopology extends NetworkTopology {
             excludedNodes);
     LOG.debug("chooseRandom returning {}", chosen);
     return chosen;
+  }
+
+  private boolean isNodeInScope(Node node, String scope) {
+    if (!scope.endsWith(NodeBase.PATH_SEPARATOR_STR)) {
+      scope += NodeBase.PATH_SEPARATOR_STR;
+    }
+    String nodeLocation =
+        node.getNetworkLocation() + NodeBase.PATH_SEPARATOR_STR;
+    return nodeLocation.startsWith(scope);
   }
 
   /**

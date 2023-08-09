@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.federation.store.driver;
 import java.net.InetAddress;
 import java.util.Collection;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.metrics.StateStoreMetrics;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -37,8 +35,6 @@ import org.slf4j.LoggerFactory;
  * provider. Driver implementations will extend this class and implement some of
  * the default methods.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public abstract class StateStoreDriver implements StateStoreRecordOperations {
 
   private static final Logger LOG =
@@ -54,13 +50,13 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
   /** State Store metrics. */
   private StateStoreMetrics metrics;
 
+
   /**
    * Initialize the state store connection.
    *
    * @param config Configuration for the driver.
    * @param id Identifier for the driver.
    * @param records Records that are supported.
-   * @param stateStoreMetrics State store metrics.
    * @return If initialized and ready, false if failed to initialize driver.
    */
   public boolean init(final Configuration config, final String id,
@@ -101,7 +97,7 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
   }
 
   /**
-   * Gets a unique identifier for the running task/process. Typically, the
+   * Gets a unique identifier for the running task/process. Typically the
    * router address.
    *
    * @return Unique identifier for the running task.
@@ -133,10 +129,10 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
    * Initialize storage for a single record class.
    *
    * @param className String reference of the record class to initialize,
-   * used to construct paths and file names for the record.
-   * Determined by configuration settings for the specific driver.
+   *                  used to construct paths and file names for the record.
+   *                  Determined by configuration settings for the specific
+   *                  driver.
    * @param clazz Record type corresponding to the provided name.
-   * @param <T> Type of the state store record.
    * @return True if successful, false otherwise.
    */
   public abstract <T extends BaseRecord> boolean initRecordStorage(
@@ -166,8 +162,6 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
 
   /**
    * Close the State Store driver connection.
-   *
-   * @throws Exception if something goes wrong while closing the state store driver connection.
    */
   public abstract void close() throws Exception;
 

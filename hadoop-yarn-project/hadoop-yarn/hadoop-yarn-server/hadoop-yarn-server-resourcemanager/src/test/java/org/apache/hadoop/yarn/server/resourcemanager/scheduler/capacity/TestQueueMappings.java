@@ -18,15 +18,15 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
-import java.util.List;
 
-import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
-import org.junit.After;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,10 +43,10 @@ public class TestQueueMappings {
       CapacitySchedulerConfiguration.ROOT + "." + Q1;
   private final static String Q2_PATH =
       CapacitySchedulerConfiguration.ROOT + "." + Q2;
-
+  
   private CapacityScheduler cs;
   private YarnConfiguration conf;
-
+  
   @Before
   public void setup() {
     CapacitySchedulerConfiguration csConf =
@@ -62,13 +62,6 @@ public class TestQueueMappings {
     cs.start();
   }
 
-  @After
-  public void tearDown() {
-    if (cs != null) {
-      cs.stop();
-    }
-  }
-
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { Q1, Q2 });
@@ -78,7 +71,7 @@ public class TestQueueMappings {
 
     LOG.info("Setup top-level queues q1 and q2");
   }
-
+  
   @Test
   public void testQueueMappingSpecifyingNotExistedQueue() {
     // if the mapping specifies a queue that does not exist, reinitialize will
@@ -93,19 +86,18 @@ public class TestQueueMappings {
     }
     Assert.assertTrue("queue initialization failed for non-existent q", fail);
   }
-
+  
   @Test
   public void testQueueMappingTrimSpaces() throws IOException {
     // space trimming
     conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING, "    u : a : " + Q1);
     cs.reinitialize(conf, null);
-
-    List<MappingRule> rules = cs.getConfiguration().getMappingRules();
-
-    String ruleStr = rules.get(0).toString();
-    assert(ruleStr.contains("variable='%user'"));
-    assert(ruleStr.contains("value='a'"));
-    assert(ruleStr.contains("queueName='q1'"));
+    checkQMapping(
+        QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("a")
+                .queue(Q1)
+                .build());
   }
 
   @Test
@@ -162,5 +154,14 @@ public class TestQueueMappings {
     }
     Assert.assertTrue("invalid mapping did not throw exception for " + reason,
         fail);
+  }
+
+  private void checkQMapping(QueueMapping expected)
+          throws IOException {
+    UserGroupMappingPlacementRule rule =
+        (UserGroupMappingPlacementRule) cs.getRMContext()
+            .getQueuePlacementManager().getPlacementRules().get(0);
+    QueueMapping queueMapping = rule.getQueueMappings().get(0);
+    Assert.assertEquals(queueMapping, expected);
   }
 }

@@ -30,6 +30,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudPageBlobWrapper;
 
@@ -37,8 +39,6 @@ import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.BlobRequestOptions;
 import com.microsoft.azure.storage.blob.PageRange;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * An input stream that reads file data from a page blob stored
@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
  */
 
 final class PageBlobInputStream extends InputStream {
-  private static final Logger LOG = LoggerFactory.getLogger(PageBlobInputStream.class);
+  private static final Log LOG = LogFactory.getLog(PageBlobInputStream.class);
 
   // The blob we're reading from.
   private final CloudPageBlobWrapper blob;

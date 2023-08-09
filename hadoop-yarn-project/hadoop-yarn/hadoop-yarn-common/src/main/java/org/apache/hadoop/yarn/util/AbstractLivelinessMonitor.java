@@ -83,7 +83,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
 
   protected abstract void expire(O ob);
 
-  protected void setExpireInterval(long expireInterval) {
+  protected void setExpireInterval(int expireInterval) {
     this.expireInterval = expireInterval;
   }
 

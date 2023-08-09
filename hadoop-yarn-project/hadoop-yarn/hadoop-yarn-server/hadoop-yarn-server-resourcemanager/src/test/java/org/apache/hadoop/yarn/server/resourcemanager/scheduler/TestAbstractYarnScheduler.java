@@ -33,11 +33,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -83,8 +84,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -404,8 +405,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       RMApp mockAPp =
           new MockRMApp(125, System.currentTimeMillis(), RMAppState.NEW);
       SchedulerApplication<FiCaSchedulerApp> application =
-          new SchedulerApplication<FiCaSchedulerApp>(null, mockAPp.getUser(),
-              false);
+          new SchedulerApplication<FiCaSchedulerApp>(null, mockAPp.getUser());
 
       // Second app with one app attempt
       RMApp app = MockRMAppSubmitter.submitWithMemory(200, rm1);
@@ -1046,7 +1046,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
       // Register node1
       String hostname1 = "localhost1";
-      Resource capability = Resources.createResource(4096, 4);
+      Resource capability = BuilderUtils.newResource(4096, 4);
       RecordFactory recordFactory =
           RecordFactoryProvider.getRecordFactory(null);
 
@@ -1066,7 +1066,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       Assert.assertEquals("Initial cluster resources don't match", capability,
           clusterResource);
 
-      Resource newCapability = Resources.createResource(1024);
+      Resource newCapability = BuilderUtils.newResource(1024, 1);
       RegisterNodeManagerRequest request2 =
           recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
       request2.setNodeId(nodeId1);
@@ -1167,7 +1167,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       //verify queue name when rmContainer is recovered
       if (scheduler instanceof CapacityScheduler) {
         Assert.assertEquals(
-            app1.getQueue(),
+            CapacitySchedulerConfiguration.ROOT + "." + app1.getQueue(),
             rmContainer.getQueueName());
       } else {
         Assert.assertEquals(app1.getQueue(), rmContainer.getQueueName());

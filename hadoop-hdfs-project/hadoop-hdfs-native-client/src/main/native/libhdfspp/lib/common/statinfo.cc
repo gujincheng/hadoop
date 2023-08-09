@@ -17,11 +17,9 @@
  */
 
 #include <hdfspp/statinfo.h>
-
+#include <sys/stat.h>
 #include <sstream>
 #include <iomanip>
-
-#include "x-platform/stat.h"
 
 namespace hdfs {
 

@@ -99,7 +99,8 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
 
     Credentials creds = new Credentials();
     Token<?> tokens[] = fs.addDelegationTokens(renewer, creds);
-    LOG.debug("Delegation tokens: " + Arrays.asList(tokens));
+    DistributedFileSystem.LOG.debug("Delegation tokens: " +
+        Arrays.asList(tokens));
     Assert.assertEquals(2, tokens.length);
     Assert.assertEquals(2, creds.numberOfTokens());
     

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service.client;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,9 +49,9 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test Spnego Client Login.
@@ -129,9 +129,8 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
     }
   }
 
-  @BeforeEach
+  @Before
   public void setUp() throws Exception {
-    startMiniKdc();
     keytabFile = new File(getWorkDir(), "keytab");
     getKdc().createPrincipal(keytabFile, clientPrincipal, server1Principal,
         server2Principal);
@@ -164,14 +163,13 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
     asc.serviceInit(testConf);
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     server.stop();
-    stopMiniKdc();
   }
 
   @Test
-  void testHttpSpnegoChallenge() throws Exception {
+  public void testHttpSpnegoChallenge() throws Exception {
     UserGroupInformation.loginUserFromKeytab(clientPrincipal, keytabFile
         .getCanonicalPath());
     String challenge = YarnClientUtils.generateToken("localhost");
@@ -179,7 +177,7 @@ public class TestSecureApiServiceClient extends KerberosSecurityTestcase {
   }
 
   @Test
-  void testAuthorizationHeader() throws Exception {
+  public void testAuthorizationHeader() throws Exception {
     UserGroupInformation.loginUserFromKeytab(clientPrincipal, keytabFile
         .getCanonicalPath());
     String rmAddress = asc.getRMWebAddress();

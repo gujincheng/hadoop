@@ -209,10 +209,6 @@
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.RecoveryComparator" />
     <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
   </Match>
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.LoadBasedGlobalPolicy$SortByDescendingLoad" />
-    <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE" />
-  </Match>
   <!-- Ignore some irrelevant class name warning -->
   <Match>
     <Class name="org.apache.hadoop.yarn.api.records.SerializedException" />
@@ -389,11 +385,6 @@
   <Match>
     <Class name="org.apache.hadoop.yarn.server.nodemanager.NodeManager" />
     <Method name="initAndStartNodeManager" />
-    <Bug pattern="DM_EXIT" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator" />
-    <Medhod name="startGPG" />
     <Bug pattern="DM_EXIT" />
   </Match>
  
@@ -719,10 +710,5 @@
   <Match>
     <Class name="~org\.apache\.hadoop\.yarn\.server\.timelineservice\.reader\.TestTimelineReaderWebServicesHBaseStorage.*" />
     <Bug pattern="UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS" />
-  </Match>
-
-  <!-- Generated files from JSON schema -->
-  <Match>
-    <Package name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema" />
   </Match>
 </FindBugsFilter>

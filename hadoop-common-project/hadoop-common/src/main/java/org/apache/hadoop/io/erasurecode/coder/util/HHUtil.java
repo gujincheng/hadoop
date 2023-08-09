@@ -202,8 +202,6 @@ public final class HHUtil {
 
   /**
    * Find the valid input from all the inputs.
-   *
-   * @param <T> Generics Type T.
    * @param inputs input buffers to look for valid input
    * @return the first valid input
    */

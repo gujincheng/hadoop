@@ -192,8 +192,7 @@ public abstract class ApplicationStateData {
   public abstract void setLaunchTime(long launchTime);
 
   /**
-   * The application submitter.
-   * @param user submitter user name.
+   * The application submitter
    */
   @Public
   @Unstable

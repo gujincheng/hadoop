@@ -33,10 +33,6 @@ module.exports = function(environment) {
       }
     },
 
-    moment: {
-      includeTimezone: 'all'
-    },
-
     APP: DEFAULT_CONFIG,
     contentSecurityPolicy: {
       'connect-src': "* 'self'",

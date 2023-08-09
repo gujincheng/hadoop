@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -28,23 +28,21 @@ import org.apache.hadoop.yarn.factories.RpcServerFactory;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl;
 import org.apache.hadoop.yarn.factories.impl.pb.RpcServerFactoryPBImpl;
 import org.apache.hadoop.yarn.factory.providers.RpcFactoryProvider;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.Test;
 
 public class TestRpcFactoryProvider {
 
   @Test
-  void testFactoryProvider() {
+  public void testFactoryProvider() {
     Configuration conf = new Configuration();
     RpcClientFactory clientFactory = null;
     RpcServerFactory serverFactory = null;
-
-
+    
+    
     clientFactory = RpcFactoryProvider.getClientFactory(conf);
     serverFactory = RpcFactoryProvider.getServerFactory(conf);
-    assertEquals(RpcClientFactoryPBImpl.class, clientFactory.getClass());
-    assertEquals(RpcServerFactoryPBImpl.class, serverFactory.getClass());
+    Assert.assertEquals(RpcClientFactoryPBImpl.class, clientFactory.getClass());
+    Assert.assertEquals(RpcServerFactoryPBImpl.class, serverFactory.getClass());
 
     conf.set(YarnConfiguration.IPC_CLIENT_FACTORY_CLASS, "unknown");
     conf.set(YarnConfiguration.IPC_SERVER_FACTORY_CLASS, "unknown");
@@ -52,30 +50,28 @@ public class TestRpcFactoryProvider {
 
     try {
       clientFactory = RpcFactoryProvider.getClientFactory(conf);
-      fail("Expected an exception - unknown serializer");
+      Assert.fail("Expected an exception - unknown serializer");
     } catch (YarnRuntimeException e) {
     }
     try {
       serverFactory = RpcFactoryProvider.getServerFactory(conf);
-      fail("Expected an exception - unknown serializer");
+      Assert.fail("Expected an exception - unknown serializer");
     } catch (YarnRuntimeException e) {
     }
-
+    
     conf = new Configuration();
     conf.set(YarnConfiguration.IPC_CLIENT_FACTORY_CLASS, "NonExistantClass");
     conf.set(YarnConfiguration.IPC_SERVER_FACTORY_CLASS, RpcServerFactoryPBImpl.class.getName());
-
+    
     try {
       clientFactory = RpcFactoryProvider.getClientFactory(conf);
-      fail("Expected an exception - unknown class");
+      Assert.fail("Expected an exception - unknown class");
     } catch (YarnRuntimeException e) {
     }
     try {
       serverFactory = RpcFactoryProvider.getServerFactory(conf);
     } catch (YarnRuntimeException e) {
-      fail(
-          "Error while loading factory using reflection: [" + RpcServerFactoryPBImpl.class.getName()
-              + "]");
+      Assert.fail("Error while loading factory using reflection: [" + RpcServerFactoryPBImpl.class.getName() + "]");
     }
   }
 }

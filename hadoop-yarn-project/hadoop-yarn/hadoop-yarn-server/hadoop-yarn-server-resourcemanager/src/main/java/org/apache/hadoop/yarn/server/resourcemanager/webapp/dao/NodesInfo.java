@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import java.util.ArrayList;
-import java.util.Collection;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -42,10 +41,6 @@ public class NodesInfo {
   }
 
   public void addAll(ArrayList<NodeInfo> nodesInfo) {
-    node.addAll(nodesInfo);
-  }
-
-  public void addAll(Collection<NodeInfo> nodesInfo) {
     node.addAll(nodesInfo);
   }
 }

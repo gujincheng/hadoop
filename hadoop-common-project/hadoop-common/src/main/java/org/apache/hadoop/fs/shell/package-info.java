@@ -15,10 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * Support for the execution of a file system command.
- */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.fs.shell;

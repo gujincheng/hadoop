@@ -109,9 +109,9 @@ public class DtUtilShell extends CommandShell {
    * Parse the command line arguments and initialize subcommand.
    * Also will attempt to perform Kerberos login if both -principal and -keytab
    * flags are passed in args array.
-   * @param args args.
+   * @param args
    * @return 0 if the argument(s) were recognized, 1 otherwise
-   * @throws Exception Exception.
+   * @throws Exception
    */
   @Override
   protected int init(String[] args) throws Exception {

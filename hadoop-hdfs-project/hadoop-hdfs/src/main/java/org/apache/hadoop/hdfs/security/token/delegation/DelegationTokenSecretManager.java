@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
-import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -50,7 +49,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
@@ -383,7 +383,7 @@ public class DelegationTokenSecretManager
           namesystem.logUpdateMasterKey(key);
         }
       } finally {
-        namesystem.readUnlock("logUpdateMasterKey");
+        namesystem.readUnlock();
       }
     } catch (InterruptedException ie) {
       // AbstractDelegationTokenManager may crash if an exception is thrown.
@@ -412,7 +412,7 @@ public class DelegationTokenSecretManager
           namesystem.logExpireDelegationToken(dtId);
         }
       } finally {
-        namesystem.readUnlock("logExpireToken");
+        namesystem.readUnlock();
       }
     } catch (InterruptedException ie) {
       // AbstractDelegationTokenManager may crash if an exception is thrown.

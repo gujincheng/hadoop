@@ -66,7 +66,6 @@ import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Tests HDFS persistent memory cache by PmemMappableBlockLoader.
@@ -105,8 +104,6 @@ public class TestCacheByPmemMappableBlockLoader {
 
   @BeforeClass
   public static void setUpClass() throws Exception {
-    assumeTrue("Requires PMDK", NativeIO.POSIX.isPmdkAvailable());
-
     oldInjector = DataNodeFaultInjector.get();
     DataNodeFaultInjector.set(new DataNodeFaultInjector() {
       @Override

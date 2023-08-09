@@ -282,10 +282,10 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----14----> <-------18-------> <-----14-----> <-------18------->
-        "     SSD_QUOTA      REM_SSD_QUOTA     DISK_QUOTA     REM_DISK_QUOTA " +
-        " ARCHIVE_QUOTA  REM_ARCHIVE_QUOTA PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
-        "  NVDIMM_QUOTA   REM_NVDIMM_QUOTA " +
+        // <----13---> <-------17------> <----13-----> <------17------->
+        "    SSD_QUOTA     REM_SSD_QUOTA    DISK_QUOTA    REM_DISK_QUOTA " +
+        // <----13---> <-------17------>
+        "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
@@ -310,8 +310,8 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----14----> <-------18------->
-        "     SSD_QUOTA      REM_SSD_QUOTA " +
+        // <----13---> <-------17------>
+        "    SSD_QUOTA     REM_SSD_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
@@ -336,12 +336,11 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----14----> <-------18------->
-        "     SSD_QUOTA      REM_SSD_QUOTA " +
-        "    DISK_QUOTA     REM_DISK_QUOTA " +
-        " ARCHIVE_QUOTA  REM_ARCHIVE_QUOTA " +
+        // <----13---> <-------17------>
+        "    SSD_QUOTA     REM_SSD_QUOTA " +
+        "   DISK_QUOTA    REM_DISK_QUOTA " +
+        "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA " +
         "PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
-        "  NVDIMM_QUOTA   REM_NVDIMM_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
@@ -404,9 +403,9 @@ public class TestCount {
     options.add("dummy");
     count.processOptions(options);
     String withStorageTypeHeader =
-        // <----14----> <------18-------->
-        "     SSD_QUOTA      REM_SSD_QUOTA " +
-        "    DISK_QUOTA     REM_DISK_QUOTA " +
+        // <----13---> <------17------->
+        "    SSD_QUOTA     REM_SSD_QUOTA " +
+        "   DISK_QUOTA    REM_DISK_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
@@ -496,7 +495,7 @@ public class TestCount {
         + "Otherwise, it displays the quota and usage for all the storage \n"
         + "types that support quota. The list of possible storage "
         + "types(case insensitive):\n"
-        + "ram_disk, ssd, disk, archive and nvdimm.\n"
+        + "ram_disk, ssd, disk and archive.\n"
         + "It can also pass the value '', 'all' or 'ALL' to specify all the "
         + "storage types.\n"
         + "The -u option shows the quota and \n"

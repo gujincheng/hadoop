@@ -84,8 +84,6 @@ public class FifoSchedulerInfo extends SchedulerInfo {
       this.totalNodeCapacity += ni.getTotalCapability().getMemorySize();
       this.numContainers += fs.getNodeReport(ni.getNodeID()).getNumContainers();
     }
-
-    this.schedulerName = "Fifo Scheduler";
   }
 
   public int getNumNodes() {

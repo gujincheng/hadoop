@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -33,12 +31,8 @@ import com.google.inject.Inject;
  */
 public class HsNavBlock extends HtmlBlock {
   final App app;
-  private Configuration conf;
 
-  @Inject HsNavBlock(App app, Configuration conf) {
-    this.app = app;
-    this.conf = conf;
-  }
+  @Inject HsNavBlock(App app) { this.app = app; }
 
   /*
    * (non-Javadoc)
@@ -70,11 +64,12 @@ public class HsNavBlock extends HtmlBlock {
             li().a(url("taskcounters", taskid), "Counters").__().__();
       }
     }
-
-    Hamlet.UL<DIV<Hamlet>> tools = WebPageUtils.appendToolSection(nav, conf);
-
-    if (tools != null) {
-      tools.__().__();
-    }
+    nav.
+      h3("Tools").
+        ul().
+          li().a("/conf", "Configuration").__().
+          li().a("/logs", "Local logs").__().
+          li().a("/stacks", "Server stacks").__().
+          li().a("/jmx?qry=Hadoop:*", "Server metrics").__().__().__();
   }
 }

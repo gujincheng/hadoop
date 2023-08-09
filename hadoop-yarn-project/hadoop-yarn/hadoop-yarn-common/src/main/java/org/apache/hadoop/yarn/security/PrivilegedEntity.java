@@ -45,11 +45,6 @@ public class PrivilegedEntity {
     this.name = name;
   }
 
-  public PrivilegedEntity(String name) {
-    this.type = EntityType.QUEUE;
-    this.name = name;
-  }
-
   public EntityType getType() {
     return type;
   }

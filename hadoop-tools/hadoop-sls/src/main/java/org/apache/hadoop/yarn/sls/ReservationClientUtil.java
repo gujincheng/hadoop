@@ -70,7 +70,9 @@ public final class ReservationClientUtil {
         deadline, reservationRequests, name);
 
     // outermost request
-    return ReservationSubmissionRequest
+    ReservationSubmissionRequest request = ReservationSubmissionRequest
         .newInstance(resDef, queueName, reservationId);
+
+    return request;
   }
 }

@@ -46,7 +46,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Use metrics to assert about the cost of file API calls.
  * <p></p>
- * Parameterized on directory marker keep vs delete.
+ * Parameterized on guarded vs raw. and directory marker keep vs delete.
  * There's extra complexity related to bulk/non-bulk delete calls.
  * If bulk deletes are disabled, many more requests are made to delete
  * parent directories. The counters of objects deleted are constant
@@ -64,14 +64,20 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {"keep-markers", true},
-        {"delete-markers", false},
+        {"raw-keep-markers", false, true, false},
+        {"raw-delete-markers", false, false, false},
+        {"nonauth-keep-markers", true, true, false},
+        {"nonauth-delete-markers", true, false, false},
+        {"auth-delete-markers", true, false, true},
+        {"auth-keep-markers", true, true, true}
     });
   }
 
   public ITestS3ADeleteCost(final String name,
-      final boolean keepMarkers) {
-    super(keepMarkers);
+      final boolean s3guard,
+      final boolean keepMarkers,
+      final boolean authoritative) {
+    super(s3guard, keepMarkers, authoritative);
   }
 
   @Override
@@ -99,8 +105,8 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     // still be there
     Path simpleFile = file(new Path(dir, "simple.txt"));
 
-    boolean rawAndKeeping = !isDeleting();
-    boolean rawAndDeleting = isDeleting();
+    boolean rawAndKeeping = isRaw() && isDeleting();
+    boolean rawAndDeleting = isRaw() && isDeleting();
     verifyMetrics(() -> {
           fs.delete(simpleFile, false);
           return "after fs.delete(simpleFile) " + getMetricSummary();
@@ -110,7 +116,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         // if deleting markers, look for the parent too
         probe(rawAndDeleting, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
-        with(OBJECT_LIST_REQUEST,
+        withWhenRaw(OBJECT_LIST_REQUEST,
             FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
         with(DIRECTORIES_DELETED, 0),
         with(FILES_DELETED, 1),
@@ -131,7 +137,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     );
 
     // there is an empty dir for a parent
-    S3AFileStatus status = verifyInnerGetFileStatus(dir, true,
+    S3AFileStatus status = verifyRawInnerGetFileStatus(dir, true,
         StatusProbeEnum.ALL, GET_FILE_STATUS_ON_DIR);
     assertEmptyDirStatus(status, Tristate.TRUE);
   }
@@ -151,8 +157,8 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     Path file1 = file(new Path(dir, "file1.txt"));
     Path file2 = file(new Path(dir, "file2.txt"));
 
-    boolean rawAndKeeping = !isDeleting();
-    boolean rawAndDeleting = isDeleting();
+    boolean rawAndKeeping = isRaw() && isDeleting();
+    boolean rawAndDeleting = isRaw() && isDeleting();
     verifyMetrics(() -> {
       fs.delete(file1, false);
       return "after fs.delete(file1) " + getMetricSummary();
@@ -163,7 +169,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         // if deleting markers, look for the parent too
         probe(rawAndDeleting, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
-        with(OBJECT_LIST_REQUEST,
+        withWhenRaw(OBJECT_LIST_REQUEST,
             FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
         with(DIRECTORIES_DELETED, 0),
         with(FILES_DELETED, 1),
@@ -266,10 +272,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
 
     final int directories = directoriesInPath(srcDir);
     verifyMetrics(() -> {
-      final Path srcPath = new Path(srcDir, "source.txt");
-      file(srcPath);
+      file(new Path(srcDir, "source.txt"));
       LOG.info("Metrics: {}\n{}", getMetricSummary(), getFileSystem());
-      return "after touch(fs, " + srcPath + ")" + getMetricSummary();
+      return "after touch(fs, srcFilePath) " + getMetricSummary();
     },
         with(DIRECTORIES_CREATED, 0),
         with(DIRECTORIES_DELETED, 0),
@@ -277,10 +282,10 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         withWhenKeeping(getDeleteMarkerStatistic(), 0),
         withWhenKeeping(FAKE_DIRECTORIES_DELETED, 0),
         // delete all possible fake dirs above the file
-        withWhenDeleting(FAKE_DIRECTORIES_DELETED,
-            directories),
         withWhenDeleting(getDeleteMarkerStatistic(),
-            isBulkDelete() ? 1: directories));
+            isBulkDelete() ? 1: directories),
+        withWhenDeleting(FAKE_DIRECTORIES_DELETED,
+            directories));
   }
 
 }

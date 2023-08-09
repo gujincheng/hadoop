@@ -30,7 +30,7 @@ import subprocess
 
 from jira import JIRA
 
-jira_project_name = input("JIRA Project Name (default: HADOOP): ") \
+jira_project_name = input("JIRA Project Name (e.g HADOOP / OZONE etc): ") \
                     or "HADOOP"
 # Define project_jira_keys with - appended. e.g for HADOOP Jiras,
 # project_jira_keys should include HADOOP-, HDFS-, YARN-, MAPREDUCE-
@@ -71,9 +71,10 @@ for commit in subprocess.check_output(['git', 'log', '--pretty=oneline']).decode
         print("Commit seems reverted. \t\t\t Commit: " + commit)
         continue
     ACTUAL_PROJECT_JIRA = None
-    matches = re.findall('|'.join(project_jira_keys), commit)
-    if matches:
-        ACTUAL_PROJECT_JIRA = matches[0]
+    for project_jira in project_jira_keys:
+        if project_jira in commit:
+            ACTUAL_PROJECT_JIRA = project_jira
+            break
     if not ACTUAL_PROJECT_JIRA:
         print("WARN: Jira not found. \t\t\t Commit: " + commit)
         continue

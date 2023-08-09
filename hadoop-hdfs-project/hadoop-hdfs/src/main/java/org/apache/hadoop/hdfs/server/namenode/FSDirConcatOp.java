@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -121,7 +121,7 @@ class FSDirConcatOp {
     for(String src : srcs) {
       final INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
       // permission check for srcs
-      if (pc != null && fsd.isPermissionEnabled()) {
+      if (pc != null) {
         fsd.checkPathAccess(pc, iip, FsAction.READ); // read the file
         fsd.checkParentAccess(pc, iip, FsAction.WRITE); // for delete
       }

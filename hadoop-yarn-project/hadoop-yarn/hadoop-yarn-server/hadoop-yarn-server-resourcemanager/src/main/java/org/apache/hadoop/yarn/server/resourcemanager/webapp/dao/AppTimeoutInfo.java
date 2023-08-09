@@ -22,7 +22,6 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 
 /**
@@ -44,12 +43,6 @@ public class AppTimeoutInfo {
   public AppTimeoutInfo() {
     expiryTime = "UNLIMITED";
     remainingTimeInSec = -1;
-  }
-
-  public AppTimeoutInfo(ApplicationTimeout applicationTimeout) {
-    this.expiryTime = applicationTimeout.getExpiryTime();
-    this.remainingTimeInSec = applicationTimeout.getRemainingTime();
-    this.timeoutType = applicationTimeout.getTimeoutType();
   }
 
   public ApplicationTimeoutType getTimeoutType() {

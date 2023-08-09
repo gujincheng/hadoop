@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-add_subdirectory(x-platform)
 add_subdirectory(common)
 add_subdirectory(fs)
 add_subdirectory(reader)

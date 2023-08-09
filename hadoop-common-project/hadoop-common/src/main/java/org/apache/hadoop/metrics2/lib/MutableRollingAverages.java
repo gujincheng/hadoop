@@ -31,14 +31,15 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
-import org.apache.hadoop.util.Preconditions;
+
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Time;
 
@@ -139,7 +140,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
 
   /**
    * Constructor for {@link MutableRollingAverages}.
-   * @param metricValueName input metricValueName.
+   * @param metricValueName
    */
   public MutableRollingAverages(String metricValueName) {
     if (metricValueName == null) {
@@ -167,7 +168,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
   }
 
   @Override
-  public synchronized void snapshot(MetricsRecordBuilder builder, boolean all) {
+  public void snapshot(MetricsRecordBuilder builder, boolean all) {
     if (all || changed()) {
       for (final Entry<String, LinkedBlockingDeque<SumAndCount>> entry
           : averages.entrySet()) {
@@ -179,11 +180,8 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
         long totalCount = 0;
 
         for (final SumAndCount sumAndCount : entry.getValue()) {
-          if (Time.monotonicNow() - sumAndCount.getSnapshotTimeStamp()
-              < recordValidityMs) {
-            totalCount += sumAndCount.getCount();
-            totalSum += sumAndCount.getSum();
-          }
+          totalCount += sumAndCount.getCount();
+          totalSum += sumAndCount.getSum();
         }
 
         if (totalCount != 0) {
@@ -285,7 +283,6 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
    * Retrieve a map of metric name {@literal ->} (aggregate).
    * Filter out entries that don't have at least minSamples.
    *
-   * @param minSamples input minSamples.
    * @return a map of peer DataNode Id to the average latency to that
    *         node seen over the measurement period.
    */
@@ -315,7 +312,6 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
 
   /**
    * Use for test only.
-   * @param value input value.
    */
   @VisibleForTesting
   public synchronized void setRecordValidityMs(long value) {

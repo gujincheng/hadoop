@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
@@ -389,13 +389,11 @@ public class FifoScheduler extends
 
   @VisibleForTesting
   public synchronized void addApplication(ApplicationId applicationId,
-      String queue, String user, boolean isAppRecovering,
-      boolean unmanagedAM) {
+      String queue, String user, boolean isAppRecovering) {
     SchedulerApplication<FifoAppAttempt> application =
-        new SchedulerApplication<>(DEFAULT_QUEUE, user, unmanagedAM);
+        new SchedulerApplication<>(DEFAULT_QUEUE, user);
     applications.put(applicationId, application);
-
-    metrics.submitApp(user, unmanagedAM);
+    metrics.submitApp(user);
     LOG.info("Accepted application " + applicationId + " from user: " + user
         + ", currently num of applications: " + applications.size());
     if (isAppRecovering) {
@@ -426,8 +424,7 @@ public class FifoScheduler extends
     }
     application.setCurrentAppAttempt(schedulerApp);
 
-    metrics.submitAppAttempt(user, application.isUnmanagedAM());
-
+    metrics.submitAppAttempt(user);
     LOG.info("Added Application Attempt " + appAttemptId
         + " to scheduler from user " + application.getUser());
     if (isAttemptRecovering) {
@@ -771,8 +768,8 @@ public class FifoScheduler extends
     {
       AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
       addApplication(appAddedEvent.getApplicationId(),
-          appAddedEvent.getQueue(), appAddedEvent.getUser(),
-          appAddedEvent.getIsAppRecovering(), appAddedEvent.isUnmanagedAM());
+        appAddedEvent.getQueue(), appAddedEvent.getUser(),
+        appAddedEvent.getIsAppRecovering());
     }
     break;
     case APP_REMOVED:

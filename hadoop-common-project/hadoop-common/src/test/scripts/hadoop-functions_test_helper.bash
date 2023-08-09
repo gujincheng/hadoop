@@ -16,7 +16,6 @@
 
 setup() {
 
-  export LD_LIBRARY_PATH=""
   RELTMP="${BATS_TEST_DIRNAME}/../../../target/test-dir/bats.$$.${RANDOM}"
   mkdir -p ${RELTMP}
   TMP=$(cd -P -- "${RELTMP}" >/dev/null && pwd -P)

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
@@ -72,7 +73,9 @@ public class MemoryMappableBlockLoader extends MappableBlockLoader {
       throws IOException {
     MemoryMappedBlock mappableBlock = null;
     MappedByteBuffer mmap = null;
-    try (FileChannel blockChannel = blockIn.getChannel()) {
+    FileChannel blockChannel = null;
+    try {
+      blockChannel = blockIn.getChannel();
       if (blockChannel == null) {
         throw new IOException("Block InputStream has no FileChannel.");
       }
@@ -81,6 +84,7 @@ public class MemoryMappableBlockLoader extends MappableBlockLoader {
       verifyChecksum(length, metaIn, blockChannel, blockFileName);
       mappableBlock = new MemoryMappedBlock(mmap, length);
     } finally {
+      IOUtils.closeQuietly(blockChannel);
       if (mappableBlock == null) {
         if (mmap != null) {
           NativeIO.POSIX.munmap(mmap); // unmapping also unlocks

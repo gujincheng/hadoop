@@ -82,6 +82,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorCompletionService;
@@ -102,7 +103,8 @@ public abstract class BaseAMRMProxyTest {
   private MockAMRMProxyService amrmProxyService;
 
   // Thread pool used for asynchronous operations
-  private final ExecutorService threadpool = Executors.newCachedThreadPool();
+  private static ExecutorService threadpool = Executors
+      .newCachedThreadPool();
   private Configuration conf;
   private AsyncDispatcher dispatcher;
   private Context nmContext;
@@ -132,7 +134,7 @@ public abstract class BaseAMRMProxyTest {
     String mockPassThroughInterceptorClass =
         PassThroughRequestInterceptor.class.getName();
 
-    // Create a request interceptor pipeline for testing. The last one in the
+    // Create a request intercepter pipeline for testing. The last one in the
     // chain will call the mock resource manager. The others in the chain will
     // simply forward it to the next one in the chain
     config.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
@@ -189,7 +191,7 @@ public abstract class BaseAMRMProxyTest {
     return new NMContext(null, null, null, null, stateStore, false, this.conf);
   }
 
-  // A utility method for interceptor recover unit test
+  // A utility method for intercepter recover unit test
   protected Map<String, byte[]> recoverDataMapForAppAttempt(
       NMStateStoreService nmStateStore, ApplicationAttemptId attemptId)
       throws IOException {
@@ -228,37 +230,47 @@ public abstract class BaseAMRMProxyTest {
   protected <T, R> List<R> runInParallel(List<T> testContexts,
       final Function<T, R> func) {
     ExecutorCompletionService<R> completionService =
-        new ExecutorCompletionService<>(this.getThreadPool());
-    LOG.info("Sending requests to endpoints asynchronously. Number of test contexts = {}.",
-        testContexts.size());
-    for (final T testContext : testContexts) {
-      LOG.info("Adding request to threadpool for test context: {}.", testContext.toString());
+        new ExecutorCompletionService<R>(this.getThreadPool());
+    LOG.info("Sending requests to endpoints asynchronously. Number of test contexts="
+        + testContexts.size());
+    for (int index = 0; index < testContexts.size(); index++) {
+      final T testContext = testContexts.get(index);
 
-      completionService.submit(() -> {
-        LOG.info("Sending request. Test context: {}.", testContext);
+      LOG.info("Adding request to threadpool for test context: "
+          + testContext.toString());
 
-        R response;
-        try {
-          response = func.invoke(testContext);
-          LOG.info("Successfully sent request for context: {}.", testContext);
-        } catch (Throwable ex) {
-          LOG.error("Failed to process request for context: {}.", testContext);
-          response = null;
+      completionService.submit(new Callable<R>() {
+        @Override
+        public R call() throws Exception {
+          LOG.info("Sending request. Test context:"
+              + testContext.toString());
+
+          R response = null;
+          try {
+            response = func.invoke(testContext);
+            LOG.info("Successfully sent request for context: "
+                + testContext.toString());
+          } catch (Throwable ex) {
+            LOG.error("Failed to process request for context: "
+                + testContext);
+            response = null;
+          }
+
+          return response;
         }
-
-        return response;
       });
     }
 
-    ArrayList<R> responseList = new ArrayList<>();
-    LOG.info("Waiting for responses from endpoints. Number of contexts = {}.", testContexts.size());
+    ArrayList<R> responseList = new ArrayList<R>();
+    LOG.info("Waiting for responses from endpoints. Number of contexts="
+        + testContexts.size());
     for (int i = 0; i < testContexts.size(); ++i) {
       try {
         final Future<R> future = completionService.take();
         final R response = future.get(3000, TimeUnit.MILLISECONDS);
         responseList.add(response);
       } catch (Throwable e) {
-        LOG.error("Failed to process request {}", e.getMessage());
+        LOG.error("Failed to process request " + e.getMessage());
       }
     }
 
@@ -279,19 +291,29 @@ public abstract class BaseAMRMProxyTest {
       final int testAppId) throws Exception, YarnException, IOException {
     final ApplicationUserInfo ugi = getApplicationUserInfo(testAppId);
 
-    return ugi.getUser().doAs((PrivilegedExceptionAction<RegisterApplicationMasterResponse>) () -> {
-      getAMRMProxyService().initApp(ugi.getAppAttemptId(), ugi.getUser().getUserName());
+    return ugi
+        .getUser()
+        .doAs(
+            new PrivilegedExceptionAction<RegisterApplicationMasterResponse>() {
+              @Override
+              public RegisterApplicationMasterResponse run()
+                  throws Exception {
+                getAMRMProxyService().initApp(
+                    ugi.getAppAttemptId(),
+                    ugi.getUser().getUserName());
 
-      final RegisterApplicationMasterRequest req =
-          Records.newRecord(RegisterApplicationMasterRequest.class);
-      req.setHost(Integer.toString(testAppId));
-      req.setRpcPort(testAppId);
-      req.setTrackingUrl("");
+                final RegisterApplicationMasterRequest req =
+                    Records
+                        .newRecord(RegisterApplicationMasterRequest.class);
+                req.setHost(Integer.toString(testAppId));
+                req.setRpcPort(testAppId);
+                req.setTrackingUrl("");
 
-      RegisterApplicationMasterResponse response =
-          getAMRMProxyService().registerApplicationMaster(req);
-      return response;
-    });
+                RegisterApplicationMasterResponse response =
+                    getAMRMProxyService().registerApplicationMaster(req);
+                return response;
+              }
+            });
   }
 
   /**
@@ -305,30 +327,37 @@ public abstract class BaseAMRMProxyTest {
       final ArrayList<T> testContexts) {
     List<RegisterApplicationMasterResponseInfo<T>> responses =
         runInParallel(testContexts,
-          testContext -> {
-            RegisterApplicationMasterResponseInfo<T> response;
-            try {
-              int index = testContexts.indexOf(testContext);
-              response = new RegisterApplicationMasterResponseInfo<>(
-                  registerApplicationMaster(index), testContext);
-              Assert.assertNotNull(response.getResponse());
-              Assert.assertEquals(Integer.toString(index), response.getResponse().getQueue());
+            new Function<T, RegisterApplicationMasterResponseInfo<T>>() {
+              @Override
+              public RegisterApplicationMasterResponseInfo<T> invoke(
+                  T testContext) {
+                RegisterApplicationMasterResponseInfo<T> response = null;
+                try {
+                  int index = testContexts.indexOf(testContext);
+                  response =
+                      new RegisterApplicationMasterResponseInfo<T>(
+                          registerApplicationMaster(index), testContext);
+                  Assert.assertNotNull(response.getResponse());
+                  Assert.assertEquals(Integer.toString(index), response
+                      .getResponse().getQueue());
 
-              LOG.info("Successfully registered application master with test context: {}.",
-                  testContext);
-            } catch (Throwable ex) {
-              response = null;
-              LOG.error("Failed to register application master with test context: {}.",
-                  testContext);
-            }
+                  LOG.info("Sucessfully registered application master with test context: "
+                      + testContext);
+                } catch (Throwable ex) {
+                  response = null;
+                  LOG.error("Failed to register application master with test context: "
+                      + testContext);
+                }
 
-            return response;
-          });
+                return response;
+              }
+            });
 
-    Assert.assertEquals("Number of responses received does not match with request",
+    Assert.assertEquals(
+        "Number of responses received does not match with request",
         testContexts.size(), responses.size());
 
-    Set<T> contextResponses = new TreeSet<>();
+    Set<T> contextResponses = new TreeSet<T>();
     for (RegisterApplicationMasterResponseInfo<T> item : responses) {
       contextResponses.add(item.getTestContext());
     }
@@ -381,28 +410,37 @@ public abstract class BaseAMRMProxyTest {
       final ArrayList<T> testContexts) {
     List<FinishApplicationMasterResponseInfo<T>> responses =
         runInParallel(testContexts,
-            testContext -> {
-              FinishApplicationMasterResponseInfo<T> response;
-              try {
-                response = new FinishApplicationMasterResponseInfo<>(
-                    finishApplicationMaster(testContexts.indexOf(testContext),
-                    FinalApplicationStatus.SUCCEEDED), testContext);
-                Assert.assertNotNull(response.getResponse());
+            new Function<T, FinishApplicationMasterResponseInfo<T>>() {
+              @Override
+              public FinishApplicationMasterResponseInfo<T> invoke(
+                  T testContext) {
+                FinishApplicationMasterResponseInfo<T> response = null;
+                try {
+                  response =
+                      new FinishApplicationMasterResponseInfo<T>(
+                          finishApplicationMaster(
+                              testContexts.indexOf(testContext),
+                              FinalApplicationStatus.SUCCEEDED),
+                          testContext);
+                  Assert.assertNotNull(response.getResponse());
 
-                LOG.info("Successfully finished application master with test contexts: {}.",
-                    testContext);
-              } catch (Throwable ex) {
-                response = null;
-                LOG.error("Failed to finish application master with test context: {}.",
-                    testContext);
+                  LOG.info("Sucessfully finished application master with test contexts: "
+                      + testContext);
+                } catch (Throwable ex) {
+                  response = null;
+                  LOG.error("Failed to finish application master with test context: "
+                      + testContext);
+                }
+
+                return response;
               }
-              return response;
             });
 
-    Assert.assertEquals("Number of responses received does not match with request",
+    Assert.assertEquals(
+        "Number of responses received does not match with request",
         testContexts.size(), responses.size());
 
-    Set<T> contextResponses = new TreeSet<>();
+    Set<T> contextResponses = new TreeSet<T>();
     for (FinishApplicationMasterResponseInfo<T> item : responses) {
       Assert.assertNotNull(item);
       Assert.assertNotNull(item.getResponse());
@@ -417,19 +455,27 @@ public abstract class BaseAMRMProxyTest {
   }
 
   protected AllocateResponse allocate(final int testAppId)
-      throws Exception {
+      throws Exception, YarnException, IOException {
     final AllocateRequest req = Records.newRecord(AllocateRequest.class);
     req.setResponseId(testAppId);
     return allocate(testAppId, req);
   }
 
-  protected AllocateResponse allocate(final int testAppId, final AllocateRequest request)
-      throws Exception {
+  protected AllocateResponse allocate(final int testAppId,
+      final AllocateRequest request) throws Exception, YarnException,
+      IOException {
 
     final ApplicationUserInfo ugi = getApplicationUserInfo(testAppId);
 
-    return ugi.getUser().doAs((PrivilegedExceptionAction<AllocateResponse>)
-        () -> getAMRMProxyService().allocate(request));
+    return ugi.getUser().doAs(
+        new PrivilegedExceptionAction<AllocateResponse>() {
+          @Override
+          public AllocateResponse run() throws Exception {
+            AllocateResponse response =
+                getAMRMProxyService().allocate(request);
+            return response;
+          }
+        });
   }
 
   protected ApplicationUserInfo getApplicationUserInfo(final int testAppId) {
@@ -444,37 +490,44 @@ public abstract class BaseAMRMProxyTest {
   }
 
   protected List<ResourceRequest> createResourceRequests(String[] hosts,
-      int memory, int vCores, int priority, int containers) {
+      int memory, int vCores, int priority, int containers)
+      throws Exception {
     return createResourceRequests(hosts, memory, vCores, priority,
         containers, null);
   }
 
   protected List<ResourceRequest> createResourceRequests(String[] hosts,
-      int memory, int vCores, int priority, int containers, String labelExpression) {
-    List<ResourceRequest> reqs = new ArrayList<>();
+      int memory, int vCores, int priority, int containers,
+      String labelExpression) throws Exception {
+    List<ResourceRequest> reqs = new ArrayList<ResourceRequest>();
     for (String host : hosts) {
-      ResourceRequest hostReq = createResourceRequest(host, memory, vCores, priority,
-          containers, labelExpression);
+      ResourceRequest hostReq =
+          createResourceRequest(host, memory, vCores, priority,
+              containers, labelExpression);
       reqs.add(hostReq);
-      ResourceRequest rackReq = createResourceRequest("/default-rack", memory, vCores, priority,
-          containers, labelExpression);
+      ResourceRequest rackReq =
+          createResourceRequest("/default-rack", memory, vCores, priority,
+              containers, labelExpression);
       reqs.add(rackReq);
     }
 
-    ResourceRequest offRackReq = createResourceRequest(ResourceRequest.ANY, memory, vCores,
-        priority, containers, labelExpression);
+    ResourceRequest offRackReq =
+        createResourceRequest(ResourceRequest.ANY, memory, vCores,
+            priority, containers, labelExpression);
     reqs.add(offRackReq);
     return reqs;
   }
 
   protected ResourceRequest createResourceRequest(String resource,
-      int memory, int vCores, int priority, int containers) {
-    return createResourceRequest(resource, memory, vCores, priority, containers, null);
+      int memory, int vCores, int priority, int containers)
+      throws Exception {
+    return createResourceRequest(resource, memory, vCores, priority,
+        containers, null);
   }
 
   protected ResourceRequest createResourceRequest(String resource,
       int memory, int vCores, int priority, int containers,
-      String labelExpression) {
+      String labelExpression) throws Exception {
     ResourceRequest req = Records.newRecord(ResourceRequest.class);
     req.setResourceName(resource);
     req.setNumContainers(containers);
@@ -495,8 +548,8 @@ public abstract class BaseAMRMProxyTest {
   /**
    * Returns an ApplicationId with the specified identifier
    * 
-   * @param testAppId testApplication.
-   * @return ApplicationId.
+   * @param testAppId
+   * @return
    */
   protected ApplicationId getApplicationId(int testAppId) {
     return ApplicationId.newInstance(123456, testAppId);
@@ -506,8 +559,8 @@ public abstract class BaseAMRMProxyTest {
    * Return an instance of ApplicationAttemptId using specified identifier. This
    * identifier will be used for the ApplicationId too.
    * 
-   * @param testAppId testApplicationId.
-   * @return ApplicationAttemptId.
+   * @param testAppId
+   * @return
    */
   protected ApplicationAttemptId getApplicationAttemptId(int testAppId) {
     return ApplicationAttemptId.newInstance(getApplicationId(testAppId),
@@ -518,8 +571,8 @@ public abstract class BaseAMRMProxyTest {
    * Return an instance of ApplicationAttemptId using specified identifier and
    * application id
    * 
-   * @param testAppId testApplicationId.
-   * @return ApplicationAttemptId.
+   * @param testAppId
+   * @return
    */
   protected ApplicationAttemptId getApplicationAttemptId(int testAppId,
       ApplicationId appId) {
@@ -527,8 +580,8 @@ public abstract class BaseAMRMProxyTest {
   }
 
   protected static class RegisterApplicationMasterResponseInfo<T> {
-    private final RegisterApplicationMasterResponse response;
-    private final T testContext;
+    private RegisterApplicationMasterResponse response;
+    private T testContext;
 
     RegisterApplicationMasterResponseInfo(
         RegisterApplicationMasterResponse response, T testContext) {
@@ -546,8 +599,8 @@ public abstract class BaseAMRMProxyTest {
   }
 
   protected static class FinishApplicationMasterResponseInfo<T> {
-    private final FinishApplicationMasterResponse response;
-    private final T testContext;
+    private FinishApplicationMasterResponse response;
+    private T testContext;
 
     FinishApplicationMasterResponseInfo(
         FinishApplicationMasterResponse response, T testContext) {
@@ -565,8 +618,8 @@ public abstract class BaseAMRMProxyTest {
   }
 
   protected static class ApplicationUserInfo {
-    private final UserGroupInformation user;
-    private final ApplicationAttemptId attemptId;
+    private UserGroupInformation user;
+    private ApplicationAttemptId attemptId;
 
     ApplicationUserInfo(UserGroupInformation user,
         ApplicationAttemptId attemptId) {
@@ -601,12 +654,12 @@ public abstract class BaseAMRMProxyTest {
      * actual service, the initialization is called by the
      * ContainerManagerImpl::StartContainers method
      * 
-     * @param applicationId ApplicationAttemptId
-     * @param user username.
+     * @param applicationId
+     * @param user
      */
     public void initApp(ApplicationAttemptId applicationId, String user) {
       super.initializePipeline(applicationId, user,
-          new Token<>(), null, null, false, null);
+          new Token<AMRMTokenIdentifier>(), null, null, false, null);
     }
 
     public void stopApp(ApplicationId applicationId) {
@@ -619,7 +672,7 @@ public abstract class BaseAMRMProxyTest {
    * invoked asynchronously at a later point.
    */
   protected interface Function<T, R> {
-    R invoke(T input);
+    public R invoke(T input);
   }
 
   protected class NullContext implements Context {

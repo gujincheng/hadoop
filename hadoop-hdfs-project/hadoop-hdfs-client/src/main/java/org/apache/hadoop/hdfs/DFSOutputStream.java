@@ -72,11 +72,9 @@ import org.apache.hadoop.tracing.TraceScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
 
 /****************************************************************
  * DFSOutputStream creates files from a stream of bytes.
@@ -113,8 +111,6 @@ public class DFSOutputStream extends FSOutputSummer
 
   protected final String src;
   protected final long fileId;
-  private final String namespace;
-  private final String uniqKey;
   protected final long blockSize;
   protected final int bytesPerChecksum;
 
@@ -130,7 +126,6 @@ public class DFSOutputStream extends FSOutputSummer
   protected final AtomicReference<CachingStrategy> cachingStrategy;
   private FileEncryptionInfo fileEncryptionInfo;
   private int writePacketSize;
-  private boolean leaseRecovered = false;
 
   /** Use {@link ByteArrayManager} to create buffer for non-heartbeat packets.*/
   protected DFSPacket createPacket(int packetSize, int chunksPerPkt,
@@ -197,15 +192,6 @@ public class DFSOutputStream extends FSOutputSummer
     this.dfsClient = dfsClient;
     this.src = src;
     this.fileId = stat.getFileId();
-    this.namespace = stat.getNamespace();
-    if (this.namespace == null) {
-      String defaultKey = dfsClient.getConfiguration().get(
-          HdfsClientConfigKeys.DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY,
-          HdfsClientConfigKeys.DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT);
-      this.uniqKey = defaultKey + "_" + this.fileId;
-    } else {
-      this.uniqKey = this.namespace + "_" + this.fileId;
-    }
     this.blockSize = stat.getBlockSize();
     this.blockReplication = stat.getReplication();
     this.fileEncryptionInfo = stat.getFileEncryptionInfo();
@@ -829,7 +815,7 @@ public class DFSOutputStream extends FSOutputSummer
 
   void setClosed() {
     closed = true;
-    dfsClient.endFileLease(getUniqKey());
+    dfsClient.endFileLease(fileId);
     getStreamer().release();
   }
 
@@ -870,14 +856,7 @@ public class DFSOutputStream extends FSOutputSummer
   }
 
   protected synchronized void closeImpl() throws IOException {
-    boolean recoverLeaseOnCloseException = dfsClient.getConfiguration()
-        .getBoolean(RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY,
-            RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT);
     if (isClosed()) {
-      if (!leaseRecovered) {
-        recoverLease(recoverLeaseOnCloseException);
-      }
-
       LOG.debug("Closing an already closed stream. [Stream:{}, streamer:{}]",
           closed, getStreamer().streamerClosed());
       try {
@@ -912,9 +891,6 @@ public class DFSOutputStream extends FSOutputSummer
       }
       completeFile();
     } catch (ClosedChannelException ignored) {
-    } catch (IOException ioe) {
-      recoverLease(recoverLeaseOnCloseException);
-      throw ioe;
     } finally {
       // Failures may happen when flushing data.
       // Streamers may keep waiting for the new block information.
@@ -925,23 +901,7 @@ public class DFSOutputStream extends FSOutputSummer
     }
   }
 
-  /**
-   * If recoverLeaseOnCloseException is true and an exception occurs when
-   * closing a file, recover lease.
-   */
-  protected void recoverLease(boolean recoverLeaseOnCloseException) {
-    if (recoverLeaseOnCloseException) {
-      try {
-        dfsClient.endFileLease(getUniqKey());
-        dfsClient.recoverLease(src);
-        leaseRecovered = true;
-      } catch (Exception e) {
-        LOG.warn("Fail to recover lease for {}", src, e);
-      }
-    }
-  }
-
-  void completeFile() throws IOException {
+  private void completeFile() throws IOException {
     // get last block before destroying the streamer
     ExtendedBlock lastBlock = getStreamer().getBlock();
     try (TraceScope ignored = dfsClient.getTracer()
@@ -1095,16 +1055,6 @@ public class DFSOutputStream extends FSOutputSummer
     return fileId;
   }
 
-  @VisibleForTesting
-  public String getNamespace() {
-    return namespace;
-  }
-
-  @VisibleForTesting
-  public String getUniqKey() {
-    return this.uniqKey;
-  }
-
   /**
    * Return the source of stream.
    */
@@ -1122,11 +1072,6 @@ public class DFSOutputStream extends FSOutputSummer
   @Override
   public String toString() {
     return getClass().getSimpleName() + ":" + streamer;
-  }
-
-  @VisibleForTesting
-  boolean isLeaseRecovered() {
-    return leaseRecovered;
   }
 
   static LocatedBlock addBlock(DatanodeInfo[] excludedNodes,

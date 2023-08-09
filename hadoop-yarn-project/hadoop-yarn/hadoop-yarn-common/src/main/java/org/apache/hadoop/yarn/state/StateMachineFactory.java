@@ -60,7 +60,7 @@ final public class StateMachineFactory
    * Constructor
    *
    * This is the only constructor in the API.
-   * @param defaultInitialState default initial state.
+   *
    */
   public StateMachineFactory(STATE defaultInitialState) {
     this.transitionsListNode = null;
@@ -457,7 +457,6 @@ final public class StateMachineFactory
         implements StateMachine<STATE, EVENTTYPE, EVENT> {
     private final OPERAND operand;
     private STATE currentState;
-    private STATE previousState;
     private final StateTransitionListener<OPERAND, EVENT, STATE> listener;
 
     InternalStateMachine(OPERAND operand, STATE initialState) {
@@ -481,18 +480,13 @@ final public class StateMachineFactory
     }
 
     @Override
-    public synchronized STATE getPreviousState() {
-      return previousState;
-    }
-
-    @Override
     public synchronized STATE doTransition(EVENTTYPE eventType, EVENT event)
          throws InvalidStateTransitionException  {
       listener.preTransition(operand, currentState, event);
-      previousState = currentState;
+      STATE oldState = currentState;
       currentState = StateMachineFactory.this.doTransition
           (operand, currentState, eventType, event);
-      listener.postTransition(operand, previousState, currentState, event);
+      listener.postTransition(operand, oldState, currentState, event);
       return currentState;
     }
   }

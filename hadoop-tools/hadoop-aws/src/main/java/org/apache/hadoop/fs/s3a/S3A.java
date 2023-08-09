@@ -18,16 +18,14 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegateToFileSystem;
 
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * S3A implementation of AbstractFileSystem.
@@ -35,12 +33,11 @@ import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class S3A extends DelegateToFileSystem {
+public class S3A extends DelegateToFileSystem{
 
   public S3A(URI theUri, Configuration conf)
-      throws IOException, URISyntaxException {
-    super(theUri, new S3AFileSystem(), conf,
-        theUri.getScheme().isEmpty() ? FS_S3A : theUri.getScheme(), false);
+          throws IOException, URISyntaxException {
+    super(theUri, new S3AFileSystem(), conf, "s3a", false);
   }
 
   @Override
@@ -56,14 +53,5 @@ public class S3A extends DelegateToFileSystem {
     sb.append("; fsImpl=").append(fsImpl);
     sb.append('}');
     return sb.toString();
-  }
-
-  /**
-   * Close the file system; the FileContext API doesn't have an explicit close.
-   */
-  @Override
-  protected void finalize() throws Throwable {
-    fsImpl.close();
-    super.finalize();
   }
 }

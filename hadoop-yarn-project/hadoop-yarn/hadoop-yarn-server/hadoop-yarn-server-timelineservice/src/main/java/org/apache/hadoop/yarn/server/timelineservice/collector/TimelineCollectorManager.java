@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +75,7 @@ public class TimelineCollectorManager extends CompositeService {
     String timelineWriterClassName = conf.get(
         YarnConfiguration.TIMELINE_SERVICE_WRITER_CLASS,
             YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WRITER_CLASS);
-    LOG.info("Using TimelineWriter: {}", timelineWriterClassName);
+    LOG.info("Using TimelineWriter: " + timelineWriterClassName);
     try {
       Class<?> timelineWriterClazz = Class.forName(timelineWriterClassName);
       if (TimelineWriter.class.isAssignableFrom(timelineWriterClazz)) {
@@ -139,14 +139,14 @@ public class TimelineCollectorManager extends CompositeService {
           collector.setWriter(writer);
           collector.start();
           collectors.put(appId, collector);
-          LOG.info("the collector for {} was added", appId);
+          LOG.info("the collector for " + appId + " was added");
           collectorInTable = collector;
           postPut(appId, collectorInTable);
         } catch (Exception e) {
           throw new YarnRuntimeException(e);
         }
       } else {
-        LOG.info("the collector for {} already exists!", appId);
+        LOG.info("the collector for " + appId + " already exists!");
       }
     }
     return collectorInTable;
@@ -182,14 +182,14 @@ public class TimelineCollectorManager extends CompositeService {
   public boolean remove(ApplicationId appId) {
     TimelineCollector collector = collectors.remove(appId);
     if (collector == null) {
-      LOG.error("the collector for {} does not exist!", appId);
+      LOG.error("the collector for " + appId + " does not exist!");
     } else {
       synchronized (collector) {
         postRemove(appId, collector);
         // stop the service to do clean up
         collector.stop();
       }
-      LOG.info("The collector service for {} was removed", appId);
+      LOG.info("The collector service for " + appId + " was removed");
     }
     return collector != null;
   }

@@ -63,36 +63,27 @@ public class UTF8 implements WritableComparable<UTF8> {
     //set("");
   }
 
-  /**
-   * Construct from a given string.
-   * @param string input string.
-   */
+  /** Construct from a given string. */
   public UTF8(String string) {
     set(string);
   }
 
-  /**
-   * Construct from a given string.
-   * @param utf8 input utf8.
-   */
+  /** Construct from a given string. */
   public UTF8(UTF8 utf8) {
     set(utf8);
   }
 
-  /** @return The raw bytes. */
+  /** The raw bytes. */
   public byte[] getBytes() {
     return bytes;
   }
 
-  /** @return The number of bytes in the encoded string. */
+  /** The number of bytes in the encoded string. */
   public int getLength() {
     return length;
   }
 
-  /**
-   * Set to contain the contents of a string.
-   * @param string input string.
-   */
+  /** Set to contain the contents of a string. */
   public void set(String string) {
     if (string.length() > 0xffff/3) {             // maybe too long
       LOG.warn("truncating long string: " + string.length()
@@ -117,10 +108,7 @@ public class UTF8 implements WritableComparable<UTF8> {
     }
   }
 
-  /**
-   * Set to contain the contents of a string.
-   * @param other input other.
-   */
+  /** Set to contain the contents of a string. */
   public void set(UTF8 other) {
     length = other.length;
     if (bytes == null || length > bytes.length)   // grow buffer
@@ -136,11 +124,7 @@ public class UTF8 implements WritableComparable<UTF8> {
     in.readFully(bytes, 0, length);
   }
 
-  /**
-   * Skips over one UTF8 in the input.
-   * @param in datainput.
-   * @throws IOException raised on errors performing I/O.
-   */
+  /** Skips over one UTF8 in the input. */
   public static void skip(DataInput in) throws IOException {
     int length = in.readUnsignedShort();
     WritableUtils.skipFully(in, length);
@@ -230,10 +214,8 @@ public class UTF8 implements WritableComparable<UTF8> {
 
   /// These are probably not used much anymore, and might be removed...
 
-  /**
-   * @return Convert a string to a UTF-8 encoded byte array.
+  /** Convert a string to a UTF-8 encoded byte array.
    * @see String#getBytes(String)
-   * @param string input string.
    */
   public static byte[] getBytes(String string) {
     byte[] result = new byte[utf8Length(string)];
@@ -249,9 +231,8 @@ public class UTF8 implements WritableComparable<UTF8> {
   }
 
   /**
-   * @return Convert a UTF-8 encoded byte array back into a string.
+   * Convert a UTF-8 encoded byte array back into a string.
    *
-   * @param bytes input bytes.
    * @throws IOException if the byte array is invalid UTF8
    */
   public static String fromBytes(byte[] bytes) throws IOException {
@@ -262,12 +243,9 @@ public class UTF8 implements WritableComparable<UTF8> {
     return buf.toString();
   }
 
-  /**
-   * @return Read a UTF-8 encoded string.
+  /** Read a UTF-8 encoded string.
    *
    * @see DataInput#readUTF()
-   * @param in DataInput.
-   * @throws IOException raised on errors performing I/O.
    */
   public static String readString(DataInput in) throws IOException {
     int bytes = in.readUnsignedShort();
@@ -340,13 +318,9 @@ public class UTF8 implements WritableComparable<UTF8> {
     return (char) ((codePoint & 0x3ff) + Character.MIN_LOW_SURROGATE);
   }
 
-  /**
-   * @return Write a UTF-8 encoded string.
+  /** Write a UTF-8 encoded string.
    *
    * @see DataOutput#writeUTF(String)
-   * @param out input out.
-   * @param s input s.
-   * @throws IOException raised on errors performing I/O.
    */
   public static int writeString(DataOutput out, String s) throws IOException {
     if (s.length() > 0xffff/3) {         // maybe too long

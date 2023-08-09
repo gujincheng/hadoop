@@ -23,14 +23,16 @@ import org.apache.hadoop.util.DiskChecker.FileIoProvider;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertTrue;
@@ -42,8 +44,8 @@ import static org.junit.Assert.assertTrue;
  */
 public final class TestDiskCheckerWithDiskIo {
   @Rule
-  public Timeout testTimeout = new Timeout(30_000, TimeUnit.MILLISECONDS);
-
+  public Timeout testTimeout = new Timeout(30_000);
+  
   /**
    * Verify DiskChecker ignores at least 2 transient file creation errors.
    */

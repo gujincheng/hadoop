@@ -18,14 +18,11 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.yarn.server.timelineservice.metrics.PerNodeAggTimelineCollectorMetrics;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test PerNodeAggTimelineCollectorMetrics.
@@ -35,24 +32,24 @@ public class TestPerNodeAggTimelineCollectorMetrics {
   private PerNodeAggTimelineCollectorMetrics metrics;
 
   @Test
-  void testTimelineCollectorMetrics() {
-    assertNotNull(metrics);
-    assertEquals(10,
+  public void testTimelineCollectorMetrics() {
+    Assert.assertNotNull(metrics);
+    Assert.assertEquals(10,
         metrics.getPutEntitiesSuccessLatency().getInterval());
-    assertEquals(10,
+    Assert.assertEquals(10,
         metrics.getPutEntitiesFailureLatency().getInterval());
-    assertEquals(10,
+    Assert.assertEquals(10,
         metrics.getAsyncPutEntitiesSuccessLatency().getInterval());
-    assertEquals(10,
+    Assert.assertEquals(10,
         metrics.getAsyncPutEntitiesFailureLatency().getInterval());
   }
 
-  @BeforeEach
+  @Before
   public void setup() {
     metrics = PerNodeAggTimelineCollectorMetrics.getInstance();
   }
 
-  @AfterEach
+  @After
   public void tearDown() {
     PerNodeAggTimelineCollectorMetrics.destroy();
   }

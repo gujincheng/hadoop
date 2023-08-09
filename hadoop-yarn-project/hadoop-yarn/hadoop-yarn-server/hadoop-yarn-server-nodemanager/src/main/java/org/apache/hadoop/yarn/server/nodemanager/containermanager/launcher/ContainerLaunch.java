@@ -46,8 +46,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -98,7 +96,7 @@ import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -246,7 +244,7 @@ public class ContainerLaunch implements Callable<Integer> {
       launchContext.setCommands(newCmds);
 
       // The actual expansion of environment variables happens after calling
-      // addConfigsToEnv.  This allows variables specified in NM_ADMIN_USER_ENV
+      // sanitizeEnv.  This allows variables specified in NM_ADMIN_USER_ENV
       // to reference user or container-defined variables.
       Map<String, String> environment = launchContext.getEnvironment();
       // /////////////////////////// End of variable expansion
@@ -340,14 +338,12 @@ public class ContainerLaunch implements Callable<Integer> {
       try (DataOutputStream containerScriptOutStream =
                lfs.create(nmPrivateContainerScriptPath,
                    EnumSet.of(CREATE, OVERWRITE))) {
-        addConfigsToEnv(environment);
-
-        expandAllEnvironmentVars(environment, containerLogDir);
-
         // Sanitize the container's environment
         sanitizeEnv(environment, containerWorkDir, appDirs, userLocalDirs,
             containerLogDirs, localResources, nmPrivateClasspathJarDir,
             nmEnvVars);
+
+        expandAllEnvironmentVars(environment, containerLogDir);
 
         // Add these if needed after expanding so we don't expand key values.
         if (keystore != null) {
@@ -1453,9 +1449,6 @@ public class ContainerLaunch implements Callable<Integer> {
   private static final class WindowsShellScriptBuilder
       extends ShellScriptBuilder {
 
-    private static final Pattern VARIABLE_PATTERN = Pattern.compile("%(.*?)%");
-    private static final Pattern SPLIT_PATTERN = Pattern.compile(":");
-
     private void errorCheck() {
       line("@if %errorlevel% neq 0 exit /b %errorlevel%");
     }
@@ -1546,25 +1539,34 @@ public class ContainerLaunch implements Callable<Integer> {
       if (envVal == null || envVal.isEmpty()) {
         return Collections.emptySet();
       }
-
-      // Example inputs: %var%, %%, %a:b%
-      Matcher matcher = VARIABLE_PATTERN.matcher(envVal);
       final Set<String> deps = new HashSet<>();
-      while (matcher.find()) {
-        String match = matcher.group(1);
-        if (!match.isEmpty()) {
-          if (match.equals(":")) {
-            // Special case, variable name can be a single : character
-            deps.add(match);
-          } else {
-            // Either store the variable name before the : string manipulation
-            // character or the whole match. (%var% -> var, %a:b% -> a)
-            String[] split = SPLIT_PATTERN.split(match, 2);
-            if (!split[0].isEmpty()) {
-              deps.add(split[0]);
-            }
-          }
+      final int len = envVal.length();
+      int i = 0;
+      while (i < len) {
+        i = envVal.indexOf('%', i); // find beginning of variable
+        if (i < 0 || i == (len - 1)) {
+          break;
         }
+        i++;
+        // 3 cases: %var%, %var:...% or %%
+        final int j = envVal.indexOf('%', i); // find end of variable
+        if (j == i) {
+          // %% case, just skip it
+          i++;
+          continue;
+        }
+        if (j < 0) {
+          break; // even %var:...% syntax ends with a %, so j cannot be negative
+        }
+        final int k = envVal.indexOf(':', i);
+        if (k >= 0 && k < j) {
+          // %var:...% syntax
+          deps.add(envVal.substring(i, k));
+        } else {
+          // %var% syntax
+          deps.add(envVal.substring(i, j));
+        }
+        i = j + 1;
       }
       return deps;
     }
@@ -1643,35 +1645,13 @@ public class ContainerLaunch implements Callable<Integer> {
       addToEnvMap(environment, nmVars, "JVM_PID", "$$");
     }
 
-    // TODO: Remove Windows check and use this approach on all platforms after
-    // additional testing.  See YARN-358.
-    if (Shell.WINDOWS) {
-      sanitizeWindowsEnv(environment, pwd,
-          resources, nmPrivateClasspathJarDir);
-    }
-
-    // put AuxiliaryService data to environment
-    for (Map.Entry<String, ByteBuffer> meta : containerManager
-        .getAuxServiceMetaData().entrySet()) {
-      AuxiliaryServiceHelper.setServiceDataIntoEnv(
-          meta.getKey(), meta.getValue(), environment);
-      nmVars.add(AuxiliaryServiceHelper.getPrefixServiceName(meta.getKey()));
-    }
-  }
-
-  /**
-   * There are some configurations (such as {@value YarnConfiguration#NM_ADMIN_USER_ENV}) whose
-   * values need to be added to the environment variables.
-   *
-   * @param environment The environment variables map to add the configuration values to.
-   */
-  public void addConfigsToEnv(Map<String, String> environment) {
     // variables here will be forced in, even if the container has
     // specified them.  Note: we do not track these in nmVars, to
     // allow them to be ordered properly if they reference variables
     // defined by the user.
     String defEnvStr = conf.get(YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV);
-    Apps.setEnvFromInputProperty(environment, YarnConfiguration.NM_ADMIN_USER_ENV, defEnvStr, conf,
+    Apps.setEnvFromInputProperty(environment,
+        YarnConfiguration.NM_ADMIN_USER_ENV, defEnvStr, conf,
         File.pathSeparator);
 
     if (!Shell.WINDOWS) {
@@ -1682,21 +1662,39 @@ public class ContainerLaunch implements Callable<Integer> {
         String userPath = environment.get(Environment.PATH.name());
         environment.remove(Environment.PATH.name());
         if (userPath == null || userPath.isEmpty()) {
-          Apps.addToEnvironment(environment, Environment.PATH.name(), forcePath,
-              File.pathSeparator);
-          Apps.addToEnvironment(environment, Environment.PATH.name(), "$PATH", File.pathSeparator);
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              forcePath, File.pathSeparator);
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              "$PATH", File.pathSeparator);
         } else {
-          Apps.addToEnvironment(environment, Environment.PATH.name(), forcePath,
-              File.pathSeparator);
-          Apps.addToEnvironment(environment, Environment.PATH.name(), userPath, File.pathSeparator);
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              forcePath, File.pathSeparator);
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              userPath, File.pathSeparator);
         }
       }
+    }
+
+    // TODO: Remove Windows check and use this approach on all platforms after
+    // additional testing.  See YARN-358.
+    if (Shell.WINDOWS) {
+
+      sanitizeWindowsEnv(environment, pwd,
+          resources, nmPrivateClasspathJarDir);
+    }
+    // put AuxiliaryService data to environment
+    for (Map.Entry<String, ByteBuffer> meta : containerManager
+        .getAuxServiceMetaData().entrySet()) {
+      AuxiliaryServiceHelper.setServiceDataIntoEnv(
+          meta.getKey(), meta.getValue(), environment);
+      nmVars.add(AuxiliaryServiceHelper.getPrefixServiceName(meta.getKey()));
     }
   }
 
   private void sanitizeWindowsEnv(Map<String, String> environment, Path pwd,
       Map<Path, List<String>> resources, Path nmPrivateClasspathJarDir)
       throws IOException {
+
     String inputClassPath = environment.get(Environment.CLASSPATH.name());
 
     if (inputClassPath != null && !inputClassPath.isEmpty()) {

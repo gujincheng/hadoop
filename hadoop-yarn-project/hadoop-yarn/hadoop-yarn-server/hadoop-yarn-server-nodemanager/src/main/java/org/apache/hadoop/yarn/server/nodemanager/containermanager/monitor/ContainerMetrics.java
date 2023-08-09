@@ -155,7 +155,7 @@ public class ContainerMetrics implements MetricsSource {
         .newQuantiles(PMEM_USAGE_QUANTILES_NAME, "Physical memory quantiles",
             "Usage", "MBs", 1);
     ContainerMetricsQuantiles memEstimator =
-        new ContainerMetricsQuantiles(MutableQuantiles.QUANTILES);
+        new ContainerMetricsQuantiles(MutableQuantiles.quantiles);
     pMemMBQuantiles.setEstimator(memEstimator);
 
     this.cpuCoreUsagePercent = registry.newStat(
@@ -166,7 +166,7 @@ public class ContainerMetrics implements MetricsSource {
             "Physical Cpu core percent usage quantiles", "Usage", "Percents",
             1);
     ContainerMetricsQuantiles cpuEstimator =
-        new ContainerMetricsQuantiles(MutableQuantiles.QUANTILES);
+        new ContainerMetricsQuantiles(MutableQuantiles.quantiles);
     cpuCoreUsagePercentQuantiles.setEstimator(cpuEstimator);
     this.milliVcoresUsed = registry.newStat(
         VCORE_USAGE_METRIC_NAME, "1000 times Vcore usage", "Usage",

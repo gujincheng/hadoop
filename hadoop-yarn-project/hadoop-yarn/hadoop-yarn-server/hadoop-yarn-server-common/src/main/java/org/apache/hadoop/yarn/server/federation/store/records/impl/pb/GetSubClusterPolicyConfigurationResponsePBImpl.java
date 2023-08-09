@@ -126,10 +126,8 @@ public class GetSubClusterPolicyConfigurationResponsePBImpl
     maybeInitBuilder();
     if (policyConfiguration == null) {
       builder.clearPolicyConfiguration();
-      return;
     }
     this.subClusterPolicy = policyConfiguration;
-    this.builder.setPolicyConfiguration(convertToProtoFormat(policyConfiguration));
   }
 
   private SubClusterPolicyConfiguration convertFromProtoFormat(

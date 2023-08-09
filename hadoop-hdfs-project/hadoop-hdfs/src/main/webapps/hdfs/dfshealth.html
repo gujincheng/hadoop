@@ -196,9 +196,6 @@
 {#fsn}
   <tr><th>Last Checkpoint Time</th><td>{@if cond="{LastCheckpointTime} === 0"}Never{:else}{LastCheckpointTime|date_tostring}{/if}</td></tr>
 {/fsn}
-{#nnstat}
-  <tr><th>Last HA Transition Time</th><td>{@if cond="{LastHATransitionTime} === 0"}Never{:else}{LastHATransitionTime|date_tostring}{/if}</td></tr>
-{/nnstat}
 {#ecstat}
   <tr><th>Enabled Erasure Coding Policies</th><td>{EnabledEcPolicies}</td></tr>
 {/ecstat}
@@ -254,15 +251,13 @@
 
 <script type="text/x-dust-template" id="tmpl-snapshot">
 <div class="page-header"><h1>Snapshot Summary</h1></div>
-<div class="snapshot-stats"><h2><small>Snapshottable Directories: {@size key=SnapshottableDirectories}{/size}</small></div>
-<div class="snapshot-stats"><h2><small>Total Snapshots: {@size key=Snapshots}{/size}</small></div>
+<div class="page-header"><h1><small>Snapshottable directories: {@size key=SnapshottableDirectories}{/size}</small></div>
 <small>
-<table class="table" id="table-snapshots">
+<table class="table">
   <thead>
     <tr>
-      <th></th>
       <th>Path</th>
-      <th>Snapshots Count</th>
+      <th>Snapshot Number</th>
       <th>Snapshot Quota</th>
       <th>Modification Time</th>
       <th>Permission</th>
@@ -270,23 +265,40 @@
       <th>Group</th>
     </tr>
   </thead>
-  <tbody>
-    {#SnapshottableDirectories}
-    <tr>
-      <td class="details-control"></td>
-      <td ng-value="{path}">{path}</td>
-      <td ng-value="{snapshotNumber}">{snapshotNumber}</td>
-      <td ng-value="{snapshotQuota}">{snapshotQuota}</td>
-      <td ng-value="{modificationTime}">{modificationTime|date_tostring}</td>
-      <td>{permission|helper_to_permission}</td>
-      <td ng-value="{owner}">{owner}</td>
-      <td ng-value="{group}">{group}</td>
-    </tr>
-    {/SnapshottableDirectories}
-  </tbody>
+  {#SnapshottableDirectories}
+  <tr>
+    <td>{path}</td>
+    <td>{snapshotNumber}</td>
+    <td>{snapshotQuota}</td>
+    <td>{modificationTime|date_tostring}</td>
+    <td>{permission|helper_to_permission}</td>
+    <td>{owner}</td>
+    <td>{group}</td>
+  </tr>
+  {/SnapshottableDirectories}
 </table>
 </small>
 
+<div class="page-header"><h1><small>Snapshots: {@size key=Snapshots}{/size}</small></div>
+
+<small>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Snapshot ID</th>
+      <th>Snapshot Directory</th>
+      <th>Modification Time</th>
+    </tr>
+  </thead>
+  {#Snapshots}
+  <tr>
+    <td>{snapshotID}</td>
+    <td>{snapshotDirectory}</td>
+    <td>{modificationTime|date_tostring}</td>
+  </tr>
+  {/Snapshots}
+</table>
+</small>
 </script>
 
 <script type="text/x-dust-template" id="tmpl-datanode">
@@ -323,7 +335,6 @@
       <th style="width:180px; text-align:center">Capacity</th>
       <th>Blocks</th>
       <th>Block pool used</th>
-      <th>Block pool usage StdDev</th>
       <th>Version</th>
     </tr>
   </thead>
@@ -347,7 +358,6 @@
     </td>
     <td title="Blocks Scheduled : {blockScheduled}">{numBlocks}</td>
     <td ng-value="{blockPoolUsedPercent}">{blockPoolUsed|fmt_bytes} ({blockPoolUsedPercent|fmt_percentage})</td>
-    <td ng-value="{blockPoolUsedPercentStdDev}">{blockPoolUsedPercentStdDev|fmt_percentage}</td>
     <td>{version}</td>
   </tr>
   {/LiveNodes}
@@ -357,7 +367,6 @@
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{location}/{name} ({xferaddr})</td>
     <td></td>
     <td>{#helper_relative_time value="{lastContact}"/}</td>
-    <td></td>
     <td></td>
     <td></td>
     <td></td>
@@ -406,7 +415,6 @@
       <th>Under replicated blocks</th>
       <th>Blocks with no live replicas</th>
       <th>Under Replicated Blocks <br/>In files under construction</th>
-      <th>Decommission duration</th>
     </tr>
   </thead>
   {#DecomNodes}
@@ -415,7 +423,6 @@
     <td>{underReplicatedBlocks}</td>
     <td>{decommissionOnlyReplicas}</td>
     <td>{underReplicateInOpenFiles}</td>
-    <td>{decommissionDuration}ms</td>
   </tr>
   {/DecomNodes}
 </table>
@@ -495,7 +502,6 @@ There are no reported volume failures.
 </script><script type="text/javascript" src="/static/dfs-dust.js">
 </script><script type="text/javascript" src="/static/d3-v4.1.1.min.js">
 </script><script type="text/javascript" src="dfshealth.js">
-</script><script type="text/javascript" src="/static/histogram-hostip.js">
 </script>
 </body>
 </html>

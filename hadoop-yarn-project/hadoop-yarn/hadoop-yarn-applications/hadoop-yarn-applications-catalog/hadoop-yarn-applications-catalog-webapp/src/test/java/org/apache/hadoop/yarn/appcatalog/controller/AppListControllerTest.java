@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.appcatalog.controller;
 
 import org.apache.hadoop.yarn.appcatalog.model.AppEntry;
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.ws.rs.Path;
@@ -29,9 +29,8 @@ import javax.ws.rs.core.Response;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,14 +42,14 @@ public class AppListControllerTest {
 
   private AppListController controller;
 
-  @BeforeEach
+  @Before
   public void setUp() throws Exception {
     this.controller = new AppListController();
 
   }
 
   @Test
-  void testGetList() throws Exception {
+  public void testGetList() throws Exception {
     AppListController ac = Mockito.mock(AppListController.class);
 
     List<AppEntry> actual = new ArrayList<AppEntry>();
@@ -60,7 +59,7 @@ public class AppListControllerTest {
   }
 
   @Test
-  void testDelete() throws Exception {
+  public void testDelete() throws Exception {
     String id = "application 1";
     AppListController ac = Mockito.mock(AppListController.class);
 
@@ -71,7 +70,7 @@ public class AppListControllerTest {
   }
 
   @Test
-  void testDeploy() throws Exception {
+  public void testDeploy() throws Exception {
     String id = "application 1";
     AppListController ac = Mockito.mock(AppListController.class);
     Service service = new Service();
@@ -82,7 +81,7 @@ public class AppListControllerTest {
   }
 
   @Test
-  void testPathAnnotation() throws Exception {
+  public void testPathAnnotation() throws Exception {
     assertNotNull(this.controller.getClass()
         .getAnnotations());
     assertThat("The controller has the annotation Path",

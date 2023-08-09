@@ -21,7 +21,6 @@ package org.apache.hadoop.metrics2.sink.ganglia;
 import java.io.IOException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,10 +78,6 @@ public abstract class AbstractGangliaSink implements MetricsSink {
   private int offset;
   private boolean supportSparseMetrics = SUPPORT_SPARSE_METRICS_DEFAULT;
 
-  public List<? extends SocketAddress> getMetricsServers() {
-    return metricsServers;
-  }
-
   /**
    * Used for visiting Metrics
    */
@@ -138,11 +133,8 @@ public abstract class AbstractGangliaSink implements MetricsSink {
     }
 
     // load the gannglia servers from properties
-    List<String> serversFromConf =
-        conf.getList(String.class, SERVERS_PROPERTY, new ArrayList<String>());
-    metricsServers =
-        Servers.parse(serversFromConf.size() > 0 ? String.join(",", serversFromConf) : null,
-            DEFAULT_PORT);
+    metricsServers = Servers.parse(conf.getString(SERVERS_PROPERTY),
+        DEFAULT_PORT);
     multicastEnabled = conf.getBoolean(MULTICAST_ENABLED_PROPERTY,
             DEFAULT_MULTICAST_ENABLED);
     multicastTtl = conf.getInt(MULTICAST_TTL_PROPERTY, DEFAULT_MULTICAST_TTL);
@@ -220,7 +212,7 @@ public abstract class AbstractGangliaSink implements MetricsSink {
   /**
    * Lookup GangliaConf from cache. If not found, return default values
    *
-   * @param metricName metricName.
+   * @param metricName
    * @return looked up GangliaConf
    */
   protected GangliaConf getGangliaConfForMetric(String metricName) {
@@ -261,7 +253,6 @@ public abstract class AbstractGangliaSink implements MetricsSink {
 
   /**
    * Puts an integer into the buffer as 4 bytes, big-endian.
-   * @param i i.
    */
   protected void xdr_int(int i) {
     buffer[offset++] = (byte) ((i >> 24) & 0xff);
@@ -272,7 +263,7 @@ public abstract class AbstractGangliaSink implements MetricsSink {
 
   /**
    * Sends Ganglia Metrics to the configured hosts
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   protected void emitToGangliaHosts() throws IOException {
     try {

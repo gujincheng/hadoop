@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
-import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.util.Collection;
 import java.util.Set;

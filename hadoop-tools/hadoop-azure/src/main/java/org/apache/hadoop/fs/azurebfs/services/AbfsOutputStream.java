@@ -26,9 +26,8 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.UUID;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.impl.BackReference;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
@@ -59,7 +58,7 @@ import static org.apache.hadoop.io.IOUtils.wrapException;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.FLUSH_CLOSE_MODE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.FLUSH_MODE;
-import static org.apache.hadoop.util.Preconditions.checkState;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkState;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
@@ -81,7 +80,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private boolean disableOutputStreamFlush;
   private boolean enableSmallWriteOptimization;
   private boolean isAppendBlob;
-  private boolean isExpectHeaderEnabled;
   private volatile IOException lastError;
 
   private long lastFlushOffset;
@@ -127,9 +125,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   /** Executor service to carry out the parallel upload requests. */
   private final ListeningExecutorService executorService;
 
-  /** ABFS instance to be held by the output stream to avoid GC close. */
-  private final BackReference fsBackRef;
-
   public AbfsOutputStream(AbfsOutputStreamContext abfsOutputStreamContext)
       throws IOException {
     this.client = abfsOutputStreamContext.getClient();
@@ -138,7 +133,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.position = abfsOutputStreamContext.getPosition();
     this.closed = false;
     this.supportFlush = abfsOutputStreamContext.isEnableFlush();
-    this.isExpectHeaderEnabled = abfsOutputStreamContext.isExpectHeaderEnabled();
     this.disableOutputStreamFlush = abfsOutputStreamContext
             .isDisableOutputStreamFlush();
     this.enableSmallWriteOptimization
@@ -151,7 +145,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.numOfAppendsToServerSinceLastFlush = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
     this.outputStreamStatistics = abfsOutputStreamContext.getStreamStatistics();
-    this.fsBackRef = abfsOutputStreamContext.getFsBackRef();
 
     if (this.isAppendBlob) {
       this.maxConcurrentRequestCount = 1;
@@ -334,7 +327,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
              * leaseId - The AbfsLeaseId for this request.
              */
             AppendRequestParameters reqParams = new AppendRequestParameters(
-                offset, 0, bytesLength, mode, false, leaseId, isExpectHeaderEnabled);
+                offset, 0, bytesLength, mode, false, leaseId);
             AbfsRestOperation op =
                 client.append(path, blockUploadData.toByteArray(), reqParams,
                     cachedSasToken.get(), new TracingContext(tracingContext));
@@ -493,12 +486,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     }
 
     try {
-      // Check if Executor Service got shutdown before the writes could be
-      // completed.
-      if (hasActiveBlockDataToUpload() && executorService.isShutdown()) {
-        throw new PathIOException(path, "Executor Service closed before "
-            + "writes could be completed.");
-      }
       flushInternal(true);
     } catch (IOException e) {
       // Problems surface in try-with-resources clauses if
@@ -586,7 +573,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
         "writeCurrentBufferToService", "append")) {
       AppendRequestParameters reqParams = new AppendRequestParameters(offset, 0,
-          bytesLength, APPEND_MODE, true, leaseId, isExpectHeaderEnabled);
+          bytesLength, APPEND_MODE, true, leaseId);
       AbfsRestOperation op = client.append(path, uploadData.toByteArray(), reqParams,
           cachedSasToken.get(), new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());
@@ -776,15 +763,5 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     sb.append(outputStreamStatistics.toString());
     sb.append("}");
     return sb.toString();
-  }
-
-  @VisibleForTesting
-  BackReference getFsBackRef() {
-    return fsBackRef;
-  }
-
-  @VisibleForTesting
-  ListeningExecutorService getExecutorService() {
-    return executorService;
   }
 }

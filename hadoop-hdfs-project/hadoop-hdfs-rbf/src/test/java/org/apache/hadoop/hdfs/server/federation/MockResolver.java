@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +59,6 @@ public class MockResolver
   private String defaultNamespace = null;
   private boolean disableDefaultNamespace = false;
   private volatile boolean disableRegistration = false;
-  private TreeSet<String> disableNamespaces = new TreeSet<>();
 
   public MockResolver() {
     this.cleanRegistrations();
@@ -96,16 +94,6 @@ public class MockResolver
     }
   }
 
-  public boolean removeLocation(String mount, String nsId, String location) {
-    List<RemoteLocation> locationsList = this.locations.get(mount);
-    final RemoteLocation remoteLocation =
-        new RemoteLocation(nsId, location, mount);
-    if (locationsList != null) {
-      return locationsList.remove(remoteLocation);
-    }
-    return false;
-  }
-
   public synchronized void cleanRegistrations() {
     this.resolver = new HashMap<>();
     this.namespaces = new HashSet<>();
@@ -120,24 +108,12 @@ public class MockResolver
     disableRegistration = isDisable;
   }
 
-  @Override public void updateUnavailableNamenode(String ns,
-      InetSocketAddress failedAddress) throws IOException {
-    updateNameNodeState(ns, failedAddress,
-        FederationNamenodeServiceState.UNAVAILABLE);
-  }
-
   @Override
   public void updateActiveNamenode(
       String nsId, InetSocketAddress successfulAddress) {
-    updateNameNodeState(nsId, successfulAddress,
-        FederationNamenodeServiceState.ACTIVE);
-  }
 
-  private void updateNameNodeState(String nsId,
-      InetSocketAddress iAddr,
-      FederationNamenodeServiceState state) {
-    String sAddress = iAddr.getHostName() + ":" +
-        iAddr.getPort();
+    String address = successfulAddress.getHostName() + ":" +
+        successfulAddress.getPort();
     String key = nsId;
     if (key != null) {
       // Update the active entry
@@ -145,13 +121,13 @@ public class MockResolver
       List<FederationNamenodeContext> namenodes =
           (List<FederationNamenodeContext>) this.resolver.get(key);
       for (FederationNamenodeContext namenode : namenodes) {
-        if (namenode.getRpcAddress().equals(sAddress)) {
+        if (namenode.getRpcAddress().equals(address)) {
           MockNamenodeContext nn = (MockNamenodeContext) namenode;
-          nn.setState(state);
+          nn.setState(FederationNamenodeServiceState.ACTIVE);
           break;
         }
       }
-      // This operation modifies the list, so we need to be careful
+      // This operation modifies the list so we need to be careful
       synchronized(namenodes) {
         Collections.sort(namenodes, new NamenodePriorityComparator());
       }
@@ -160,39 +136,14 @@ public class MockResolver
 
   @Override
   public synchronized List<? extends FederationNamenodeContext>
-      getNamenodesForNameserviceId(String nameserviceId, boolean observerRead) {
+      getNamenodesForNameserviceId(String nameserviceId) {
     // Return a copy of the list because it is updated periodically
     List<? extends FederationNamenodeContext> namenodes =
         this.resolver.get(nameserviceId);
     if (namenodes == null) {
       namenodes = new ArrayList<>();
     }
-
-    List<FederationNamenodeContext> ret = new ArrayList<>();
-
-    if (observerRead) {
-      Iterator<? extends FederationNamenodeContext> iterator = namenodes
-          .iterator();
-      List<FederationNamenodeContext> observerNN = new ArrayList<>();
-      List<FederationNamenodeContext> nonObserverNN = new ArrayList<>();
-      while (iterator.hasNext()) {
-        FederationNamenodeContext membership = iterator.next();
-        if (membership.getState() == FederationNamenodeServiceState.OBSERVER) {
-          observerNN.add(membership);
-        } else {
-          nonObserverNN.add(membership);
-        }
-      }
-      Collections.shuffle(observerNN);
-      Collections.sort(nonObserverNN, new NamenodePriorityComparator());
-      ret.addAll(observerNN);
-      ret.addAll(nonObserverNN);
-    } else {
-      ret.addAll(namenodes);
-      Collections.sort(ret, new NamenodePriorityComparator());
-    }
-
-    return Collections.unmodifiableList(ret);
+    return Collections.unmodifiableList(new ArrayList<>(namenodes));
   }
 
   @Override
@@ -339,17 +290,9 @@ public class MockResolver
     return Collections.unmodifiableSet(this.namespaces);
   }
 
-  public void clearDisableNamespaces() {
-    this.disableNamespaces.clear();
-  }
-
-  public void disableNamespace(String nsId) {
-    this.disableNamespaces.add(nsId);
-  }
-
   @Override
   public Set<String> getDisabledNamespaces() throws IOException {
-    return this.disableNamespaces;
+    return new TreeSet<>();
   }
 
   @Override
@@ -384,13 +327,33 @@ public class MockResolver
 
   @Override
   public List<String> getMountPoints(String path) throws IOException {
-    List<String> mountPoints = new ArrayList<>();
-    for (String mp : this.locations.keySet()) {
-      if (mp.startsWith(path)) {
-        mountPoints.add(mp);
+    List<String> mounts = new ArrayList<>();
+    // for root path search, returning all downstream root level mapping
+    if (path.equals("/")) {
+      // Mounts only supported under root level
+      for (String mount : this.locations.keySet()) {
+        if (mount.length() > 1) {
+          // Remove leading slash, this is the behavior of the mount tree,
+          // return only names.
+          mounts.add(mount.replace("/", ""));
+        }
+      }
+    } else {
+      // a simplified version of MountTableResolver implementation
+      for (String key : this.locations.keySet()) {
+        if (key.startsWith(path)) {
+          String child = key.substring(path.length());
+          if (child.length() > 0) {
+            // only take children so remove parent path and /
+            mounts.add(key.substring(path.length()+1));
+          }
+        }
+      }
+      if (mounts.size() == 0) {
+        mounts = null;
       }
     }
-    return FileSubclusterResolver.getMountPoints(path, mountPoints);
+    return mounts;
   }
 
   @Override

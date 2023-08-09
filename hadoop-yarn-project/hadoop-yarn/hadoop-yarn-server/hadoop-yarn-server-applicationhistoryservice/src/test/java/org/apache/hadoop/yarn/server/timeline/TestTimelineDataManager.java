@@ -20,10 +20,6 @@ package org.apache.hadoop.yarn.server.timeline;
 
 import java.io.File;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -34,10 +30,10 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 
 public class TestTimelineDataManager extends TimelineStoreTestUtils {
@@ -47,7 +43,7 @@ public class TestTimelineDataManager extends TimelineStoreTestUtils {
   private TimelineDataManager dataManaer;
   private static TimelineACLsManager aclsManager;
   private static AdminACLsManager adminACLsManager;
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     fsPath = new File("target", this.getClass().getSimpleName() +
         "-tmpDir").getAbsoluteFile();
@@ -74,7 +70,7 @@ public class TestTimelineDataManager extends TimelineStoreTestUtils {
     adminACLsManager = new AdminACLsManager(conf);
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     if (store != null) {
       store.stop();
@@ -85,55 +81,55 @@ public class TestTimelineDataManager extends TimelineStoreTestUtils {
   }
 
   @Test
-  void testGetOldEntityWithOutDomainId() throws Exception {
+  public void testGetOldEntityWithOutDomainId() throws Exception {
     TimelineEntity entity = dataManaer.getEntity(
         "OLD_ENTITY_TYPE_1", "OLD_ENTITY_ID_1", null,
         UserGroupInformation.getCurrentUser());
-    assertNotNull(entity);
-    assertEquals("OLD_ENTITY_ID_1", entity.getEntityId());
-    assertEquals("OLD_ENTITY_TYPE_1", entity.getEntityType());
-    assertEquals(
+    Assert.assertNotNull(entity);
+    Assert.assertEquals("OLD_ENTITY_ID_1", entity.getEntityId());
+    Assert.assertEquals("OLD_ENTITY_TYPE_1", entity.getEntityType());
+    Assert.assertEquals(
         TimelineDataManager.DEFAULT_DOMAIN_ID, entity.getDomainId());
   }
 
   @Test
-  void testGetEntitiesAclEnabled() throws Exception {
+  public void testGetEntitiesAclEnabled() throws Exception {
     AdminACLsManager oldAdminACLsManager =
-        aclsManager.setAdminACLsManager(adminACLsManager);
+      aclsManager.setAdminACLsManager(adminACLsManager);
     try {
       TimelineEntities entities = dataManaer.getEntities(
-          "ACL_ENTITY_TYPE_1", null, null, null, null, null, null, 1L, null,
-          UserGroupInformation.createUserForTesting("owner_1", new String[]{"group1"}));
-      assertEquals(1, entities.getEntities().size());
-      assertEquals("ACL_ENTITY_ID_11",
-          entities.getEntities().get(0).getEntityId());
+        "ACL_ENTITY_TYPE_1", null, null, null, null, null, null, 1l, null,
+        UserGroupInformation.createUserForTesting("owner_1", new String[] {"group1"}));
+      Assert.assertEquals(1, entities.getEntities().size());
+      Assert.assertEquals("ACL_ENTITY_ID_11",
+        entities.getEntities().get(0).getEntityId());
     } finally {
       aclsManager.setAdminACLsManager(oldAdminACLsManager);
     }
   }
 
   @Test
-  void testGetOldEntitiesWithOutDomainId() throws Exception {
+  public void testGetOldEntitiesWithOutDomainId() throws Exception {
     TimelineEntities entities = dataManaer.getEntities(
         "OLD_ENTITY_TYPE_1", null, null, null, null, null, null, null, null,
         UserGroupInformation.getCurrentUser());
-    assertEquals(2, entities.getEntities().size());
-    assertEquals("OLD_ENTITY_ID_2",
+    Assert.assertEquals(2, entities.getEntities().size());
+    Assert.assertEquals("OLD_ENTITY_ID_2",
         entities.getEntities().get(0).getEntityId());
-    assertEquals("OLD_ENTITY_TYPE_1",
+    Assert.assertEquals("OLD_ENTITY_TYPE_1",
         entities.getEntities().get(0).getEntityType());
-    assertEquals(TimelineDataManager.DEFAULT_DOMAIN_ID,
+    Assert.assertEquals(TimelineDataManager.DEFAULT_DOMAIN_ID,
         entities.getEntities().get(0).getDomainId());
-    assertEquals("OLD_ENTITY_ID_1",
+    Assert.assertEquals("OLD_ENTITY_ID_1",
         entities.getEntities().get(1).getEntityId());
-    assertEquals("OLD_ENTITY_TYPE_1",
+    Assert.assertEquals("OLD_ENTITY_TYPE_1",
         entities.getEntities().get(1).getEntityType());
-    assertEquals(TimelineDataManager.DEFAULT_DOMAIN_ID,
+    Assert.assertEquals(TimelineDataManager.DEFAULT_DOMAIN_ID,
         entities.getEntities().get(1).getDomainId());
   }
 
   @Test
-  void testUpdatingOldEntityWithoutDomainId() throws Exception {
+  public void testUpdatingOldEntityWithoutDomainId() throws Exception {
     // Set the domain to the default domain when updating
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityType("OLD_ENTITY_TYPE_1");
@@ -144,18 +140,18 @@ public class TestTimelineDataManager extends TimelineStoreTestUtils {
     entities.addEntity(entity);
     TimelinePutResponse response = dataManaer.postEntities(
         entities, UserGroupInformation.getCurrentUser());
-    assertEquals(0, response.getErrors().size());
+    Assert.assertEquals(0, response.getErrors().size());
     entity = store.getEntity("OLD_ENTITY_ID_1", "OLD_ENTITY_TYPE_1", null);
-    assertNotNull(entity);
+    Assert.assertNotNull(entity);
     // Even in leveldb, the domain is updated to the default domain Id
-    assertEquals(
+    Assert.assertEquals(
         TimelineDataManager.DEFAULT_DOMAIN_ID, entity.getDomainId());
-    assertEquals(1, entity.getOtherInfo().size());
-    assertEquals("NEW_OTHER_INFO_KEY",
+    Assert.assertEquals(1, entity.getOtherInfo().size());
+    Assert.assertEquals("NEW_OTHER_INFO_KEY",
         entity.getOtherInfo().keySet().iterator().next());
-    assertEquals("NEW_OTHER_INFO_VALUE",
+    Assert.assertEquals("NEW_OTHER_INFO_VALUE",
         entity.getOtherInfo().values().iterator().next());
-
+    
     // Set the domain to the non-default domain when updating
     entity = new TimelineEntity();
     entity.setEntityType("OLD_ENTITY_TYPE_1");
@@ -166,15 +162,15 @@ public class TestTimelineDataManager extends TimelineStoreTestUtils {
     entities.addEntity(entity);
     response = dataManaer.postEntities(
         entities, UserGroupInformation.getCurrentUser());
-    assertEquals(1, response.getErrors().size());
-    assertEquals(TimelinePutResponse.TimelinePutError.ACCESS_DENIED,
+    Assert.assertEquals(1, response.getErrors().size());
+    Assert.assertEquals(TimelinePutResponse.TimelinePutError.ACCESS_DENIED,
         response.getErrors().get(0).getErrorCode());
     entity = store.getEntity("OLD_ENTITY_ID_2", "OLD_ENTITY_TYPE_1", null);
-    assertNotNull(entity);
+    Assert.assertNotNull(entity);
     // In leveldb, the domain Id is still null
-    assertNull(entity.getDomainId());
+    Assert.assertNull(entity.getDomainId());
     // Updating is not executed
-    assertEquals(0, entity.getOtherInfo().size());
+    Assert.assertEquals(0, entity.getOtherInfo().size());
   }
   
 }

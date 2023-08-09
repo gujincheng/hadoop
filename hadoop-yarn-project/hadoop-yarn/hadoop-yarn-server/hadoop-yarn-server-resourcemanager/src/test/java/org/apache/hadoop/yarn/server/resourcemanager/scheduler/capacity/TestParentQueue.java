@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -33,7 +31,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -81,8 +78,7 @@ public class TestParentQueue {
   YarnConfiguration conf;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
-  CapacitySchedulerQueueContext queueContext;
-
+  
   final static int GB = 1024;
   final static String DEFAULT_RACK = "/default";
 
@@ -108,10 +104,6 @@ public class TestParentQueue {
     when(csContext.getResourceCalculator()).
         thenReturn(resourceComparator);
     when(csContext.getRMContext()).thenReturn(rmContext);
-    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(
-        new CapacitySchedulerQueueManager(csConf, rmContext.getNodeLabelManager(), null));
-
-    queueContext = new CapacitySchedulerQueueContext(csContext);
   }
   
   private static final String A = "a";
@@ -128,8 +120,6 @@ public class TestParentQueue {
     conf.setCapacity(Q_A, 30);
     
     conf.setCapacity(Q_B, 70);
-
-    queueContext.reinitialize();
     
     LOG.info("Setup top-level queues a and b");
   }
@@ -140,13 +130,11 @@ public class TestParentQueue {
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{A, B});
 
-    conf.setMinimumResourceRequirement("", new QueuePath(Q_A),
+    conf.setMinimumResourceRequirement("", Q_A,
         QUEUE_A_RESOURCE);
 
-    conf.setMinimumResourceRequirement("", new QueuePath(Q_B),
+    conf.setMinimumResourceRequirement("", Q_B,
         QUEUE_B_RESOURCE);
-
-    queueContext.reinitialize();
 
     LOG.info("Setup top-level queues a and b with absolute resource");
   }
@@ -201,8 +189,8 @@ public class TestParentQueue {
               " alloc=" + allocation + " node=" + node.getNodeName());
         }
         final Resource allocatedResource = Resources.createResource(allocation);
-        if (queue instanceof AbstractParentQueue) {
-          ((AbstractParentQueue)queue).allocateResource(clusterResource,
+        if (queue instanceof ParentQueue) {
+          ((ParentQueue)queue).allocateResource(clusterResource, 
               allocatedResource, RMNodeLabelsManager.NO_LABEL);
         } else {
           FiCaSchedulerApp app1 = getMockApplication(0, "");
@@ -264,7 +252,7 @@ public class TestParentQueue {
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue root =
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues, 
             TestUtils.spyHook);
 
@@ -382,19 +370,14 @@ public class TestParentQueue {
     setupSingleLevelQueues(csConf);
     csConf.setCapacity(Q_A, 30);
     csConf.setCapacity(Q_B, 70.5F);
-    queueContext.reinitialize();
-
-    // If the new queue mode is used it's allowed to over allocate the resources,
-    // as they'll be scaled down accordingly
-    assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     CSQueueStore queues = new CSQueueStore();
     boolean exceptionOccurred = false;
     try {
-      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
-    } catch (IOException ie) {
+    } catch (IllegalArgumentException ie) {
       exceptionOccurred = true;
     }
     if (!exceptionOccurred) {
@@ -402,11 +385,10 @@ public class TestParentQueue {
     }
     csConf.setCapacity(Q_A, 30);
     csConf.setCapacity(Q_B, 70);
-    queueContext.reinitialize();
     exceptionOccurred = false;
     queues.clear();
     try {
-      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
@@ -417,11 +399,10 @@ public class TestParentQueue {
     }
     csConf.setCapacity(Q_A, 30);
     csConf.setCapacity(Q_B, 70.005F);
-    queueContext.reinitialize();
     exceptionOccurred = false;
     queues.clear();
     try {
-      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
@@ -445,7 +426,6 @@ public class TestParentQueue {
   private static final String B1 = "b1";
   private static final String B2 = "b2";
   private static final String B3 = "b3";
-  private static final String B4 = "b4";
   
   private void setupMultiLevelQueues(CapacitySchedulerConfiguration conf) {
     
@@ -488,7 +468,6 @@ public class TestParentQueue {
     conf.setQueues(Q_C111, new String[] {C1111});
     final String Q_C1111= Q_C111 + "." + C1111;
     conf.setCapacity(Q_C1111, 100);
-    queueContext.reinitialize();
   }
 
   @Test
@@ -514,7 +493,7 @@ public class TestParentQueue {
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue root =
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
     
@@ -667,111 +646,37 @@ public class TestParentQueue {
     reset(a); reset(b); reset(c);
   }
   
-  @Test (expected=IOException.class)
+  @Test (expected=IllegalArgumentException.class)
   public void testQueueCapacitySettingChildZero() throws Exception {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
-
-    // If the new queue mode is used it's allowed to have
-    // zero-capacity queues under a non-zero parent
-    assumeThat(csConf.isLegacyQueueMode(), is(true));
-
+    
     // set child queues capacity to 0 when parents not 0
     csConf.setCapacity(Q_B + "." + B1, 0);
     csConf.setCapacity(Q_B + "." + B2, 0);
     csConf.setCapacity(Q_B + "." + B3, 0);
-    queueContext.reinitialize();
 
     CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
   }
   
-  @Test (expected=IOException.class)
+  @Test (expected=IllegalArgumentException.class)
   public void testQueueCapacitySettingParentZero() throws Exception {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
-
-    // If the new queue mode is used it's allowed to have
-    // non-zero capacity queues under a zero capacity parent
-    assumeThat(csConf.isLegacyQueueMode(), is(true));
-
+    
     // set parent capacity to 0 when child not 0
     csConf.setCapacity(Q_B, 0);
     csConf.setCapacity(Q_A, 60);
-    queueContext.reinitialize();
 
     CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
   }
-
-  @Test
-  public void testQueueCapacitySettingParentZeroChildren100pctZeroSumAllowed()
-      throws Exception {
-    // Setup queue configs
-    setupMultiLevelQueues(csConf);
-
-    // set parent capacity to 0 when child is 100
-    // and allow zero capacity sum
-    csConf.setCapacity(Q_B, 0);
-    csConf.setCapacity(Q_A, 60);
-    csConf.setAllowZeroCapacitySum(Q_B, true);
-    queueContext.reinitialize();
-    CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-        CapacitySchedulerConfiguration.ROOT, queues, queues,
-        TestUtils.spyHook);
-  }
-
-  @Test(expected = IOException.class)
-  public void testQueueCapacitySettingParentZeroChildren50pctZeroSumAllowed()
-      throws Exception {
-    // Setup queue configs
-    setupMultiLevelQueues(csConf);
-
-    // If the new queue mode is used it's allowed to have
-    // non-zero capacity queues under a zero capacity parent
-    assumeThat(csConf.isLegacyQueueMode(), is(true));
-
-    // set parent capacity to 0 when sum(children) is 50
-    // and allow zero capacity sum
-    csConf.setCapacity(Q_B, 0);
-    csConf.setCapacity(Q_A, 100);
-    csConf.setCapacity(Q_B + "." + B1, 10);
-    csConf.setCapacity(Q_B + "." + B2, 20);
-    csConf.setCapacity(Q_B + "." + B3, 20);
-    csConf.setAllowZeroCapacitySum(Q_B, true);
-    queueContext.reinitialize();
-    CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-        CapacitySchedulerConfiguration.ROOT, queues, queues,
-        TestUtils.spyHook);
-  }
-
-  @Test
-  public void testQueueCapacitySettingParentNonZeroChildrenZeroSumAllowed()
-      throws Exception {
-    // Setup queue configs
-    setupMultiLevelQueues(csConf);
-
-    // set parent capacity to 10 when sum(children) is 0
-    // and allow zero capacity sum
-    csConf.setCapacity(Q_B, 10);
-    csConf.setCapacity(Q_A, 50);
-    csConf.setCapacity(Q_B + "." + B1, 0);
-    csConf.setCapacity(Q_B + "." + B2, 0);
-    csConf.setCapacity(Q_B + "." + B3, 0);
-    csConf.setAllowZeroCapacitySum(Q_B, true);
-    queueContext.reinitialize();
-    CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-        CapacitySchedulerConfiguration.ROOT, queues, queues,
-        TestUtils.spyHook);
-  }
-
+  
   @Test
   public void testQueueCapacityZero() throws Exception {
     // Setup queue configs
@@ -782,12 +687,12 @@ public class TestParentQueue {
     csConf.setCapacity(Q_B + "." + B1, 0);
     csConf.setCapacity(Q_B + "." + B2, 0);
     csConf.setCapacity(Q_B + "." + B3, 0);
+    
     csConf.setCapacity(Q_A, 60);
-    queueContext.reinitialize();
 
     CSQueueStore queues = new CSQueueStore();
     try {
-      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException e) {
@@ -803,7 +708,7 @@ public class TestParentQueue {
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue root =
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
 
@@ -885,7 +790,7 @@ public class TestParentQueue {
     //B3
     CSQueueStore queues = new CSQueueStore();
     CSQueue root = 
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
 
@@ -984,11 +889,10 @@ public class TestParentQueue {
     csConf.setAcl(Q_C, QueueACL.ADMINISTER_QUEUE, "*");
     final String Q_C11= Q_C + "." + C1 +  "." + C11;
     csConf.setAcl(Q_C11, QueueACL.SUBMIT_APPLICATIONS, "*");
-    queueContext.reinitialize();
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue root = 
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
     YarnAuthorizationProvider authorizer =
@@ -1051,7 +955,7 @@ public class TestParentQueue {
     setupSingleLevelQueuesWithAbsoluteResource(csConf);
 
     CSQueueStore queues = new CSQueueStore();
-    CSQueue root = CapacitySchedulerQueueManager.parseQueue(queueContext, csConf,
+    CSQueue root = CapacitySchedulerQueueManager.parseQueue(csContext, csConf,
         null, CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
 
@@ -1104,15 +1008,8 @@ public class TestParentQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
-    // Legacy mode uses the ResourceCalculator.lessThan() function for comparison
-    //      DefaultResourceCalculator only compares the memory
-    //      DominantResourceCalculator compares the dominants
-    // While the non-legacy mode compares the resources individually
-    // Further details: YARN-11507
-    Resource QUEUE_B_RESOURCE_70PERC =
-        Resource.newInstance(7 * 1024, csConf.isLegacyQueueMode() ? 27 : 22);
-    Resource QUEUE_A_RESOURCE_30PERC =
-        Resource.newInstance(3 * 1024, csConf.isLegacyQueueMode() ? 12 : 10);
+    Resource QUEUE_B_RESOURCE_70PERC = Resource.newInstance(7 * 1024, 27);
+    Resource QUEUE_A_RESOURCE_30PERC = Resource.newInstance(3 * 1024, 12);
     assertEquals(a.getQueueResourceQuotas().getConfiguredMinResource(),
         QUEUE_A_RESOURCE);
     assertEquals(b.getQueueResourceQuotas().getConfiguredMinResource(),
@@ -1129,7 +1026,7 @@ public class TestParentQueue {
     setupSingleLevelQueuesWithAbsoluteResource(csConf);
 
     CSQueueStore queues = new CSQueueStore();
-    CSQueue root = CapacitySchedulerQueueManager.parseQueue(queueContext, csConf,
+    CSQueue root = CapacitySchedulerQueueManager.parseQueue(csContext, csConf,
             null, CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
 
@@ -1181,8 +1078,7 @@ public class TestParentQueue {
     assertEquals(b.getMaxApplications(), b.getMaxApplicationsPerUser());
 
     // Set GlobalMaximumApplicationsPerQueue in csConf
-    csConf.setGlobalMaximumApplicationsPerQueue(8000);
-    queueContext.reinitialize();
+    csConf.setGlobalMaximumApplicationsPerQueue(20000);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
@@ -1200,7 +1096,6 @@ public class TestParentQueue {
             Integer.toString(queueAMaxApplications));
     csConf.set("yarn.scheduler.capacity." + Q_B + ".maximum-applications",
             Integer.toString(queueBMaxApplications));
-    queueContext.reinitialize();
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
@@ -1210,26 +1105,18 @@ public class TestParentQueue {
     assertEquals(b.getMaxApplications(), b.getMaxApplicationsPerUser());
 
     // Extra cases for testing maxApplicationsPerUser
-    float halfPercent = 50f;
-    float oneAndQuarterPercent = 125f;
-    float thirdPercent = 33.3f;
+    int halfPercent = 50;
+    int oneAndQuarterPercent = 125;
     a.getUsersManager().setUserLimit(halfPercent);
     b.getUsersManager().setUserLimit(oneAndQuarterPercent);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
-    assertEquals((int) (a.getMaxApplications() * halfPercent / 100),
+    assertEquals(a.getMaxApplications() * halfPercent / 100,
             a.getMaxApplicationsPerUser());
     // Q_B's limit per user shouldn't be greater
     // than the whole queue's application limit
     assertEquals(b.getMaxApplications(), b.getMaxApplicationsPerUser());
-
-    b.getUsersManager().setUserLimit(thirdPercent);
-    root.updateClusterResource(clusterResource,
-        new ResourceLimits(clusterResource));
-
-    assertEquals((int) (b.getMaxApplications() * thirdPercent / 100),
-        b.getMaxApplicationsPerUser());
 
     float userLimitFactorQueueA = 0.9f;
     float userLimitFactorQueueB = 1.1f;

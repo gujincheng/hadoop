@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -57,6 +56,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 public class TestCapacitySchedulerNodeLabelUpdate {
   private final int GB = 1024;
@@ -674,7 +674,6 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     checkAMResourceLimit(rm, "a", 640, "y");
     checkAMResourceLimit(rm, "a", 0, "z");
     checkAMResourceLimit(rm, "a", 0, "");
-    rm.stop();
   }
 
   @Test(timeout = 60000)
@@ -953,6 +952,5 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     // Last node with label x is replaced by CLI or REST.
     Assert.assertEquals(0,
         waitForNodeLabelSchedulerEventUpdate(rm, "x", 0, 3000L));
-    rm.stop();
   }
 }

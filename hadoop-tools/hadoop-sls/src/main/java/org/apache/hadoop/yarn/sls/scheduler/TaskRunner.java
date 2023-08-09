@@ -26,14 +26,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
 public class TaskRunner {
-  private static final Logger LOG = LoggerFactory.getLogger(TaskRunner.class);
-
   @Private
   @Unstable
   public abstract static class Task implements Runnable, Delayed {
@@ -102,7 +98,7 @@ public class TaskRunner {
           lastStep();
         }
       } catch (Exception e) {
-        LOG.error("Caught exception while executing Taskrunner", e);
+        e.printStackTrace();
         Thread.getDefaultUncaughtExceptionHandler()
             .uncaughtException(Thread.currentThread(), e);
       }

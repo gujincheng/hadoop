@@ -26,7 +26,7 @@ export default DS.JSONAPISerializer.extend({
       var children = [];
       if (payload.queues && payload.queues.queue) {
         payload.queues.queue.forEach(function(queue) {
-          children.push(queue.queuePath);
+          children.push(queue.queueName);
         });
       }
 
@@ -40,10 +40,10 @@ export default DS.JSONAPISerializer.extend({
           var maxAMResource = defaultPartitionResource.amLimit;
           includedData.push({
             type: "YarnUser",
-            id: u.username + "_" + payload.queuePath,
+            id: u.username + "_" + payload.queueName,
             attributes: {
               name: u.username,
-              queueName: payload.queuePath,
+              queueName: payload.queueName,
               usedMemoryMB: u.resourcesUsed.memory || 0,
               usedVCore: u.resourcesUsed.vCores || 0,
               maxMemoryMB: u.userResourceLimit.memory || 0,
@@ -60,7 +60,7 @@ export default DS.JSONAPISerializer.extend({
 
           relationshipUserData.push({
             type: "YarnUser",
-            id: u.username + "_" + payload.queuePath,
+            id: u.username + "_" + payload.queueName,
           });
         });
       }
@@ -92,7 +92,6 @@ export default DS.JSONAPISerializer.extend({
         type: primaryModelClass.modelName, // yarn-queue
         attributes: {
           name: payload.queueName,
-          queuePath: payload.queuePath,
           parent: payload.myParent,
           children: children,
           capacity: payload.capacity,
@@ -101,11 +100,7 @@ export default DS.JSONAPISerializer.extend({
           absCapacity: payload.absoluteCapacity,
           absMaxCapacity: payload.absoluteMaxCapacity,
           absUsedCapacity: payload.absoluteUsedCapacity,
-          weight: payload.weight,
-          normalizedWeight: payload.normalizedWeight,
-          creationMethod: payload.creationMethod,
           state: payload.state,
-          orderingPolicy: payload.orderingPolicyInfo,
           userLimit: payload.userLimit,
           userLimitFactor: payload.userLimitFactor,
           preemptionDisabled: payload.preemptionDisabled,
@@ -141,9 +136,9 @@ export default DS.JSONAPISerializer.extend({
       if (payload.queues && payload.queues.queue) {
         for (var i = 0; i < payload.queues.queue.length; i++) {
           var queue = payload.queues.queue[i];
-          queue.myParent = payload.queuePath;
+          queue.myParent = payload.queueName;
           var childResult = this.handleQueue(store, primaryModelClass, queue,
-            queue.queuePath,
+            queue.queueName,
             requestType);
 
           data = data.concat(childResult.data);

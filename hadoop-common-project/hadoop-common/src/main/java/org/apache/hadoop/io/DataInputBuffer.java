@@ -140,23 +140,12 @@ public class DataInputBuffer extends DataInputStream {
     this.buffer = buffer;
   }
 
-  /**
-   * Resets the data that the buffer reads.
-   *
-   * @param input input.
-   * @param length length.
-   */
+  /** Resets the data that the buffer reads. */
   public void reset(byte[] input, int length) {
     buffer.reset(input, 0, length);
   }
 
-  /**
-   * Resets the data that the buffer reads.
-   *
-   * @param input input.
-   * @param start start.
-   * @param length length.
-   */
+  /** Resets the data that the buffer reads. */
   public void reset(byte[] input, int start, int length) {
     buffer.reset(input, start, length);
   }
@@ -165,18 +154,12 @@ public class DataInputBuffer extends DataInputStream {
     return buffer.getData();
   }
 
-  /**
-   * Returns the current position in the input.
-   *
-   * @return position.
-   */
+  /** Returns the current position in the input. */
   public int getPosition() { return buffer.getPosition(); }
 
   /**
    * Returns the index one greater than the last valid character in the input
    * stream buffer.
-   *
-   * @return length.
    */
   public int getLength() { return buffer.getLength(); }
 

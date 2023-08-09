@@ -167,18 +167,21 @@ public abstract class PeriodicService extends AbstractService {
     stopPeriodic();
 
     // Create the runnable service
-    Runnable updateRunnable = () -> {
-      LOG.debug("Running {} update task", serviceName);
-      try {
-        if (!isRunning) {
-          return;
+    Runnable updateRunnable = new Runnable() {
+      @Override
+      public void run() {
+        LOG.debug("Running {} update task", serviceName);
+        try {
+          if (!isRunning) {
+            return;
+          }
+          periodicInvoke();
+          runCount++;
+          lastRun = Time.now();
+        } catch (Exception ex) {
+          errorCount++;
+          LOG.warn(serviceName + " service threw an exception", ex);
         }
-        periodicInvoke();
-        runCount++;
-        lastRun = Time.now();
-      } catch (Exception ex) {
-        errorCount++;
-        LOG.warn("{} service threw an exception", serviceName, ex);
       }
     };
 

@@ -26,8 +26,15 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reducer;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.*;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
 import java.net.URI;
@@ -55,8 +62,8 @@ public class MRCaching {
     public void configure(JobConf jconf) {
       conf = jconf;
       try {
-        Path[] localArchives = JobContextImpl.getLocalCacheArchives(conf);
-        Path[] localFiles = JobContextImpl.getLocalCacheFiles(conf);
+        Path[] localArchives = DistributedCache.getLocalCacheArchives(conf);
+        Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
         // read the cached files (unzipped, unjarred and text)
         // and put it into a single file TEST_ROOT_DIR/test.txt
         String TEST_ROOT_DIR = jconf.get("test.build.data","/tmp");
@@ -247,7 +254,7 @@ public class MRCaching {
     uris[3] = fs.getUri().resolve(cacheDir + "/test.tgz");
     uris[4] = fs.getUri().resolve(cacheDir + "/test.tar.gz");
     uris[5] = fs.getUri().resolve(cacheDir + "/test.tar");
-    Job.addCacheFile(uris[0], conf);
+    DistributedCache.addCacheFile(uris[0], conf);
 
     // Save expected file sizes
     long[] fileSizes = new long[1];
@@ -255,7 +262,7 @@ public class MRCaching {
 
     long[] archiveSizes = new long[5]; // track last 5
     for (int i = 1; i < 6; i++) {
-      Job.addCacheArchive(uris[i], conf);
+      DistributedCache.addCacheArchive(uris[i], conf);
       archiveSizes[i-1] = // starting with second archive
         fs.getFileStatus(new Path(uris[i].getPath())).getLen();
     }

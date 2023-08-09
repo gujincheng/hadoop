@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidPathException;
@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Time;
@@ -152,8 +151,8 @@ class FSDirRenameOp {
    * @param srcIIP source path
    * @param dstIIP destination path
    * @return true INodesInPath if rename succeeds; null otherwise
-   * @deprecated See {@link #renameToInt(FSDirectory, FSPermissionChecker,
-   * String, String, boolean, Options.Rename...)}
+   * @deprecated See {@link #renameToInt(FSDirectory, String, String,
+   * boolean, Options.Rename...)}
    */
   @Deprecated
   static INodesInPath unprotectedRenameTo(FSDirectory fsd,
@@ -198,7 +197,7 @@ class FSDirRenameOp {
     }
 
     validateNestSnapshot(fsd, src, dstParent.asDirectory(), snapshottableDirs);
-    checkUnderSameSnapshottableRoot(fsd, srcIIP, dstIIP);
+
     fsd.ezManager.checkMoveValidity(srcIIP, dstIIP);
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
@@ -248,8 +247,8 @@ class FSDirRenameOp {
     String src = srcArg;
     String dst = dstArg;
     if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options={} {} to {}",
-          Arrays.toString(options), src, dst);
+      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options -" +
+          " " + src + " to " + dst);
     }
 
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
@@ -258,8 +257,8 @@ class FSDirRenameOp {
   }
 
   /**
-   * @see {@link #unprotectedRenameTo(FSDirectory, INodesInPath, INodesInPath,
-   * long, BlocksMapUpdateInfo, Options.Rename...)}
+   * @see {@link #unprotectedRenameTo(FSDirectory, String, String, INodesInPath,
+   * INodesInPath, long, BlocksMapUpdateInfo, Options.Rename...)}
    */
   static RenameResult renameTo(FSDirectory fsd, FSPermissionChecker pc,
       String src, String dst, BlocksMapUpdateInfo collectedBlocks,
@@ -417,7 +416,6 @@ class FSDirRenameOp {
 
     validateNestSnapshot(fsd, src,
             dstParent.asDirectory(), srcSnapshottableDirs);
-    checkUnderSameSnapshottableRoot(fsd, srcIIP, dstIIP);
 
     // Ensure dst has quota to accommodate rename
     verifyFsLimitsForRename(fsd, srcIIP, dstIIP);
@@ -482,8 +480,8 @@ class FSDirRenameOp {
   }
 
   /**
-   * @deprecated Use {@link #renameToInt(FSDirectory, FSPermissionChecker,
-   * String, String, boolean, Options.Rename...)}
+   * @deprecated Use {@link #renameToInt(FSDirectory, String, String,
+   * boolean, Options.Rename...)}
    */
   @Deprecated
   private static RenameResult renameTo(FSDirectory fsd, FSPermissionChecker pc,
@@ -828,29 +826,6 @@ class FSDirRenameOp {
         QuotaCounts newSrcCounts = srcChild.computeQuotaUsage(bsps, false);
         newSrcCounts.subtract(oldSrcCounts);
         srcParent.addSpaceConsumed(newSrcCounts);
-      }
-    }
-  }
-
-  private static void checkUnderSameSnapshottableRoot(
-      FSDirectory fsd, INodesInPath srcIIP, INodesInPath dstIIP)
-      throws IOException {
-    // Ensure rename out of a snapshottable root is not permitted if ordered
-    // snapshot deletion feature is enabled
-    SnapshotManager snapshotManager = fsd.getFSNamesystem().
-        getSnapshotManager();
-    if (snapshotManager.isSnapshotDeletionOrdered() && fsd.getFSNamesystem()
-        .isSnapshotTrashRootEnabled()) {
-      INodeDirectory srcRoot = snapshotManager.
-          getSnapshottableAncestorDir(srcIIP);
-      INodeDirectory dstRoot = snapshotManager.
-          getSnapshottableAncestorDir(dstIIP);
-      // Ensure snapshoottable root for both src and dest are same.
-      if (srcRoot != dstRoot) {
-        String errMsg = "Source " + srcIIP.getPath() +
-            " and dest " + dstIIP.getPath() + " are not under " +
-            "the same snapshot root.";
-        throw new SnapshotException(errMsg);
       }
     }
   }

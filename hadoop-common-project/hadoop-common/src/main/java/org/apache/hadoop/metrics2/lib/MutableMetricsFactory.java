@@ -146,10 +146,8 @@ public class MutableMetricsFactory {
   }
 
   /**
-   * @return Remove the prefix "get", if any, from the method name. Return the
+   * Remove the prefix "get", if any, from the method name. Return the
    * capacitalized method name."
-   *
-   * @param method input method.
    */
   protected String getName(Method method) {
     String methodName = method.getName();

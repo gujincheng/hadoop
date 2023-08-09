@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import static org.apache.hadoop.util.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -41,6 +41,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
+import org.apache.hadoop.security.http.XFrameOptionsFilter;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -324,19 +325,6 @@ public class WebApps {
                 YarnConfiguration.YARN_ADMIN_ACL,
                 YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)))
             .setPathSpec(pathList.toArray(new String[0]));
-
-        // Set the X-FRAME-OPTIONS header, use the HttpServer2 default if
-        // the header value is not specified
-        Map<String, String> xfsParameters =
-            getConfigParameters(xfsConfigPrefix);
-
-        if (xfsParameters != null) {
-          String xFrameOptions = xfsParameters.get("xframe-options");
-          if (xFrameOptions != null) {
-            builder.configureXFrame(hasXFSEnabled())
-                .setXFrameOption(xFrameOptions);
-          }
-        }
         // Get port ranges from config.
         IntegerRanges ranges = null;
         if (portRangeConfigKey != null) {
@@ -405,6 +393,15 @@ public class WebApps {
           HttpServer2.defineFilter(server.getWebAppContext(), restCsrfClassName,
                                    restCsrfClassName, params,
                                    new String[] {"/*"});
+        }
+
+        params = getConfigParameters(xfsConfigPrefix);
+
+        if (hasXFSEnabled()) {
+          String xfsClassName = XFrameOptionsFilter.class.getName();
+          HttpServer2.defineFilter(server.getWebAppContext(), xfsClassName,
+              xfsClassName, params,
+              new String[] {"/*"});
         }
 
         HttpServer2.defineFilter(server.getWebAppContext(), "guice",
@@ -476,7 +473,7 @@ public class WebApps {
         LOG.info("Web app " + name + " started at "
             + httpServer.getConnectorAddress(0).getPort());
       } catch (IOException e) {
-        throw new WebAppException("Error starting http server", e, webApp);
+        throw new WebAppException("Error starting http server", e);
       }
       return webApp;
     }
@@ -491,6 +488,14 @@ public class WebApps {
         String restCsrfClassName = RestCsrfPreventionFilter.class.getName();
         HttpServer2.defineFilter(ui2Context, restCsrfClassName,
             restCsrfClassName, params, new String[]{"/*"});
+      }
+
+      params = getConfigParameters(xfsConfigPrefix);
+
+      if (hasXFSEnabled()) {
+        String xfsClassName = XFrameOptionsFilter.class.getName();
+        HttpServer2.defineFilter(ui2Context, xfsClassName, xfsClassName, params,
+            new String[]{"/*"});
       }
     }
 

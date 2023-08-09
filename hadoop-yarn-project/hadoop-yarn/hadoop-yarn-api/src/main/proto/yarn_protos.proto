@@ -18,7 +18,7 @@
 
 /**
  * These .proto interfaces are public and stable.
- * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
+ * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
 
@@ -294,7 +294,6 @@ message ApplicationReportProto {
   repeated AppTimeoutsMapProto appTimeouts = 26;
   optional int64 launchTime = 27;
   optional int64 submitTime = 28;
-  optional string rmClusterId = 29;
 }
 
 message AppTimeoutsMapProto {
@@ -430,20 +429,6 @@ enum ContainerTypeProto {
 enum ExecutionTypeProto {
   GUARANTEED = 1;
   OPPORTUNISTIC = 2;
-}
-
-message DeregisterSubClustersProto {
-  optional string subClusterId = 1;
-  optional string deregisterState = 2;
-  optional string lastHeartBeatTime = 3;
-  optional string information = 4;
-  optional string subClusterState = 5;
-}
-
-message FederationQueueWeightProto {
-  optional string routerWeight = 1;
-  optional string amrmWeight = 2;
-  optional string headRoomAlpha = 3;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -586,8 +571,6 @@ message YarnClusterMetricsProto {
   optional int32 num_lost_nms = 4;
   optional int32 num_unhealthy_nms = 5;
   optional int32 num_rebooted_nms = 6;
-  optional int32 num_decommissioning_nms = 7;
-  optional int32 num_shutdown_nms = 8;
 }
 
 enum QueueStateProto {
@@ -631,9 +614,6 @@ message QueueInfoProto {
   optional bool preemptionDisabled = 11;
   repeated QueueConfigurationsMapProto queueConfigurationsMap = 12;
   optional bool intraQueuePreemptionDisabled = 13;
-  optional float weight = 14;
-  optional string queuePath = 15;
-  optional int32 maxParallelApps = 16;
 }
 
 message QueueConfigurationsProto {

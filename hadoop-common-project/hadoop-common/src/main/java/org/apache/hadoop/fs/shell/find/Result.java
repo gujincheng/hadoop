@@ -35,36 +35,23 @@ public final class Result {
     this.descend = recurse;
   }
 
-  /**
-   * Should further directories be descended.
-   * @return if is pass true,not false.
-   */
+  /** Should further directories be descended. */
   public boolean isDescend() {
     return this.descend;
   }
 
-  /**
-   * Should processing continue.
-   * @return if is pass true,not false.
-   */
+  /** Should processing continue. */
   public boolean isPass() {
     return this.success;
   }
 
-  /**
-   * Returns the combination of this and another result.
-   * @param other other.
-   * @return result.
-   */
+  /** Returns the combination of this and another result. */
   public Result combine(Result other) {
     return new Result(this.isPass() && other.isPass(), this.isDescend()
         && other.isDescend());
   }
 
-  /**
-   * Negate this result.
-   * @return Result.
-   */
+  /** Negate this result. */
   public Result negate() {
     return new Result(!this.isPass(), this.isDescend());
   }

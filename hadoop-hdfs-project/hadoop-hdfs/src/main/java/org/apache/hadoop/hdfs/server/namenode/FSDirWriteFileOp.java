@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.AddBlockFlag;
@@ -624,7 +624,7 @@ class FSDirWriteFileOp {
       //    timeout, or because of an HA failover. In that case, we know
       //    by the fact that the client is re-issuing the RPC that it
       //    never began to write to the old block. Hence it is safe to
-      //    return the existing block.
+      //    to return the existing block.
       // 3) This is an entirely bogus request/bug -- we should error out
       //    rather than potentially appending a new block with an empty
       //    one in the middle, etc

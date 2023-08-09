@@ -184,11 +184,7 @@ static int testOpenTrunc(const char *base)
   const char * const SAMPLE2 = "this is the second file that we wrote.  "
     "It's #2!";
 
-  int szToWrite = snprintf(NULL, 0, "%s/trunc.txt", base);
-  EXPECT_INT_LT(szToWrite, PATH_MAX);
-  int szWritten = snprintf(path, sizeof(path), "%s/trunc.txt", base);
-  EXPECT_NONNEGATIVE(szWritten);
-
+  snprintf(path, sizeof(path), "%s/trunc.txt", base);
   fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
   if (fd < 0) {
     err = errno;
@@ -256,10 +252,7 @@ int runFuseWorkloadImpl(const char *root, const char *pcomp,
   EXPECT_NONZERO(S_ISDIR(stBuf.st_mode));
 
   // mkdir <base>/a
-  int szToWrite = snprintf(NULL, 0, "%s/a", base);
-  EXPECT_INT_LT(szToWrite, PATH_MAX);
-  int szWritten = snprintf(tmp, sizeof(tmp), "%s/a", base);
-  EXPECT_NONNEGATIVE(szWritten);
+  snprintf(tmp, sizeof(tmp), "%s/a", base);
   RETRY_ON_EINTR_GET_ERRNO(ret, mkdir(tmp, 0755));
   EXPECT_ZERO(ret);
 
@@ -267,10 +260,7 @@ int runFuseWorkloadImpl(const char *root, const char *pcomp,
   EXPECT_INT_EQ(1, testReadDir(base, expectDirs, DIRS_A_AND_B));
 
   // mkdir <base>/b
-  szToWrite = snprintf(NULL, 0, "%s/b", base);
-  EXPECT_INT_LT(szToWrite, PATH_MAX);
-  szWritten = snprintf(tmp, sizeof(tmp), "%s/b", base);
-  EXPECT_NONNEGATIVE(szWritten);
+  snprintf(tmp, sizeof(tmp), "%s/b", base);
   RETRY_ON_EINTR_GET_ERRNO(ret, mkdir(tmp, 0755));
   EXPECT_ZERO(ret);
 
@@ -278,16 +268,8 @@ int runFuseWorkloadImpl(const char *root, const char *pcomp,
   EXPECT_INT_EQ(2, testReadDir(base, expectDirs, DIRS_A_AND_B));
 
   // rename a -> c
-  szToWrite = snprintf(NULL, 0, "%s/a", base);
-  EXPECT_INT_LT(szToWrite, PATH_MAX);
-  szWritten = snprintf(src, sizeof(src), "%s/a", base);
-  EXPECT_NONNEGATIVE(szWritten);
-
-  szToWrite = snprintf(NULL, 0, "%s/c", base);
-  EXPECT_INT_LT(szToWrite, PATH_MAX);
-  szWritten = snprintf(dst, sizeof(dst), "%s/c", base);
-  EXPECT_NONNEGATIVE(szWritten);
-
+  snprintf(src, sizeof(src), "%s/a", base);
+  snprintf(dst, sizeof(dst), "%s/c", base);
   EXPECT_ZERO(rename(src, dst));
 
   // readdir c and b
@@ -312,11 +294,7 @@ int runFuseWorkloadImpl(const char *root, const char *pcomp,
 
   // open some files and write to them
   for (i = 0; i < NUM_FILE_CTX; i++) {
-    szToWrite = snprintf(NULL, 0, "%s/b/%d", base, i);
-    EXPECT_INT_LT(szToWrite, PATH_MAX);
-    szWritten = snprintf(tmp, sizeof(tmp), "%s/b/%d", base, i);
-    EXPECT_NONNEGATIVE(szWritten);
-
+    snprintf(tmp, sizeof(tmp), "%s/b/%d", base, i);
     ctx[i].path = strdup(tmp);
     if (!ctx[i].path) {
       fprintf(stderr, "FUSE_WORKLOAD: OOM on line %d\n", __LINE__);

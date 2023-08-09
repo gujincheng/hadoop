@@ -27,11 +27,15 @@ import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.retry.RetryUtils;
+import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
+import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -41,21 +45,17 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.functional.RemoteIterators;
-import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
-import org.apache.hadoop.fs.s3a.audit.AuditIntegration;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
-import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.VersionInfo;
 
-import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,8 +96,6 @@ import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteI
 
 /**
  * Utility methods for S3A code.
- * Some methods are marked LimitedPrivate since they are being used in an
- * external project.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -165,6 +163,7 @@ public final class S3AUtils {
    *
    * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">S3 Error responses</a>
    * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ErrorBestPractices.html">Amazon S3 Error Best Practices</a>
+   * @see <a href="http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/CommonErrors.html">Dynamo DB Commmon errors</a>
    * @param operation operation
    * @param path path operated on (must not be null)
    * @param exception amazon exception raised
@@ -205,19 +204,20 @@ public final class S3AUtils {
         // call considered an sign of connectivity failure
         return (EOFException)new EOFException(message).initCause(exception);
       }
-      // if the exception came from the auditor, hand off translation
-      // to it.
-      if (exception instanceof AuditFailureException) {
-        return AuditIntegration.translateAuditException(path, (AuditFailureException) exception);
-      }
       if (exception instanceof CredentialInitializationException) {
         // the exception raised by AWSCredentialProvider list if the
         // credentials were not accepted,
+        // or auditing blocked the operation.
         return (AccessDeniedException)new AccessDeniedException(path, null,
             exception.toString()).initCause(exception);
       }
       return new AWSClientIOException(message, exception);
     } else {
+      if (exception instanceof AmazonDynamoDBException) {
+        // special handling for dynamo DB exceptions
+        return translateDynamoDBException(path, message,
+            (AmazonDynamoDBException)exception);
+      }
       IOException ioe;
       AmazonServiceException ase = (AmazonServiceException) exception;
       // this exception is non-null if the service exception is an s3 one
@@ -386,7 +386,6 @@ public final class S3AUtils {
     } else {
       String name = innerCause.getClass().getName();
       if (name.endsWith(".ConnectTimeoutException")
-          || name.endsWith(".ConnectionPoolTimeoutException")
           || name.endsWith("$ConnectTimeoutException")) {
         // TCP connection http timeout from the shaded or unshaded filenames
         // com.amazonaws.thirdparty.apache.http.conn.ConnectTimeoutException
@@ -402,7 +401,8 @@ public final class S3AUtils {
 
   /**
    * Is the exception an instance of a throttling exception. That
-   * is an AmazonServiceException with a 503 response, an
+   * is an AmazonServiceException with a 503 response, any
+   * exception from DynamoDB for limits exceeded, an
    * {@link AWSServiceThrottledException},
    * or anything which the AWS SDK's RetryUtils considers to be
    * a throttling exception.
@@ -411,6 +411,8 @@ public final class S3AUtils {
    */
   public static boolean isThrottleException(Exception ex) {
     return ex instanceof AWSServiceThrottledException
+        || ex instanceof ProvisionedThroughputExceededException
+        || ex instanceof LimitExceededException
         || (ex instanceof AmazonServiceException
             && 503  == ((AmazonServiceException)ex).getStatusCode())
         || (ex instanceof SdkBaseException
@@ -427,6 +429,49 @@ public final class S3AUtils {
   public static boolean isMessageTranslatableToEOF(SdkBaseException ex) {
     return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER) ||
             ex.toString().contains(EOF_READ_DIFFERENT_LENGTH);
+  }
+
+  /**
+   * Translate a DynamoDB exception into an IOException.
+   *
+   * @param path path in the DDB
+   * @param message preformatted message for the exception
+   * @param ddbException exception
+   * @return an exception to throw.
+   */
+  public static IOException translateDynamoDBException(final String path,
+      final String message,
+      final AmazonDynamoDBException ddbException) {
+    if (isThrottleException(ddbException)) {
+      return new AWSServiceThrottledException(message, ddbException);
+    }
+    if (ddbException instanceof ResourceNotFoundException) {
+      return (FileNotFoundException) new FileNotFoundException(message)
+          .initCause(ddbException);
+    }
+    final int statusCode = ddbException.getStatusCode();
+    final String errorCode = ddbException.getErrorCode();
+    IOException result = null;
+    // 400 gets used a lot by DDB
+    if (statusCode == 400) {
+      switch (errorCode) {
+      case "AccessDeniedException":
+        result = (IOException) new AccessDeniedException(
+            path,
+            null,
+            ddbException.toString())
+            .initCause(ddbException);
+        break;
+
+      default:
+        result = new AWSBadRequestException(message, ddbException);
+      }
+
+    }
+    if (result ==  null) {
+      result = new AWSServiceIOException(message, ddbException);
+    }
+    return result;
   }
 
   /**
@@ -560,7 +605,6 @@ public final class S3AUtils {
   /**
    * The standard AWS provider list for AWS connections.
    */
-  @SuppressWarnings("deprecation")
   public static final List<Class<?>>
       STANDARD_AWS_PROVIDERS = Collections.unmodifiableList(
       Arrays.asList(
@@ -646,13 +690,6 @@ public final class S3AUtils {
     // each provider
     AWSCredentialProviderList providers = new AWSCredentialProviderList();
     for (Class<?> aClass : awsClasses) {
-
-      // List of V1 credential providers that will be migrated with V2 upgrade
-      if (!Arrays.asList("EnvironmentVariableCredentialsProvider",
-              "EC2ContainerCredentialsProviderWrapper", "InstanceProfileCredentialsProvider")
-          .contains(aClass.getSimpleName()) && aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
-        V2Migration.v1ProviderReferenced(aClass.getName());
-      }
 
       if (forbidden.contains(aClass)) {
         throw new IOException(E_FORBIDDEN_AWS_PROVIDER
@@ -847,8 +884,6 @@ public final class S3AUtils {
   /**
    * Get a password from a configuration, including JCEKS files, handling both
    * the absolute key and bucket override.
-   * <br>
-   * <i>Note:</i> LimitedPrivate for ranger repository to get secrets.
    * @param bucket bucket or "" if none known
    * @param conf configuration
    * @param baseKey base key to look up, e.g "fs.s3a.secret.key"
@@ -859,7 +894,6 @@ public final class S3AUtils {
    * @throws IOException on any IO problem
    * @throws IllegalArgumentException bad arguments
    */
-  @InterfaceAudience.LimitedPrivate("Ranger")
   public static String lookupPassword(
       String bucket,
       Configuration conf,
@@ -1039,38 +1073,6 @@ public final class S3AUtils {
   }
 
   /**
-   * Validates the output stream configuration.
-   * @param path path: for error messages
-   * @param conf : configuration object for the given context
-   * @throws PathIOException Unsupported configuration.
-   */
-  public static void validateOutputStreamConfiguration(final Path path,
-      Configuration conf) throws PathIOException {
-    if(!checkDiskBuffer(conf)){
-      throw new PathIOException(path.toString(),
-          "Unable to create OutputStream with the given"
-          + " multipart upload and buffer configuration.");
-    }
-  }
-
-  /**
-   * Check whether the configuration for S3ABlockOutputStream is
-   * consistent or not. Multipart uploads allow all kinds of fast buffers to
-   * be supported. When the option is disabled only disk buffers are allowed to
-   * be used as the file size might be bigger than the buffer size that can be
-   * allocated.
-   * @param conf : configuration object for the given context
-   * @return true if the disk buffer and the multipart settings are supported
-   */
-  public static boolean checkDiskBuffer(Configuration conf) {
-    boolean isMultipartUploadEnabled = conf.getBoolean(MULTIPART_UPLOADS_ENABLED,
-        DEFAULT_MULTIPART_UPLOAD_ENABLED);
-    return isMultipartUploadEnabled
-        || FAST_UPLOAD_BUFFER_DISK.equals(
-            conf.get(FAST_UPLOAD_BUFFER, DEFAULT_FAST_UPLOAD_BUFFER));
-  }
-
-  /**
    * Ensure that the long value is in the range of an integer.
    * @param name property name for error messages
    * @param size original size
@@ -1150,15 +1152,10 @@ public final class S3AUtils {
    * This method does not propagate security provider path information from
    * the S3A property into the Hadoop common provider: callers must call
    * {@link #patchSecurityCredentialProviders(Configuration)} explicitly.
-   *
-   * <br>
-   * <i>Note:</i> LimitedPrivate for ranger repository to set up
-   * per-bucket configurations.
    * @param source Source Configuration object.
    * @param bucket bucket name. Must not be empty.
    * @return a (potentially) patched clone of the original.
    */
-  @InterfaceAudience.LimitedPrivate("Ranger")
   public static Configuration propagateBucketOptions(Configuration source,
       String bucket) {
 
@@ -1251,7 +1248,7 @@ public final class S3AUtils {
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @param awsServiceIdentifier a string representing the AWS service (S3,
-   * etc) for which the ClientConfiguration is being created.
+   * DDB, etc) for which the ClientConfiguration is being created.
    * @return new AWS client configuration
    * @throws IOException problem creating AWS client configuration
    */
@@ -1267,6 +1264,9 @@ public final class S3AUtils {
       switch (awsServiceIdentifier) {
       case AWS_SERVICE_IDENTIFIER_S3:
         configKey = SIGNING_ALGORITHM_S3;
+        break;
+      case AWS_SERVICE_IDENTIFIER_DDB:
+        configKey = SIGNING_ALGORITHM_DDB;
         break;
       case AWS_SERVICE_IDENTIFIER_STS:
         configKey = SIGNING_ALGORITHM_STS;
@@ -1351,8 +1351,6 @@ public final class S3AUtils {
   /**
    * Initializes AWS SDK proxy support in the AWS client configuration
    * if the S3A settings enable it.
-   * <br>
-   * <i>Note:</i> LimitedPrivate to provide proxy support in ranger repository.
    *
    * @param conf Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
@@ -1360,7 +1358,6 @@ public final class S3AUtils {
    * @throws IllegalArgumentException if misconfigured
    * @throws IOException problem getting username/secret from password source.
    */
-  @InterfaceAudience.LimitedPrivate("Ranger")
   public static void initProxySupport(Configuration conf,
       String bucket,
       ClientConfiguration awsConf) throws IllegalArgumentException,
@@ -1390,17 +1387,13 @@ public final class S3AUtils {
         LOG.error(msg);
         throw new IllegalArgumentException(msg);
       }
-      boolean isProxySecured = conf.getBoolean(PROXY_SECURED, false);
       awsConf.setProxyUsername(proxyUsername);
       awsConf.setProxyPassword(proxyPassword);
       awsConf.setProxyDomain(conf.getTrimmed(PROXY_DOMAIN));
       awsConf.setProxyWorkstation(conf.getTrimmed(PROXY_WORKSTATION));
-      awsConf.setProxyProtocol(isProxySecured ? Protocol.HTTPS : Protocol.HTTP);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Using proxy server {}://{}:{} as user {} with password {} "
-                + "on domain {} as workstation {}",
-            awsConf.getProxyProtocol(),
-            awsConf.getProxyHost(),
+        LOG.debug("Using proxy server {}:{} as user {} with password {} on " +
+                "domain {} as workstation {}", awsConf.getProxyHost(),
             awsConf.getProxyPort(),
             String.valueOf(awsConf.getProxyUsername()),
             awsConf.getProxyPassword(), awsConf.getProxyDomain(),
@@ -1437,16 +1430,21 @@ public final class S3AUtils {
 
   /**
    * Convert the data of an iterator of {@link S3AFileStatus} to
-   * an array.
+   * an array. Given tombstones are filtered out. If the iterator
+   * does return any item, an empty array is returned.
    * @param iterator a non-null iterator
+   * @param tombstones possibly empty set of tombstones
    * @return a possibly-empty array of file status entries
    * @throws IOException failure
    */
   public static S3AFileStatus[] iteratorToStatuses(
-      RemoteIterator<S3AFileStatus> iterator)
+      RemoteIterator<S3AFileStatus> iterator, Set<Path> tombstones)
       throws IOException {
+    // this will close the span afterwards
+    RemoteIterator<S3AFileStatus> source = filteringRemoteIterator(iterator,
+        st -> !tombstones.contains(st.getPath()));
     S3AFileStatus[] statuses = RemoteIterators
-        .toArray(iterator, new S3AFileStatus[0]);
+        .toArray(source, new S3AFileStatus[0]);
     return statuses;
   }
 
@@ -1521,22 +1519,17 @@ public final class S3AUtils {
   /**
    * List located files and filter them as a classic listFiles(path, filter)
    * would do.
-   * This will be incremental, fetching pages async.
-   * While it is rare for job to have many thousands of files, jobs
-   * against versioned buckets may return earlier if there are many
-   * non-visible objects.
    * @param fileSystem filesystem
    * @param path path to list
    * @param recursive recursive listing?
    * @param filter filter for the filename
-   * @return interator over the entries.
+   * @return the filtered list of entries
    * @throws IOException IO failure.
    */
-  public static RemoteIterator<LocatedFileStatus> listAndFilter(FileSystem fileSystem,
+  public static List<LocatedFileStatus> listAndFilter(FileSystem fileSystem,
       Path path, boolean recursive, PathFilter filter) throws IOException {
-    return filteringRemoteIterator(
-        fileSystem.listFiles(path, recursive),
-        status -> filter.accept(status.getPath()));
+    return flatmapLocatedFiles(fileSystem.listFiles(path, recursive),
+        status -> maybe(filter.accept(status.getPath()), status));
   }
 
   /**

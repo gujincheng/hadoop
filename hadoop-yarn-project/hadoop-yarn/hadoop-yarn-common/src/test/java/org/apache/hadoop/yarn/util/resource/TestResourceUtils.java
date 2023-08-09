@@ -18,6 +18,25 @@
 
 package org.apache.hadoop.yarn.util.resource;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -28,27 +47,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test class to verify all resource utility methods.
@@ -72,12 +70,15 @@ public class TestResourceUtils {
     }
   }
 
-  @BeforeEach
+  @Rule
+  public ExpectedException expexted = ExpectedException.none();
+
+  @Before
   public void setup() {
     ResourceUtils.resetResourceTypes();
   }
 
-  @AfterEach
+  @After
   public void teardown() {
     if (nodeResourcesFile != null && nodeResourcesFile.exists()) {
       nodeResourcesFile.delete();
@@ -136,28 +137,29 @@ public class TestResourceUtils {
   private void testMemoryAndVcores(Map<String, ResourceInformation> res) {
     String memory = ResourceInformation.MEMORY_MB.getName();
     String vcores = ResourceInformation.VCORES.getName();
-    assertTrue(res.containsKey(memory), "Resource 'memory' missing");
-    assertEquals(ResourceInformation.MEMORY_MB.getUnits(), res.get(memory).getUnits(),
-        "'memory' units incorrect");
-    assertEquals(ResourceInformation.MEMORY_MB.getResourceType(), res.get(memory).getResourceType(),
-        "'memory' types incorrect");
-    assertTrue(res.containsKey(vcores), "Resource 'vcores' missing");
-    assertEquals(ResourceInformation.VCORES.getUnits(), res.get(vcores).getUnits(),
-        "'vcores' units incorrect");
-    assertEquals(ResourceInformation.VCORES.getResourceType(),
-        res.get(vcores).getResourceType(),
-        "'vcores' type incorrect");
+    Assert.assertTrue("Resource 'memory' missing", res.containsKey(memory));
+    Assert.assertEquals("'memory' units incorrect",
+        ResourceInformation.MEMORY_MB.getUnits(), res.get(memory).getUnits());
+    Assert.assertEquals("'memory' types incorrect",
+        ResourceInformation.MEMORY_MB.getResourceType(),
+        res.get(memory).getResourceType());
+    Assert.assertTrue("Resource 'vcores' missing", res.containsKey(vcores));
+    Assert.assertEquals("'vcores' units incorrect",
+        ResourceInformation.VCORES.getUnits(), res.get(vcores).getUnits());
+    Assert.assertEquals("'vcores' type incorrect",
+        ResourceInformation.VCORES.getResourceType(),
+        res.get(vcores).getResourceType());
   }
 
   @Test
-  void testGetResourceTypes() {
+  public void testGetResourceTypes() {
     Map<String, ResourceInformation> res = ResourceUtils.getResourceTypes();
-    assertEquals(2, res.size());
+    Assert.assertEquals(2, res.size());
     testMemoryAndVcores(res);
   }
 
   @Test
-  void testGetResourceTypesConfigs() throws Exception {
+  public void testGetResourceTypesConfigs() throws Exception {
     Configuration conf = new YarnConfiguration();
 
     ResourceFileInformation testFile1 =
@@ -181,19 +183,19 @@ public class TestResourceUtils {
       ResourceUtils.resetResourceTypes();
       res = setupResourceTypesInternal(conf, testInformation.filename);
       testMemoryAndVcores(res);
-      assertEquals(testInformation.resourceCount, res.size());
+      Assert.assertEquals(testInformation.resourceCount, res.size());
       for (Map.Entry<String, String> entry :
           testInformation.resourceNameUnitsMap.entrySet()) {
         String resourceName = entry.getKey();
-        assertTrue(res.containsKey(resourceName),
-            "Missing key " + resourceName);
-        assertEquals(entry.getValue(), res.get(resourceName).getUnits());
+        Assert.assertTrue("Missing key " + resourceName,
+            res.containsKey(resourceName));
+        Assert.assertEquals(entry.getValue(), res.get(resourceName).getUnits());
       }
     }
   }
 
   @Test
-  void testGetRequestedResourcesFromConfig() {
+  public void testGetRequestedResourcesFromConfig() {
     Configuration conf = new Configuration();
 
     //these resource type configurations should be recognised
@@ -227,14 +229,14 @@ public class TestResourceUtils {
     Set<String> expectedSet =
         new HashSet<>(Arrays.asList(expectedKeys));
 
-    assertEquals(properList.size(), expectedKeys.length);
+    Assert.assertEquals(properList.size(), expectedKeys.length);
     properList.forEach(
-        item -> assertTrue(expectedSet.contains(item.getName())));
+        item -> Assert.assertTrue(expectedSet.contains(item.getName())));
 
   }
 
   @Test
-  void testGetResourceTypesConfigErrors() throws IOException {
+  public void testGetResourceTypesConfigErrors() throws IOException {
     Configuration conf = new YarnConfiguration();
 
     String[] resourceFiles = {"resource-types-error-1.xml",
@@ -244,7 +246,7 @@ public class TestResourceUtils {
       ResourceUtils.resetResourceTypes();
       try {
         setupResourceTypesInternal(conf, resourceFile);
-        fail("Expected error with file " + resourceFile);
+        Assert.fail("Expected error with file " + resourceFile);
       } catch (YarnRuntimeException | IllegalArgumentException e) {
         //Test passed
       }
@@ -252,7 +254,7 @@ public class TestResourceUtils {
   }
 
   @Test
-  void testInitializeResourcesMap() {
+  public void testInitializeResourcesMap() {
     String[] empty = {"", ""};
     String[] res1 = {"resource1", "m"};
     String[] res2 = {"resource2", "G"};
@@ -289,30 +291,31 @@ public class TestResourceUtils {
         len = 4;
       }
 
-      assertEquals(len, ret.size());
+      Assert.assertEquals(len, ret.size());
       for (String[] resources : test) {
         if (resources[0].length() == 0) {
           continue;
         }
-        assertTrue(ret.containsKey(resources[0]));
+        Assert.assertTrue(ret.containsKey(resources[0]));
         ResourceInformation resInfo = ret.get(resources[0]);
-        assertEquals(resources[1], resInfo.getUnits());
-        assertEquals(ResourceTypes.COUNTABLE, resInfo.getResourceType());
+        Assert.assertEquals(resources[1], resInfo.getUnits());
+        Assert.assertEquals(ResourceTypes.COUNTABLE, resInfo.getResourceType());
       }
       // we must always have memory and vcores with their fixed units
-      assertTrue(ret.containsKey("memory-mb"));
+      Assert.assertTrue(ret.containsKey("memory-mb"));
       ResourceInformation memInfo = ret.get("memory-mb");
-      assertEquals("Mi", memInfo.getUnits());
-      assertEquals(ResourceTypes.COUNTABLE, memInfo.getResourceType());
-      assertTrue(ret.containsKey("vcores"));
+      Assert.assertEquals("Mi", memInfo.getUnits());
+      Assert.assertEquals(ResourceTypes.COUNTABLE, memInfo.getResourceType());
+      Assert.assertTrue(ret.containsKey("vcores"));
       ResourceInformation vcoresInfo = ret.get("vcores");
-      assertEquals("", vcoresInfo.getUnits());
-      assertEquals(ResourceTypes.COUNTABLE, vcoresInfo.getResourceType());
+      Assert.assertEquals("", vcoresInfo.getUnits());
+      Assert
+          .assertEquals(ResourceTypes.COUNTABLE, vcoresInfo.getResourceType());
     }
   }
 
   @Test
-  void testInitializeResourcesMapErrors() {
+  public void testInitializeResourcesMapErrors() {
     String[] mem1 = {"memory-mb", ""};
     String[] vcores1 = {"vcores", "M"};
 
@@ -343,7 +346,7 @@ public class TestResourceUtils {
       }
       try {
         ResourceUtils.initializeResourcesMap(conf);
-        fail("resource map initialization should fail");
+        Assert.fail("resource map initialization should fail");
       } catch (Exception e) {
         //Test passed
       }
@@ -351,7 +354,7 @@ public class TestResourceUtils {
   }
 
   @Test
-  void testGetResourceInformation() throws Exception {
+  public void testGetResourceInformation() throws Exception {
     Configuration conf = new YarnConfiguration();
     Map<String, Resource> testRun = new HashMap<>();
     setupResourceTypesInternal(conf, "resource-types-4.xml");
@@ -369,16 +372,16 @@ public class TestResourceUtils {
       ResourceUtils.resetNodeResources();
       Map<String, ResourceInformation> actual = setupNodeResources(conf,
           resourceFile);
-      assertEquals(actual.size(),
+      Assert.assertEquals(actual.size(),
           entry.getValue().getResources().length);
       for (ResourceInformation resInfo : entry.getValue().getResources()) {
-        assertEquals(resInfo, actual.get(resInfo.getName()));
+        Assert.assertEquals(resInfo, actual.get(resInfo.getName()));
       }
     }
   }
 
   @Test
-  void testGetNodeResourcesConfigErrors() throws Exception {
+  public void testGetNodeResourcesConfigErrors() throws Exception {
     Configuration conf = new YarnConfiguration();
     setupResourceTypesInternal(conf, "resource-types-4.xml");
     String[] invalidNodeResFiles = {"node-resources-error-1.xml"};
@@ -387,7 +390,7 @@ public class TestResourceUtils {
       ResourceUtils.resetNodeResources();
       try {
         setupNodeResources(conf, resourceFile);
-        fail("Expected error with file " + resourceFile);
+        Assert.fail("Expected error with file " + resourceFile);
       } catch (YarnRuntimeException e) {
         //Test passed
       }
@@ -395,28 +398,26 @@ public class TestResourceUtils {
   }
 
   @Test
-  void testGetNodeResourcesRedefineFpgaErrors() throws Exception {
-    Throwable exception = assertThrows(YarnRuntimeException.class, () -> {
-      Configuration conf = new YarnConfiguration();
-      setupResourceTypesInternal(conf,
-          "resource-types-error-redefine-fpga-unit.xml");
-    });
-    assertTrue(exception.getMessage().contains("Defined mandatory resource type=yarn.io/fpga"));
+  public void testGetNodeResourcesRedefineFpgaErrors() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    expexted.expect(YarnRuntimeException.class);
+    expexted.expectMessage("Defined mandatory resource type=yarn.io/fpga");
+    setupResourceTypesInternal(conf,
+        "resource-types-error-redefine-fpga-unit.xml");
   }
 
   @Test
-  void testGetNodeResourcesRedefineGpuErrors() throws Exception {
-    Throwable exception = assertThrows(YarnRuntimeException.class, () -> {
-      Configuration conf = new YarnConfiguration();
-      setupResourceTypesInternal(conf,
-          "resource-types-error-redefine-gpu-unit.xml");
-    });
-    assertTrue(exception.getMessage().contains("Defined mandatory resource type=yarn.io/gpu"));
+  public void testGetNodeResourcesRedefineGpuErrors() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    expexted.expect(YarnRuntimeException.class);
+    expexted.expectMessage("Defined mandatory resource type=yarn.io/gpu");
+    setupResourceTypesInternal(conf,
+        "resource-types-error-redefine-gpu-unit.xml");
   }
 
   @Test
-  void testResourceNameFormatValidation() {
-    String[] validNames = new String[]{
+  public void testResourceNameFormatValidation() {
+    String[] validNames = new String[] {
         "yarn.io/gpu",
         "gpu",
         "g_1_2",
@@ -426,7 +427,7 @@ public class TestResourceUtils {
         "a....b",
     };
 
-    String[] invalidNames = new String[]{
+    String[] invalidNames = new String[] {
         "asd/resource/-name",
         "prefix/-resource_1",
         "prefix/0123resource",
@@ -442,7 +443,7 @@ public class TestResourceUtils {
     for (String invalidName : invalidNames) {
       try {
         ResourceUtils.validateNameOfResourceNameAndThrowException(invalidName);
-        fail("Expected to fail name check, the name=" + invalidName
+        Assert.fail("Expected to fail name check, the name=" + invalidName
             + " is illegal.");
       } catch (YarnRuntimeException e) {
         // Expected
@@ -451,7 +452,7 @@ public class TestResourceUtils {
   }
 
   @Test
-  void testGetResourceInformationWithDiffUnits() throws Exception {
+  public void testGetResourceInformationWithDiffUnits() throws Exception {
     Configuration conf = new YarnConfiguration();
     Map<String, Resource> testRun = new HashMap<>();
     setupResourceTypesInternal(conf, "resource-types-4.xml");
@@ -475,82 +476,82 @@ public class TestResourceUtils {
       ResourceUtils.resetNodeResources();
       Map<String, ResourceInformation> actual = setupNodeResources(conf,
           resourceFile);
-      assertEquals(actual.size(),
+      Assert.assertEquals(actual.size(),
           entry.getValue().getResources().length);
       for (ResourceInformation resInfo : entry.getValue().getResources()) {
-        assertEquals(resInfo, actual.get(resInfo.getName()));
+        Assert.assertEquals(resInfo, actual.get(resInfo.getName()));
       }
     }
   }
 
   @Test
-  void testResourceUnitParsing() throws Exception {
+  public void testResourceUnitParsing() throws Exception {
     Resource res = ResourceUtils.createResourceFromString("memory=20g,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    assertEquals(Resources.createResource(20 * 1024, 3), res);
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
 
     res = ResourceUtils.createResourceFromString("memory=20G,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    assertEquals(Resources.createResource(20 * 1024, 3), res);
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
 
     res = ResourceUtils.createResourceFromString("memory=20M,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    assertEquals(Resources.createResource(20, 3), res);
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
 
     res = ResourceUtils.createResourceFromString("memory=20m,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    assertEquals(Resources.createResource(20, 3), res);
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
 
     res = ResourceUtils.createResourceFromString("memory-mb=20,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    assertEquals(Resources.createResource(20, 3), res);
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
 
     res = ResourceUtils.createResourceFromString("memory-mb=20m,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    assertEquals(Resources.createResource(20, 3), res);
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
 
     res = ResourceUtils.createResourceFromString("memory-mb=20G,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    assertEquals(Resources.createResource(20 * 1024, 3), res);
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
 
     // W/o unit for memory means bits, and 20 bits will be rounded to 0
     res = ResourceUtils.createResourceFromString("memory=20,vcores=3",
-        ResourceUtils.getResourcesTypeInfo());
-    assertEquals(Resources.createResource(0, 3), res);
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(0, 3), res);
 
     // Test multiple resources
     List<ResourceTypeInfo> resTypes = new ArrayList<>(
-        ResourceUtils.getResourcesTypeInfo());
+            ResourceUtils.getResourcesTypeInfo());
     resTypes.add(ResourceTypeInfo.newInstance(ResourceInformation.GPU_URI, ""));
     ResourceUtils.reinitializeResources(resTypes);
     res = ResourceUtils.createResourceFromString("memory=2G,vcores=3,gpu=0",
-        resTypes);
-    assertEquals(2 * 1024, res.getMemorySize());
-    assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
+            resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
 
     res = ResourceUtils.createResourceFromString("memory=2G,vcores=3,gpu=3",
-        resTypes);
-    assertEquals(2 * 1024, res.getMemorySize());
-    assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
+            resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
 
     res = ResourceUtils.createResourceFromString("memory=2G,vcores=3",
-        resTypes);
-    assertEquals(2 * 1024, res.getMemorySize());
-    assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
+            resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
 
     res = ResourceUtils.createResourceFromString(
-        "memory=2G,vcores=3,yarn.io/gpu=0", resTypes);
-    assertEquals(2 * 1024, res.getMemorySize());
-    assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
+            "memory=2G,vcores=3,yarn.io/gpu=0", resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
 
     res = ResourceUtils.createResourceFromString(
-        "memory=2G,vcores=3,yarn.io/gpu=3", resTypes);
-    assertEquals(2 * 1024, res.getMemorySize());
-    assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
+            "memory=2G,vcores=3,yarn.io/gpu=3", resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
   }
 
   @Test
-  void testMultipleOpsForResourcesWithTags() throws Exception {
+  public void testMultipleOpsForResourcesWithTags() throws Exception {
 
     Configuration conf = new YarnConfiguration();
     setupResourceTypes(conf, "resource-types-6.xml");

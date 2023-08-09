@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.yarn.sls.appmaster;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -32,10 +32,10 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.sls.AMDefinition;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.slf4j.Logger;
@@ -93,15 +93,19 @@ public class DAGAMSimulator extends AMSimulator {
       LoggerFactory.getLogger(DAGAMSimulator.class);
 
   @SuppressWarnings("checkstyle:parameternumber")
-  public void init(AMDefinition amDef, ResourceManager rm, SLSRunner slsRunner,
-      boolean tracked, long baselineTimeMS, long heartbeatInterval,
-      Map<ApplicationId, AMSimulator> appIdToAMSim) {
-    super.init(amDef, rm, slsRunner, tracked, baselineTimeMS, heartbeatInterval,
-        appIdToAMSim);
+  public void init(int heartbeatInterval,
+      List<ContainerSimulator> containerList, ResourceManager resourceManager,
+      SLSRunner slsRunnner, long startTime, long finishTime, String simUser,
+      String simQueue, boolean tracked, String oldApp, long baseTimeMS,
+      Resource amResource, String nodeLabelExpr, Map<String, String> params,
+      Map<ApplicationId, AMSimulator> appIdAMSim) {
+    super.init(heartbeatInterval, containerList, resourceManager, slsRunnner,
+        startTime, finishTime, simUser, simQueue, tracked, oldApp, baseTimeMS,
+        amResource, nodeLabelExpr, params, appIdAMSim);
     super.amtype = "dag";
 
-    allContainers.addAll(amDef.getTaskContainers());
-    pendingContainers.addAll(amDef.getTaskContainers());
+    allContainers.addAll(containerList);
+    pendingContainers.addAll(containerList);
     totalContainers = allContainers.size();
 
     LOG.info("Added new job with {} containers", allContainers.size());
@@ -185,8 +189,7 @@ public class DAGAMSimulator extends AMSimulator {
               appId, container.getId());
           assignedContainers.put(container.getId(), cs);
           se.getNmMap().get(container.getNodeId())
-              .addNewContainer(container, cs.getLifeTime(), appId);
-          getRanNodes().add(container.getNodeId());
+              .addNewContainer(container, cs.getLifeTime());
         }
       }
     }

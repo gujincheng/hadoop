@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import java.io.FileNotFoundException;
 import java.util.List;
@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.junit.Assume.assumeTrue;
 
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
@@ -1298,7 +1297,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     final Path filePath = new Path(methodName.getMethodName());
     fs.create(filePath);
 
-    assertPathExists(fs, "This path should exist", filePath);
+    assertTrue(fs.exists(filePath));
 
     TracingHeaderValidator tracingHeaderValidator = new TracingHeaderValidator(
         conf.getClientCorrelationId(), fs.getFileSystemId(),
@@ -1321,7 +1320,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
     final Path filePath = new Path(methodName.getMethodName());
     fs.create(filePath);
 
-    assertPathExists(fs, "This path should exist", filePath);
+    assertTrue(fs.exists(filePath));
     FsPermission oldPermission = fs.getFileStatus(filePath).getPermission();
     // default permission for non-namespace enabled account is "777"
     FsPermission newPermission = new FsPermission("557");

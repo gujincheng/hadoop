@@ -1,4 +1,4 @@
-/*
+/**
  * 
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -26,8 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
-import java.util.List;
-import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -53,7 +51,7 @@ public class FSDataInputStream extends DataInputStream
    */
   private final IdentityHashStore<ByteBuffer, ByteBufferPool>
     extendedReadBuffers
-      = new IdentityHashStore<>(0);
+      = new IdentityHashStore<ByteBuffer, ByteBufferPool>(0);
 
   public FSDataInputStream(InputStream in) {
     super(in);
@@ -144,8 +142,7 @@ public class FSDataInputStream extends DataInputStream
    *
    * @return the underlying input stream
    */
-  @InterfaceAudience.Public
-  @InterfaceStability.Stable
+  @InterfaceAudience.LimitedPrivate({"HDFS"})
   public InputStream getWrappedStream() {
     return in;
   }
@@ -281,21 +278,5 @@ public class FSDataInputStream extends DataInputStream
   @Override
   public IOStatistics getIOStatistics() {
     return IOStatisticsSupport.retrieveIOStatistics(in);
-  }
-
-  @Override
-  public int minSeekForVectorReads() {
-    return ((PositionedReadable) in).minSeekForVectorReads();
-  }
-
-  @Override
-  public int maxReadSizeForVectorReads() {
-    return ((PositionedReadable) in).maxReadSizeForVectorReads();
-  }
-
-  @Override
-  public void readVectored(List<? extends FileRange> ranges,
-                           IntFunction<ByteBuffer> allocate) throws IOException {
-    ((PositionedReadable) in).readVectored(ranges, allocate);
   }
 }

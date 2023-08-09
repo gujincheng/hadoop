@@ -82,7 +82,6 @@ public interface MutableConfigurationProvider {
   /**
    * Get the last updated scheduler config version.
    * @return Last updated scheduler config version.
-   * @throws Exception exception occurs.
    */
   long getConfigVersion() throws Exception;
 

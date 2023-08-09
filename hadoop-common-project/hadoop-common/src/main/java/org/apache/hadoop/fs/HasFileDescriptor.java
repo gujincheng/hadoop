@@ -33,7 +33,7 @@ public interface HasFileDescriptor {
 
   /**
    * @return the FileDescriptor
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public FileDescriptor getFileDescriptor() throws IOException;
 

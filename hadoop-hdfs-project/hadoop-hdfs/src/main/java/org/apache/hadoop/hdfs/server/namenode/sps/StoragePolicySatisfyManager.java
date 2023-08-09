@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.sps.ExternalStoragePolicySatisfier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This manages satisfy storage policy invoked path ids and expose methods to
@@ -60,7 +60,7 @@ public class StoragePolicySatisfyManager {
   private final StoragePolicySatisfier spsService;
   private final boolean storagePolicyEnabled;
   private volatile StoragePolicySatisfierMode mode;
-  private final Queue<Long> pathsToBeTraversed;
+  private final Queue<Long> pathsToBeTraveresed;
   private final int outstandingPathsLimit;
   private final Namesystem namesystem;
 
@@ -77,7 +77,7 @@ public class StoragePolicySatisfyManager {
         DFSConfigKeys.DFS_SPS_MAX_OUTSTANDING_PATHS_KEY,
         DFSConfigKeys.DFS_SPS_MAX_OUTSTANDING_PATHS_DEFAULT);
     mode = StoragePolicySatisfierMode.fromString(modeVal);
-    pathsToBeTraversed = new LinkedList<Long>();
+    pathsToBeTraveresed = new LinkedList<Long>();
     this.namesystem = namesystem;
     // instantiate SPS service by just keeps config reference and not starting
     // any supporting threads.
@@ -218,8 +218,8 @@ public class StoragePolicySatisfyManager {
    *         storages.
    */
   public Long getNextPathId() {
-    synchronized (pathsToBeTraversed) {
-      return pathsToBeTraversed.poll();
+    synchronized (pathsToBeTraveresed) {
+      return pathsToBeTraveresed.poll();
     }
   }
 
@@ -228,7 +228,7 @@ public class StoragePolicySatisfyManager {
    * @throws IOException
    */
   public void verifyOutstandingPathQLimit() throws IOException {
-    long size = pathsToBeTraversed.size();
+    long size = pathsToBeTraveresed.size();
     // Checking that the SPS call Q exceeds the allowed limit.
     if (outstandingPathsLimit - size <= 0) {
       LOG.debug("Satisifer Q - outstanding limit:{}, current size:{}",
@@ -244,15 +244,15 @@ public class StoragePolicySatisfyManager {
    * @throws IOException
    */
   private void clearPathIds(){
-    synchronized (pathsToBeTraversed) {
-      Iterator<Long> iterator = pathsToBeTraversed.iterator();
+    synchronized (pathsToBeTraveresed) {
+      Iterator<Long> iterator = pathsToBeTraveresed.iterator();
       while (iterator.hasNext()) {
         Long trackId = iterator.next();
         try {
           namesystem.removeXattr(trackId,
               HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY);
         } catch (IOException e) {
-          LOG.debug("Failed to remove sps xattr!", e);
+          LOG.debug("Failed to remove sps xatttr!", e);
         }
         iterator.remove();
       }
@@ -263,8 +263,8 @@ public class StoragePolicySatisfyManager {
    * Clean up all sps path ids.
    */
   public void removeAllPathIds() {
-    synchronized (pathsToBeTraversed) {
-      pathsToBeTraversed.clear();
+    synchronized (pathsToBeTraveresed) {
+      pathsToBeTraveresed.clear();
     }
   }
 
@@ -273,8 +273,8 @@ public class StoragePolicySatisfyManager {
    * @param id
    */
   public void addPathId(long id) {
-    synchronized (pathsToBeTraversed) {
-      pathsToBeTraversed.add(id);
+    synchronized (pathsToBeTraveresed) {
+      pathsToBeTraveresed.add(id);
     }
   }
 
@@ -291,12 +291,5 @@ public class StoragePolicySatisfyManager {
    */
   public StoragePolicySatisfierMode getMode() {
     return mode;
-  }
-
-  /**
-   * @return the number of paths to be processed by storage policy satisfier.
-   */
-  public int getPendingSPSPaths() {
-    return pathsToBeTraversed.size();
   }
 }

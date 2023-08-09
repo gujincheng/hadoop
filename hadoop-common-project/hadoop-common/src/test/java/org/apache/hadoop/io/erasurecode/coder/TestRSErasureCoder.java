@@ -25,14 +25,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * Test Reed-Solomon encoding and decoding.
  */
 public class TestRSErasureCoder extends TestErasureCoderBase {
   @Rule
-  public Timeout globalTimeout = new Timeout(300000, TimeUnit.MILLISECONDS);
+  public Timeout globalTimeout = new Timeout(300000);
 
   @Before
   public void setup() {

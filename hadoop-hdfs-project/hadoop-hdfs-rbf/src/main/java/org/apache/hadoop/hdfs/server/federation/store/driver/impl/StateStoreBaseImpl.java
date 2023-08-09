@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
@@ -41,8 +39,6 @@ import org.apache.hadoop.hdfs.server.federation.store.records.QueryResult;
  * optimization, such as custom get/put/remove queries, depending on the
  * capabilities of the data store.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
 public abstract class StateStoreBaseImpl extends StateStoreDriver {
 
   @Override
@@ -75,7 +71,7 @@ public abstract class StateStoreBaseImpl extends StateStoreDriver {
       T record, boolean allowUpdate, boolean errorIfExists) throws IOException {
     List<T> singletonList = new ArrayList<>();
     singletonList.add(record);
-    return putAll(singletonList, allowUpdate, errorIfExists).isOperationSuccessful();
+    return putAll(singletonList, allowUpdate, errorIfExists);
   }
 
   @Override

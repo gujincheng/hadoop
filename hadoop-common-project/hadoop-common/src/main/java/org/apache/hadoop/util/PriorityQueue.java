@@ -31,19 +31,11 @@ public abstract class PriorityQueue<T> {
   private int size;
   private int maxSize;
 
-  /**
-   * Determines the ordering of objects in this priority queue.  Subclasses
-      must define this one method.
-   * @param a object a.
-   * @param b object b.
-   * @return if a less than b true, not false
-   */
+  /** Determines the ordering of objects in this priority queue.  Subclasses
+      must define this one method. */
   protected abstract boolean lessThan(Object a, Object b);
 
-  /**
-   * Subclass constructors must call this.
-   * @param maxSize max size.
-   */
+  /** Subclass constructors must call this. */
   @SuppressWarnings("unchecked")
   protected final void initialize(int maxSize) {
     size = 0;
@@ -56,7 +48,6 @@ public abstract class PriorityQueue<T> {
    * Adds an Object to a PriorityQueue in log(size) time.
    * If one tries to add more objects than maxSize from initialize
    * a RuntimeException (ArrayIndexOutOfBound) is thrown.
-   * @param element element.
    */
   public final void put(T element) {
     size++;
@@ -67,7 +58,7 @@ public abstract class PriorityQueue<T> {
   /**
    * Adds element to the PriorityQueue in log(size) time if either
    * the PriorityQueue is not full, or not lessThan(element, top()).
-   * @param element element.
+   * @param element
    * @return true if element is added, false otherwise.
    */
   public boolean insert(T element){
@@ -84,11 +75,7 @@ public abstract class PriorityQueue<T> {
       return false;
   }
 
-  /**
-   * Returns the least element of the PriorityQueue in constant time.
-   *
-   * @return T Generics Type T.
-   */
+  /** Returns the least element of the PriorityQueue in constant time. */
   public final T top() {
     if (size > 0)
       return heap[1];
@@ -96,11 +83,8 @@ public abstract class PriorityQueue<T> {
       return null;
   }
 
-  /**
-   * Removes and returns the least element of the PriorityQueue in log(size)
-      time.
-   * @return T Generics Type T.
-   */
+  /** Removes and returns the least element of the PriorityQueue in log(size)
+      time. */
   public final T pop() {
     if (size > 0) {
       T result = heap[1];			  // save first value
@@ -125,11 +109,7 @@ public abstract class PriorityQueue<T> {
   }
 
 
-  /**
-   * Returns the number of elements currently stored in the PriorityQueue.
-   *
-   * @return size.
-   */
+  /** Returns the number of elements currently stored in the PriorityQueue. */
   public final int size() {
     return size;
   }

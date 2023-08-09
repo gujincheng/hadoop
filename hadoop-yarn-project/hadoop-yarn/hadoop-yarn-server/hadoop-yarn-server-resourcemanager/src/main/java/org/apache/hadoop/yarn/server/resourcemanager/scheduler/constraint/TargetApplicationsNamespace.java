@@ -92,7 +92,7 @@ public abstract class TargetApplicationsNamespace implements
    * in this method.
    *
    * @param target a generic type target that impacts this evaluation.
-   * @throws InvalidAllocationTagsQueryException if given string is not in valid format.
+   * @throws InvalidAllocationTagsQueryException
    */
   @Override
   public void evaluate(TargetApplications target)

@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
@@ -82,7 +83,9 @@ public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
     POSIX.PmemMappedRegion region = null;
     String filePath = null;
 
-    try (FileChannel blockChannel = blockIn.getChannel()) {
+    FileChannel blockChannel = null;
+    try {
+      blockChannel = blockIn.getChannel();
       if (blockChannel == null) {
         throw new IOException("Block InputStream has no FileChannel.");
       }
@@ -99,9 +102,10 @@ public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
       mappableBlock = new NativePmemMappedBlock(region.getAddress(),
           region.getLength(), key);
       LOG.info("Successfully cached one replica:{} into persistent memory"
-              + ", [cached path={}, address={}, length={}]", key, filePath,
+          + ", [cached path={}, address={}, length={}]", key, filePath,
           region.getAddress(), length);
     } finally {
+      IOUtils.closeQuietly(blockChannel);
       if (mappableBlock == null) {
         if (region != null) {
           // unmap content from persistent memory
@@ -127,7 +131,9 @@ public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
         BlockMetadataHeader.readHeader(new DataInputStream(
             new BufferedInputStream(metaIn, BlockMetadataHeader
                 .getHeaderSize())));
-    try (FileChannel metaChannel = metaIn.getChannel()) {
+    FileChannel metaChannel = null;
+    try {
+      metaChannel = metaIn.getChannel();
       if (metaChannel == null) {
         throw new IOException("Cannot get FileChannel" +
             " from Block InputStream meta file.");
@@ -175,6 +181,8 @@ public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
       if (region != null) {
         POSIX.Pmem.memSync(region);
       }
+    } finally {
+      IOUtils.closeQuietly(metaChannel);
     }
   }
 

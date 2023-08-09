@@ -43,20 +43,18 @@ public final class TimelineEntityReaderFactory {
       TimelineReaderContext context, TimelineDataToRetrieve dataToRetrieve) {
     // currently the types that are handled separate from the generic entity
     // table are application, flow run, and flow activity entities
-    if (!context.isGenericEntity()) {
-      if (TimelineEntityType.
-          YARN_APPLICATION.matches(context.getEntityType())) {
-        return new ApplicationEntityReader(context, dataToRetrieve);
-      } else if (TimelineEntityType.
-          YARN_FLOW_RUN.matches(context.getEntityType())) {
-        return new FlowRunEntityReader(context, dataToRetrieve);
-      } else if (TimelineEntityType.
-          YARN_FLOW_ACTIVITY.matches(context.getEntityType())) {
-        return new FlowActivityEntityReader(context, dataToRetrieve);
-      }
+    if (TimelineEntityType.YARN_APPLICATION.matches(context.getEntityType())) {
+      return new ApplicationEntityReader(context, dataToRetrieve);
+    } else if (TimelineEntityType.
+        YARN_FLOW_RUN.matches(context.getEntityType())) {
+      return new FlowRunEntityReader(context, dataToRetrieve);
+    } else if (TimelineEntityType.
+        YARN_FLOW_ACTIVITY.matches(context.getEntityType())) {
+      return new FlowActivityEntityReader(context, dataToRetrieve);
+    } else {
+      // assume we're dealing with a generic entity read
+      return new GenericEntityReader(context, dataToRetrieve);
     }
-    // assume we're dealing with a generic entity read
-    return new GenericEntityReader(context, dataToRetrieve);
   }
 
   /**
@@ -75,23 +73,21 @@ public final class TimelineEntityReaderFactory {
       TimelineDataToRetrieve dataToRetrieve) {
     // currently the types that are handled separate from the generic entity
     // table are application, flow run, and flow activity entities
-    if (!context.isGenericEntity()) {
-      if (TimelineEntityType.
-          YARN_APPLICATION.matches(context.getEntityType())) {
-        return new ApplicationEntityReader(context, filters, dataToRetrieve);
-      } else if (TimelineEntityType.
-          YARN_FLOW_ACTIVITY.matches(context.getEntityType())) {
-        return new FlowActivityEntityReader(context, filters, dataToRetrieve);
-      } else if (TimelineEntityType.
-          YARN_FLOW_RUN.matches(context.getEntityType())) {
-        return new FlowRunEntityReader(context, filters, dataToRetrieve);
+    if (TimelineEntityType.YARN_APPLICATION.matches(context.getEntityType())) {
+      return new ApplicationEntityReader(context, filters, dataToRetrieve);
+    } else if (TimelineEntityType.
+        YARN_FLOW_ACTIVITY.matches(context.getEntityType())) {
+      return new FlowActivityEntityReader(context, filters, dataToRetrieve);
+    } else if (TimelineEntityType.
+        YARN_FLOW_RUN.matches(context.getEntityType())) {
+      return new FlowRunEntityReader(context, filters, dataToRetrieve);
+    } else {
+      if (context.getDoAsUser() != null) {
+        return new SubApplicationEntityReader(context, filters, dataToRetrieve);
       }
+      // assume we're dealing with a generic entity read
+      return new GenericEntityReader(context, filters, dataToRetrieve);
     }
-    if (context.getDoAsUser() != null) {
-      return new SubApplicationEntityReader(context, filters, dataToRetrieve);
-    }
-    // assume we're dealing with a generic entity read
-    return new GenericEntityReader(context, filters, dataToRetrieve);
   }
 
   /**

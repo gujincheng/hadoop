@@ -29,6 +29,11 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.conf.Configuration;
@@ -50,15 +55,9 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.util.Lists;
-
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import static org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_REENCRYPTION_STATUS_NUM_RESPONSES_DEFAULT;
@@ -192,7 +191,7 @@ public class EncryptionZoneManager {
     try {
       iip = dir.resolvePath(pc, zone, DirOp.READ);
     } finally {
-      dir.getFSNamesystem().readUnlock("pauseForTestingAfterNthCheckpoint");
+      dir.getFSNamesystem().readUnlock();
     }
     reencryptionHandler
         .pauseForTestingAfterNthCheckpoint(iip.getLastINode().getId(), count);
@@ -224,7 +223,7 @@ public class EncryptionZoneManager {
       return getReencryptionStatus().getZoneStatus(inode.getId());
     } finally {
       dir.readUnlock();
-      dir.getFSNamesystem().readUnlock("getZoneStatus");
+      dir.getFSNamesystem().readUnlock();
     }
   }
 
@@ -285,7 +284,7 @@ public class EncryptionZoneManager {
     try {
       reencryptionHandler.stopThreads();
     } finally {
-      dir.getFSNamesystem().writeUnlock("stopReencryptThread");
+      dir.getFSNamesystem().writeUnlock();
     }
     if (reencryptHandlerExecutor != null) {
       reencryptHandlerExecutor.shutdownNow();
@@ -616,8 +615,8 @@ public class EncryptionZoneManager {
   /**
    * Resolves the path to inode id, then check if it's the same as the inode id
    * passed in. This is necessary to filter out zones in snapshots.
-   * @param zoneId of the encryption zone
-   * @param zonePath encryption zone inode path
+   * @param zoneId
+   * @param zonePath
    * @return true if path resolve to the id, false if not.
    * @throws AccessControlException
    * @throws ParentNotDirectoryException
@@ -645,8 +644,8 @@ public class EncryptionZoneManager {
   /**
    * Re-encrypts the given encryption zone path. If the given path is not the
    * root of an encryption zone, an exception is thrown.
-   * @param zoneIIP encryption zone inodes in the path containing the file
-   * @param keyVersionName encryption zone version
+   * @param zoneIIP
+   * @param keyVersionName
    * @throws IOException
    */
   List<XAttr> reencryptEncryptionZone(final INodesInPath zoneIIP,
@@ -677,7 +676,7 @@ public class EncryptionZoneManager {
    * Cancels the currently-running re-encryption of the given encryption zone.
    * If the given path is not the root of an encryption zone,
    * an exception is thrown.
-   * @param zoneIIP encryption zone inodes in the path containing the file
+   * @param zoneIIP
    * @throws IOException
    */
   List<XAttr> cancelReencryptEncryptionZone(final INodesInPath zoneIIP)
@@ -700,8 +699,7 @@ public class EncryptionZoneManager {
    * Cursor-based listing of zone re-encryption status.
    * <p>
    * Called while holding the FSDirectory lock.
-   * @param prevId for a given encryption zone id, a larger and more
-   *               encryption zone can be found
+   * @param prevId
    * @throws IOException
    */
   BatchedListEntries<ZoneReencryptionStatus> listReencryptionStatus(
@@ -743,8 +741,8 @@ public class EncryptionZoneManager {
 
   /**
    * Return whether an INode is an encryption zone root.
-   * @param inode of the encryption zone inode
-   * @param name the path name of the encrypted zone inode
+   * @param inode
+   * @param name
    * @return true when INode is an encryption zone root else false
    * @throws FileNotFoundException
    */
@@ -768,7 +766,7 @@ public class EncryptionZoneManager {
    * Return whether an INode is an encryption zone root.
    *
    * @param inode the zone inode
-   * @param name the path name of the encrypted zone inode
+   * @param name
    * @throws IOException if the inode is not a directory,
    *                     or is a directory but not the root of an EZ.
    */

@@ -29,8 +29,6 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * Test class for @DefaultImpersonationProvider
  */
@@ -45,7 +43,7 @@ public class TestDefaultImpersonationProvider {
       .mock(UserGroupInformation.class);
   private Configuration conf;
   @Rule
-  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
+  public Timeout globalTimeout = new Timeout(10000);
 
   @Before
   public void setup() {

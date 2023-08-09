@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * {@link UsersManager} tracks users in the system and its respective data
@@ -55,9 +55,10 @@ public class UsersManager implements AbstractUsersManager {
   /*
    * Member declaration for UsersManager class.
    */
-  private final AbstractLeafQueue lQueue;
+  private final LeafQueue lQueue;
   private final RMNodeLabelsManager labelManager;
   private final ResourceCalculator resourceCalculator;
+  private final CapacitySchedulerContext scheduler;
   private Map<String, User> users = new ConcurrentHashMap<>();
 
   private ResourceUsage totalResUsageForActiveUsers = new ResourceUsage();
@@ -76,7 +77,7 @@ public class UsersManager implements AbstractUsersManager {
   private Map<String, Map<SchedulingMode, Long>> localVersionOfAllUsersState =
       new HashMap<String, Map<SchedulingMode, Long>>();
 
-  private volatile float userLimit;
+  private volatile int userLimit;
   private volatile float userLimitFactor;
 
   private WriteLock writeLock;
@@ -295,13 +296,17 @@ public class UsersManager implements AbstractUsersManager {
    *          Leaf Queue Object
    * @param labelManager
    *          Label Manager instance
+   * @param scheduler
+   *          Capacity Scheduler Context
    * @param resourceCalculator
    *          rc
    */
-  public UsersManager(QueueMetrics metrics, AbstractLeafQueue lQueue,
-      RMNodeLabelsManager labelManager, ResourceCalculator resourceCalculator) {
+  public UsersManager(QueueMetrics metrics, LeafQueue lQueue,
+      RMNodeLabelsManager labelManager, CapacitySchedulerContext scheduler,
+      ResourceCalculator resourceCalculator) {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.lQueue = lQueue;
+    this.scheduler = scheduler;
     this.labelManager = labelManager;
     this.resourceCalculator = resourceCalculator;
     this.qUsageRatios = new UsageRatios();
@@ -315,7 +320,7 @@ public class UsersManager implements AbstractUsersManager {
    * Get configured user-limit.
    * @return user limit
    */
-  public float getUserLimit() {
+  public int getUserLimit() {
     return userLimit;
   }
 
@@ -323,7 +328,7 @@ public class UsersManager implements AbstractUsersManager {
    * Set configured user-limit.
    * @param userLimit user limit
    */
-  public void setUserLimit(float userLimit) {
+  public void setUserLimit(int userLimit) {
     this.userLimit = userLimit;
   }
 
@@ -466,7 +471,8 @@ public class UsersManager implements AbstractUsersManager {
   }
 
   private float getUserWeightFromQueue(String userName) {
-    return lQueue.getUserWeights().getByUser(userName);
+    Float weight = lQueue.getUserWeights().get(userName);
+    return (weight == null) ? 1.0f : weight.floatValue();
   }
 
   /**
@@ -696,8 +702,7 @@ public class UsersManager implements AbstractUsersManager {
     activeUsersWithOnlyPendingApps = new AtomicInteger(numPendingUsers);
   }
 
-  @VisibleForTesting
-  Resource computeUserLimit(String userName, Resource clusterResource,
+  private Resource computeUserLimit(String userName, Resource clusterResource,
       String nodePartition, SchedulingMode schedulingMode, boolean activeUser) {
     Resource partitionResource = labelManager.getResourceByLabel(nodePartition,
         clusterResource);
@@ -711,7 +716,6 @@ public class UsersManager implements AbstractUsersManager {
      * (which extra resources we are allocating)
      */
     Resource queueCapacity = lQueue.getEffectiveCapacity(nodePartition);
-    Resource originalCapacity = queueCapacity;
 
     /*
      * Assume we have required resource equals to minimumAllocation, this can
@@ -787,19 +791,8 @@ public class UsersManager implements AbstractUsersManager {
     // IGNORE_PARTITION_EXCLUSIVITY allocation.
     Resource maxUserLimit = Resources.none();
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
-      if (getUserLimitFactor() == -1 ||
-          originalCapacity.equals(Resources.none())) {
-        // If user-limit-factor set to -1, we should disable user limit.
-        //
-        // Also prevent incorrect maxUserLimit due to low queueCapacity
-        // Can happen if dynamic queue has capacity = 0%
-        maxUserLimit = lQueue.
-            getEffectiveMaxCapacityDown(
-                nodePartition, lQueue.getMinimumAllocation());
-      } else {
-        maxUserLimit = Resources.multiplyAndRoundDown(queueCapacity,
-            getUserLimitFactor());
-      }
+      maxUserLimit = Resources.multiplyAndRoundDown(queueCapacity,
+          getUserLimitFactor());
     } else if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
       maxUserLimit = partitionResource;
     }
@@ -812,7 +805,6 @@ public class UsersManager implements AbstractUsersManager {
             lQueue.getMinimumAllocation());
 
     if (LOG.isDebugEnabled()) {
-      float weight = lQueue.getUserWeights().getByUser(userName);
       LOG.debug("User limit computation for " + userName
           + ",  in queue: " + lQueue.getQueuePath()
           + ",  userLimitPercent=" + lQueue.getUserLimit()
@@ -830,7 +822,7 @@ public class UsersManager implements AbstractUsersManager {
           + ",  Partition=" + nodePartition
           + ",  resourceUsed=" + resourceUsed
           + ",  maxUserLimit=" + maxUserLimit
-          + ",  userWeight=" + weight
+          + ",  userWeight=" + getUser(userName).getWeight()
       );
     }
     return userLimitResource;
@@ -839,8 +831,10 @@ public class UsersManager implements AbstractUsersManager {
   /**
    * Update new usage ratio.
    *
-   * @param partition Node partition
-   * @param clusterResource cluster resource
+   * @param partition
+   *          Node partition
+   * @param clusterResource
+   *          Cluster Resource
    */
   public void updateUsageRatio(String partition, Resource clusterResource) {
     writeLock.lock();
@@ -972,7 +966,7 @@ public class UsersManager implements AbstractUsersManager {
 
         // Update total resource usage of active and non-active after user
         // is moved from non-active to active.
-        for (String partition : resourceUsage.getExistingNodeLabels()) {
+        for (String partition : resourceUsage.getNodePartitionsSet()) {
           totalResUsageForNonActiveUsers.decUsed(partition,
               resourceUsage.getUsed(partition));
           totalResUsageForActiveUsers.incUsed(partition,
@@ -1013,7 +1007,7 @@ public class UsersManager implements AbstractUsersManager {
 
         // Update total resource usage of active and non-active after user is
         // moved from active to non-active.
-        for (String partition : resourceUsage.getExistingNodeLabels()) {
+        for (String partition : resourceUsage.getNodePartitionsSet()) {
           totalResUsageForActiveUsers.decUsed(partition,
               resourceUsage.getUsed(partition));
           totalResUsageForNonActiveUsers.incUsed(partition,
@@ -1057,8 +1051,6 @@ public class UsersManager implements AbstractUsersManager {
    *          Name of the user
    * @param resource
    *          Resource to increment/decrement
-   * @param clusterResource
-   *          Cluster resource (for testing purposes only)
    * @param nodePartition
    *          Node label
    * @param isAllocate
@@ -1066,7 +1058,6 @@ public class UsersManager implements AbstractUsersManager {
    * @return user
    */
   public User updateUserResourceUsage(String userName, Resource resource,
-      Resource clusterResource,
       String nodePartition, boolean isAllocate) {
     this.writeLock.lock();
     try {
@@ -1082,7 +1073,7 @@ public class UsersManager implements AbstractUsersManager {
 
       // Update usage ratios
       Resource resourceByLabel = labelManager.getResourceByLabel(nodePartition,
-          clusterResource);
+          scheduler.getClusterResource());
       incQueueUsageRatio(nodePartition, user.updateUsageRatio(
           resourceCalculator, resourceByLabel, nodePartition));
 
@@ -1131,10 +1122,5 @@ public class UsersManager implements AbstractUsersManager {
   @VisibleForTesting
   public int getNumActiveUsersWithOnlyPendingApps() {
     return activeUsersWithOnlyPendingApps.get();
-  }
-
-  @VisibleForTesting
-  void setUsageRatio(String label, float usage) {
-    qUsageRatios.usageRatios.put(label, usage);
   }
 }

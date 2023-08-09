@@ -18,12 +18,22 @@
 
 package org.apache.hadoop.yarn.server.timeline.webapp;
 
+import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
+
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -32,28 +42,17 @@ import javax.ws.rs.core.Response.Status;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticationHandler;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -65,23 +64,23 @@ import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilter;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+import com.google.inject.Guice;
+import com.google.inject.servlet.ServletModule;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
+import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import com.sun.jersey.test.framework.WebAppDescriptor;
 
 public class TestTimelineWebServices extends JerseyTestBase {
 
@@ -100,7 +99,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       try {
         store = mockTimelineStore();
       } catch (Exception e) {
-        fail();
+        Assert.fail();
       }
       Configuration conf = new YarnConfiguration();
       conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, false);
@@ -139,7 +138,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       try {
         taFilter.init(filterConfig);
       } catch (ServletException e) {
-        fail("Unable to initialize TimelineAuthenticationFilter: " +
+        Assert.fail("Unable to initialize TimelineAuthenticationFilter: " +
             e.getMessage());
       }
 
@@ -147,7 +146,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       try {
         doNothing().when(taFilter).init(any(FilterConfig.class));
       } catch (ServletException e) {
-        fail("Unable to initialize TimelineAuthenticationFilter: " +
+        Assert.fail("Unable to initialize TimelineAuthenticationFilter: " +
             e.getMessage());
       }
       filter("/*").through(taFilter);
@@ -159,7 +158,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
         Guice.createInjector(new WebServletModule()));
   }
 
-  @BeforeEach
+  @Before
   public void setUp() throws Exception {
     super.setUp();
     GuiceServletConfig.setInjector(
@@ -188,7 +187,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testAbout() throws Exception {
+  public void testAbout() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .accept(MediaType.APPLICATION_JSON)
@@ -198,54 +197,54 @@ public class TestTimelineWebServices extends JerseyTestBase {
     TimelineAbout actualAbout = response.getEntity(TimelineAbout.class);
     TimelineAbout expectedAbout =
         TimelineUtils.createTimelineAbout("Timeline API");
-    assertNotNull(
-        actualAbout, "Timeline service about response is null");
-    assertEquals(expectedAbout.getAbout(), actualAbout.getAbout());
-    assertEquals(expectedAbout.getTimelineServiceVersion(),
+    Assert.assertNotNull(
+        "Timeline service about response is null", actualAbout);
+    Assert.assertEquals(expectedAbout.getAbout(), actualAbout.getAbout());
+    Assert.assertEquals(expectedAbout.getTimelineServiceVersion(),
         actualAbout.getTimelineServiceVersion());
-    assertEquals(expectedAbout.getTimelineServiceBuildVersion(),
+    Assert.assertEquals(expectedAbout.getTimelineServiceBuildVersion(),
         actualAbout.getTimelineServiceBuildVersion());
-    assertEquals(expectedAbout.getTimelineServiceVersionBuiltOn(),
+    Assert.assertEquals(expectedAbout.getTimelineServiceVersionBuiltOn(),
         actualAbout.getTimelineServiceVersionBuiltOn());
-    assertEquals(expectedAbout.getHadoopVersion(),
+    Assert.assertEquals(expectedAbout.getHadoopVersion(),
         actualAbout.getHadoopVersion());
-    assertEquals(expectedAbout.getHadoopBuildVersion(),
+    Assert.assertEquals(expectedAbout.getHadoopBuildVersion(),
         actualAbout.getHadoopBuildVersion());
-    assertEquals(expectedAbout.getHadoopVersionBuiltOn(),
+    Assert.assertEquals(expectedAbout.getHadoopVersionBuiltOn(),
         actualAbout.getHadoopVersionBuiltOn());
   }
 
   private static void verifyEntities(TimelineEntities entities) {
-    assertNotNull(entities);
-    assertEquals(3, entities.getEntities().size());
+    Assert.assertNotNull(entities);
+    Assert.assertEquals(3, entities.getEntities().size());
     TimelineEntity entity1 = entities.getEntities().get(0);
-    assertNotNull(entity1);
-    assertEquals("id_1", entity1.getEntityId());
-    assertEquals("type_1", entity1.getEntityType());
-    assertEquals(123L, entity1.getStartTime().longValue());
-    assertEquals(2, entity1.getEvents().size());
-    assertEquals(4, entity1.getPrimaryFilters().size());
-    assertEquals(4, entity1.getOtherInfo().size());
+    Assert.assertNotNull(entity1);
+    Assert.assertEquals("id_1", entity1.getEntityId());
+    Assert.assertEquals("type_1", entity1.getEntityType());
+    Assert.assertEquals(123l, entity1.getStartTime().longValue());
+    Assert.assertEquals(2, entity1.getEvents().size());
+    Assert.assertEquals(4, entity1.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity1.getOtherInfo().size());
     TimelineEntity entity2 = entities.getEntities().get(1);
-    assertNotNull(entity2);
-    assertEquals("id_2", entity2.getEntityId());
-    assertEquals("type_1", entity2.getEntityType());
-    assertEquals(123L, entity2.getStartTime().longValue());
-    assertEquals(2, entity2.getEvents().size());
-    assertEquals(4, entity2.getPrimaryFilters().size());
-    assertEquals(4, entity2.getOtherInfo().size());
+    Assert.assertNotNull(entity2);
+    Assert.assertEquals("id_2", entity2.getEntityId());
+    Assert.assertEquals("type_1", entity2.getEntityType());
+    Assert.assertEquals(123l, entity2.getStartTime().longValue());
+    Assert.assertEquals(2, entity2.getEvents().size());
+    Assert.assertEquals(4, entity2.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity2.getOtherInfo().size());
     TimelineEntity entity3 = entities.getEntities().get(2);
-    assertNotNull(entity2);
-    assertEquals("id_6", entity3.getEntityId());
-    assertEquals("type_1", entity3.getEntityType());
-    assertEquals(61L, entity3.getStartTime().longValue());
-    assertEquals(0, entity3.getEvents().size());
-    assertEquals(4, entity3.getPrimaryFilters().size());
-    assertEquals(4, entity3.getOtherInfo().size());
+    Assert.assertNotNull(entity2);
+    Assert.assertEquals("id_6", entity3.getEntityId());
+    Assert.assertEquals("type_1", entity3.getEntityType());
+    Assert.assertEquals(61l, entity3.getStartTime().longValue());
+    Assert.assertEquals(0, entity3.getEvents().size());
+    Assert.assertEquals(4, entity3.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity3.getOtherInfo().size());
   }
 
   @Test
-  void testGetEntities() throws Exception {
+  public void testGetEntities() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1")
@@ -257,7 +256,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testFromId() throws Exception {
+  public void testFromId() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("fromId", "id_2")
@@ -279,7 +278,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testFromTs() throws Exception {
+  public void testFromTs() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("fromTs", Long.toString(beforeTime))
@@ -292,7 +291,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
 
     response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("fromTs", Long.toString(
-        System.currentTimeMillis()))
+            System.currentTimeMillis()))
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
@@ -302,7 +301,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testPrimaryFilterString() {
+  public void testPrimaryFilterString() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("primaryFilter", "user:username")
@@ -314,11 +313,11 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testPrimaryFilterInteger() {
+  public void testPrimaryFilterInteger() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("primaryFilter",
-        "appname:" + Integer.toString(Integer.MAX_VALUE))
+            "appname:" + Integer.toString(Integer.MAX_VALUE))
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
@@ -327,11 +326,11 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testPrimaryFilterLong() {
+  public void testPrimaryFilterLong() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("primaryFilter",
-        "long:" + Long.toString((long) Integer.MAX_VALUE + 1L))
+            "long:" + Long.toString((long) Integer.MAX_VALUE + 1l))
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
@@ -340,7 +339,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testSecondaryFilters() {
+  public void testSecondaryFilters() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1")
@@ -354,7 +353,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testGetEntity() throws Exception {
+  public void testGetEntity() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("id_1")
@@ -363,17 +362,17 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineEntity entity = response.getEntity(TimelineEntity.class);
-    assertNotNull(entity);
-    assertEquals("id_1", entity.getEntityId());
-    assertEquals("type_1", entity.getEntityType());
-    assertEquals(123L, entity.getStartTime().longValue());
-    assertEquals(2, entity.getEvents().size());
-    assertEquals(4, entity.getPrimaryFilters().size());
-    assertEquals(4, entity.getOtherInfo().size());
+    Assert.assertNotNull(entity);
+    Assert.assertEquals("id_1", entity.getEntityId());
+    Assert.assertEquals("type_1", entity.getEntityType());
+    Assert.assertEquals(123l, entity.getStartTime().longValue());
+    Assert.assertEquals(2, entity.getEvents().size());
+    Assert.assertEquals(4, entity.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity.getOtherInfo().size());
   }
 
   @Test
-  void testGetEntityFields1() throws Exception {
+  public void testGetEntityFields1() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("id_1").queryParam("fields", "events,otherinfo")
@@ -382,37 +381,37 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineEntity entity = response.getEntity(TimelineEntity.class);
-    assertNotNull(entity);
-    assertEquals("id_1", entity.getEntityId());
-    assertEquals("type_1", entity.getEntityType());
-    assertEquals(123L, entity.getStartTime().longValue());
-    assertEquals(2, entity.getEvents().size());
-    assertEquals(0, entity.getPrimaryFilters().size());
-    assertEquals(4, entity.getOtherInfo().size());
+    Assert.assertNotNull(entity);
+    Assert.assertEquals("id_1", entity.getEntityId());
+    Assert.assertEquals("type_1", entity.getEntityType());
+    Assert.assertEquals(123l, entity.getStartTime().longValue());
+    Assert.assertEquals(2, entity.getEvents().size());
+    Assert.assertEquals(0, entity.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity.getOtherInfo().size());
   }
 
   @Test
-  void testGetEntityFields2() throws Exception {
+  public void testGetEntityFields2() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("id_1").queryParam("fields", "lasteventonly," +
-        "primaryfilters,relatedentities")
+            "primaryfilters,relatedentities")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineEntity entity = response.getEntity(TimelineEntity.class);
-    assertNotNull(entity);
-    assertEquals("id_1", entity.getEntityId());
-    assertEquals("type_1", entity.getEntityType());
-    assertEquals(123L, entity.getStartTime().longValue());
-    assertEquals(1, entity.getEvents().size());
-    assertEquals(4, entity.getPrimaryFilters().size());
-    assertEquals(0, entity.getOtherInfo().size());
+    Assert.assertNotNull(entity);
+    Assert.assertEquals("id_1", entity.getEntityId());
+    Assert.assertEquals("type_1", entity.getEntityType());
+    Assert.assertEquals(123l, entity.getStartTime().longValue());
+    Assert.assertEquals(1, entity.getEvents().size());
+    Assert.assertEquals(4, entity.getPrimaryFilters().size());
+    Assert.assertEquals(0, entity.getOtherInfo().size());
   }
 
   @Test
-  void testGetEvents() throws Exception {
+  public void testGetEvents() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("events")
@@ -422,22 +421,22 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineEvents events = response.getEntity(TimelineEvents.class);
-    assertNotNull(events);
-    assertEquals(1, events.getAllEvents().size());
+    Assert.assertNotNull(events);
+    Assert.assertEquals(1, events.getAllEvents().size());
     TimelineEvents.EventsOfOneEntity partEvents = events.getAllEvents().get(0);
-    assertEquals(2, partEvents.getEvents().size());
+    Assert.assertEquals(2, partEvents.getEvents().size());
     TimelineEvent event1 = partEvents.getEvents().get(0);
-    assertEquals(456L, event1.getTimestamp());
-    assertEquals("end_event", event1.getEventType());
-    assertEquals(1, event1.getEventInfo().size());
+    Assert.assertEquals(456l, event1.getTimestamp());
+    Assert.assertEquals("end_event", event1.getEventType());
+    Assert.assertEquals(1, event1.getEventInfo().size());
     TimelineEvent event2 = partEvents.getEvents().get(1);
-    assertEquals(123L, event2.getTimestamp());
-    assertEquals("start_event", event2.getEventType());
-    assertEquals(0, event2.getEventInfo().size());
+    Assert.assertEquals(123l, event2.getTimestamp());
+    Assert.assertEquals("start_event", event2.getEventType());
+    Assert.assertEquals(0, event2.getEventInfo().size());
   }
 
   @Test
-  void testPostEntitiesWithPrimaryFilter() throws Exception {
+  public void testPostEntitiesWithPrimaryFilter() throws Exception {
     TimelineEntities entities = new TimelineEntities();
     TimelineEntity entity = new TimelineEntity();
     Map<String, Set<Object>> filters = new HashMap<String, Set<Object>>();
@@ -456,11 +455,11 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .post(ClientResponse.class, entities);
     TimelinePutResponse putResposne =
         response.getEntity(TimelinePutResponse.class);
-    assertEquals(0, putResposne.getErrors().size());
+    Assert.assertEquals(0, putResposne.getErrors().size());
   }
 
   @Test
-  void testPostEntities() throws Exception {
+  public void testPostEntities() throws Exception {
     TimelineEntities entities = new TimelineEntities();
     TimelineEntity entity = new TimelineEntity();
     entity.setEntityId("test id 1");
@@ -487,8 +486,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
         response.getType().toString());
     TimelinePutResponse putResposne =
         response.getEntity(TimelinePutResponse.class);
-    assertNotNull(putResposne);
-    assertEquals(0, putResposne.getErrors().size());
+    Assert.assertNotNull(putResposne);
+    Assert.assertEquals(0, putResposne.getErrors().size());
     // verify the entity exists in the store
     response = r.path("ws").path("v1").path("timeline")
         .path("test type 1").path("test id 1")
@@ -497,13 +496,13 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     entity = response.getEntity(TimelineEntity.class);
-    assertNotNull(entity);
-    assertEquals("test id 1", entity.getEntityId());
-    assertEquals("test type 1", entity.getEntityType());
+    Assert.assertNotNull(entity);
+    Assert.assertEquals("test id 1", entity.getEntityId());
+    Assert.assertEquals("test type 1", entity.getEntityType());
   }
 
   @Test
-  void testPostIncompleteEntities() throws Exception {
+  public void testPostIncompleteEntities() throws Exception {
     TimelineEntities entities = new TimelineEntities();
     TimelineEntity entity1 = new TimelineEntity();
     entity1.setEntityId("test id 1");
@@ -517,14 +516,14 @@ public class TestTimelineWebServices extends JerseyTestBase {
     // One of the entities has no id or type. HTTP 400 will be returned
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .queryParam("user.name", "tester").accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON).post(ClientResponse.class, entities);
+         .type(MediaType.APPLICATION_JSON).post(ClientResponse.class, entities);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
   }
 
   @Test
-  void testPostEntitiesWithYarnACLsEnabled() throws Exception {
+  public void testPostEntitiesWithYarnACLsEnabled() throws Exception {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
@@ -545,8 +544,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
           response.getType().toString());
       TimelinePutResponse putResponse =
           response.getEntity(TimelinePutResponse.class);
-      assertNotNull(putResponse);
-      assertEquals(0, putResponse.getErrors().size());
+      Assert.assertNotNull(putResponse);
+      Assert.assertEquals(0, putResponse.getErrors().size());
 
       // override/append timeline data in the same entity with different user
       response = r.path("ws").path("v1").path("timeline")
@@ -557,9 +556,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       putResponse = response.getEntity(TimelinePutResponse.class);
-      assertNotNull(putResponse);
-      assertEquals(1, putResponse.getErrors().size());
-      assertEquals(TimelinePutResponse.TimelinePutError.ACCESS_DENIED,
+      Assert.assertNotNull(putResponse);
+      Assert.assertEquals(1, putResponse.getErrors().size());
+      Assert.assertEquals(TimelinePutResponse.TimelinePutError.ACCESS_DENIED,
           putResponse.getErrors().get(0).getErrorCode());
 
       // Cross domain relationship will be rejected
@@ -581,9 +580,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       putResponse = response.getEntity(TimelinePutResponse.class);
-      assertNotNull(putResponse);
-      assertEquals(1, putResponse.getErrors().size());
-      assertEquals(TimelinePutError.FORBIDDEN_RELATION,
+      Assert.assertNotNull(putResponse);
+      Assert.assertEquals(1, putResponse.getErrors().size());
+      Assert.assertEquals(TimelinePutError.FORBIDDEN_RELATION,
           putResponse.getErrors().get(0).getErrorCode());
 
       // Make sure the entity has been added anyway even though the
@@ -596,16 +595,16 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entity = response.getEntity(TimelineEntity.class);
-      assertNotNull(entity);
-      assertEquals("test id 3", entity.getEntityId());
-      assertEquals("test type 2", entity.getEntityType());
+      Assert.assertNotNull(entity);
+      Assert.assertEquals("test id 3", entity.getEntityId());
+      Assert.assertEquals("test type 2", entity.getEntityType());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }
   }
 
   @Test
-  void testPostEntitiesToDefaultDomain() throws Exception {
+  public void testPostEntitiesToDefaultDomain() throws Exception {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
@@ -625,8 +624,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
           response.getType().toString());
       TimelinePutResponse putResposne =
           response.getEntity(TimelinePutResponse.class);
-      assertNotNull(putResposne);
-      assertEquals(0, putResposne.getErrors().size());
+      Assert.assertNotNull(putResposne);
+      Assert.assertEquals(0, putResposne.getErrors().size());
       // verify the entity exists in the store
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 7").path("test id 7")
@@ -636,10 +635,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entity = response.getEntity(TimelineEntity.class);
-      assertNotNull(entity);
-      assertEquals("test id 7", entity.getEntityId());
-      assertEquals("test type 7", entity.getEntityType());
-      assertEquals(TimelineDataManager.DEFAULT_DOMAIN_ID,
+      Assert.assertNotNull(entity);
+      Assert.assertEquals("test id 7", entity.getEntityId());
+      Assert.assertEquals("test type 7", entity.getEntityType());
+      Assert.assertEquals(TimelineDataManager.DEFAULT_DOMAIN_ID,
           entity.getDomainId());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
@@ -647,7 +646,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testGetEntityWithYarnACLsEnabled() throws Exception {
+  public void testGetEntityWithYarnACLsEnabled() throws Exception {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
@@ -668,7 +667,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
           response.getType().toString());
       TimelinePutResponse putResponse =
           response.getEntity(TimelinePutResponse.class);
-      assertEquals(0, putResponse.getErrors().size());
+      Assert.assertEquals(0, putResponse.getErrors().size());
       // verify the system data will not be exposed
       // 1. No field specification
       response = r.path("ws").path("v1").path("timeline")
@@ -679,7 +678,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entity = response.getEntity(TimelineEntity.class);
-      assertNull(entity.getPrimaryFilters().get(
+      Assert.assertNull(entity.getPrimaryFilters().get(
           TimelineStore.SystemFilter.ENTITY_OWNER.toString()));
       // 2. other field
       response = r.path("ws").path("v1").path("timeline")
@@ -691,7 +690,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entity = response.getEntity(TimelineEntity.class);
-      assertNull(entity.getPrimaryFilters().get(
+      Assert.assertNull(entity.getPrimaryFilters().get(
           TimelineStore.SystemFilter.ENTITY_OWNER.toString()));
       // 3. primaryfilters field
       response = r.path("ws").path("v1").path("timeline")
@@ -703,7 +702,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entity = response.getEntity(TimelineEntity.class);
-      assertNull(entity.getPrimaryFilters().get(
+      Assert.assertNull(entity.getPrimaryFilters().get(
           TimelineStore.SystemFilter.ENTITY_OWNER.toString()));
 
       // get entity with other user
@@ -721,7 +720,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testGetEntitiesWithYarnACLsEnabled() {
+  public void testGetEntitiesWithYarnACLsEnabled() {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
@@ -743,7 +742,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
           response.getType().toString());
       TimelinePutResponse putResponse =
           response.getEntity(TimelinePutResponse.class);
-      assertEquals(0, putResponse.getErrors().size());
+      Assert.assertEquals(0, putResponse.getErrors().size());
 
       // Put entity [4, 5] in domain 2
       entities = new TimelineEntities();
@@ -762,7 +761,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       putResponse = response.getEntity(TimelinePutResponse.class);
-      assertEquals(0, putResponse.getErrors().size());
+      Assert.assertEquals(0, putResponse.getErrors().size());
 
       // Query entities of type 4
       response = r.path("ws").path("v1").path("timeline")
@@ -783,7 +782,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testGetEventsWithYarnACLsEnabled() {
+  public void testGetEventsWithYarnACLsEnabled() {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
@@ -809,7 +808,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
           response.getType().toString());
       TimelinePutResponse putResponse =
           response.getEntity(TimelinePutResponse.class);
-      assertEquals(0, putResponse.getErrors().size());
+      Assert.assertEquals(0, putResponse.getErrors().size());
 
       // Put entity [5, 6] in domain 2
       entities = new TimelineEntities();
@@ -832,7 +831,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       putResponse = response.getEntity(TimelinePutResponse.class);
-      assertEquals(0, putResponse.getErrors().size());
+      Assert.assertEquals(0, putResponse.getErrors().size());
 
       // Query events belonging to the entities of type 4
       response = r.path("ws").path("v1").path("timeline")
@@ -853,7 +852,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testGetDomain() throws Exception {
+  public void testGetDomain() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("domain").path("domain_id_1")
@@ -866,7 +865,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testGetDomainYarnACLsEnabled() {
+  public void testGetDomainYarnACLsEnabled() {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
@@ -895,7 +894,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testGetDomains() throws Exception {
+  public void testGetDomains() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("domain")
@@ -905,7 +904,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineDomains domains = response.getEntity(TimelineDomains.class);
-    assertEquals(2, domains.getDomains().size());
+    Assert.assertEquals(2, domains.getDomains().size());
     for (int i = 0; i < domains.getDomains().size(); ++i) {
       verifyDomain(domains.getDomains().get(i),
           i == 0 ? "domain_id_4" : "domain_id_1");
@@ -913,7 +912,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testGetDomainsYarnACLsEnabled() throws Exception {
+  public void testGetDomainsYarnACLsEnabled() throws Exception {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
@@ -926,7 +925,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       TimelineDomains domains = response.getEntity(TimelineDomains.class);
-      assertEquals(2, domains.getDomains().size());
+      Assert.assertEquals(2, domains.getDomains().size());
       for (int i = 0; i < domains.getDomains().size(); ++i) {
         verifyDomain(domains.getDomains().get(i),
             i == 0 ? "domain_id_4" : "domain_id_1");
@@ -941,14 +940,14 @@ public class TestTimelineWebServices extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       domains = response.getEntity(TimelineDomains.class);
-      assertEquals(0, domains.getDomains().size());
+      Assert.assertEquals(0, domains.getDomains().size());
     } finally {
       timelineACLsManager.setAdminACLsManager(oldAdminACLsManager);
     }
   }
 
   @Test
-  void testPutDomain() throws Exception {
+  public void testPutDomain() throws Exception {
     TimelineDomain domain = new TimelineDomain();
     domain.setId("test_domain_id");
     WebResource r = resource();
@@ -978,10 +977,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     domain = response.getEntity(TimelineDomain.class);
-    assertNotNull(domain);
-    assertEquals("test_domain_id", domain.getId());
-    assertEquals("tester", domain.getOwner());
-    assertNull(domain.getDescription());
+    Assert.assertNotNull(domain);
+    Assert.assertEquals("test_domain_id", domain.getId());
+    Assert.assertEquals("tester", domain.getOwner());
+    Assert.assertEquals(null, domain.getDescription());
 
     // Update the domain
     domain.setDescription("test_description");
@@ -1001,13 +1000,13 @@ public class TestTimelineWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     domain = response.getEntity(TimelineDomain.class);
-    assertNotNull(domain);
-    assertEquals("test_domain_id", domain.getId());
-    assertEquals("test_description", domain.getDescription());
+    Assert.assertNotNull(domain);
+    Assert.assertEquals("test_domain_id", domain.getId());
+    Assert.assertEquals("test_description", domain.getDescription());
   }
 
   @Test
-  void testPutDomainYarnACLsEnabled() throws Exception {
+  public void testPutDomainYarnACLsEnabled() throws Exception {
     AdminACLsManager oldAdminACLsManager =
         timelineACLsManager.setAdminACLsManager(adminACLsManager);
     try {
@@ -1036,7 +1035,7 @@ public class TestTimelineWebServices extends JerseyTestBase {
   }
 
   @Test
-  void testContextFactory() throws Exception {
+  public void testContextFactory() throws Exception {
     JAXBContext jaxbContext1 = ContextFactory.createContext(
         new Class[]{TimelineDomain.class}, Collections.EMPTY_MAP);
     JAXBContext jaxbContext2 = ContextFactory.createContext(
@@ -1046,21 +1045,21 @@ public class TestTimelineWebServices extends JerseyTestBase {
     try {
       ContextFactory.createContext(new Class[]{TimelineEntity.class},
           Collections.EMPTY_MAP);
-      fail("Expected JAXBException");
-    } catch (Exception e) {
+      Assert.fail("Expected JAXBException");
+    } catch(Exception e) {
       assertThat(e).isExactlyInstanceOf(JAXBException.class);
     }
   }
 
   private static void verifyDomain(TimelineDomain domain, String domainId) {
-    assertNotNull(domain);
-    assertEquals(domainId, domain.getId());
+    Assert.assertNotNull(domain);
+    Assert.assertEquals(domainId, domain.getId());
     // The specific values have been verified in TestMemoryTimelineStore
-    assertNotNull(domain.getDescription());
-    assertNotNull(domain.getOwner());
-    assertNotNull(domain.getReaders());
-    assertNotNull(domain.getWriters());
-    assertNotNull(domain.getCreatedTime());
-    assertNotNull(domain.getModifiedTime());
+    Assert.assertNotNull(domain.getDescription());
+    Assert.assertNotNull(domain.getOwner());
+    Assert.assertNotNull(domain.getReaders());
+    Assert.assertNotNull(domain.getWriters());
+    Assert.assertNotNull(domain.getCreatedTime());
+    Assert.assertNotNull(domain.getModifiedTime());
   }
 }

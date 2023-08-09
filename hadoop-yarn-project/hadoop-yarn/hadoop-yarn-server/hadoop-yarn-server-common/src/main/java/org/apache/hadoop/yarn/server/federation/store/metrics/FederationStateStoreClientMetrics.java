@@ -31,14 +31,13 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
-import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Performance metrics for FederationStateStore implementations.
@@ -80,9 +79,6 @@ public final class FederationStateStoreClientMetrics implements MetricsSource {
 
   @Metric("Total number of failed StateStore calls")
   private static MutableCounterLong totalFailedCalls;
-
-  @Metric("Total number of Connections")
-  private static MutableGaugeInt totalConnections;
 
   // This after the static members are initialized, or the constructor will
   // throw a NullPointerException
@@ -150,14 +146,6 @@ public final class FederationStateStoreClientMetrics implements MetricsSource {
     methodQuantileMetric.add(duration);
   }
 
-  public static void incrConnections() {
-    totalConnections.incr();
-  }
-
-  public static void decrConnections() {
-    totalConnections.decr();
-  }
-
   @Override
   public void getMetrics(MetricsCollector collector, boolean all) {
     REGISTRY.snapshot(collector.addRecord(REGISTRY.info()), all);
@@ -193,10 +181,4 @@ public final class FederationStateStoreClientMetrics implements MetricsSource {
   static double getLatencySucceededCalls() {
     return totalSucceededCalls.lastStat().mean();
   }
-
-  @VisibleForTesting
-  public static int getNumConnections() {
-    return totalConnections.value();
-  }
-
 }

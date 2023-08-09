@@ -60,34 +60,27 @@ public abstract class TrashPolicy extends Configured {
 
   /**
    * Returns whether the Trash Policy is enabled for this filesystem.
-   *
-   * @return if isEnabled true,not false.
    */
   public abstract boolean isEnabled();
 
   /** 
    * Move a file or directory to the current trash directory.
-   * @param path the path.
    * @return false if the item is already in the trash or trash is disabled
-   * @throws IOException raised on errors performing I/O.
    */ 
   public abstract boolean moveToTrash(Path path) throws IOException;
 
   /** 
-   * Create a trash checkpoint.
-   * @throws IOException raised on errors performing I/O.
+   * Create a trash checkpoint. 
    */
   public abstract void createCheckpoint() throws IOException;
 
   /** 
    * Delete old trash checkpoint(s).
-   * @throws IOException raised on errors performing I/O.
    */
   public abstract void deleteCheckpoint() throws IOException;
 
   /**
    * Delete all checkpoints immediately, ie empty trash.
-   * @throws IOException raised on errors performing I/O.
    */
   public abstract void deleteCheckpointsImmediately() throws IOException;
 
@@ -101,8 +94,6 @@ public abstract class TrashPolicy extends Configured {
    * TrashPolicy#getCurrentTrashDir(Path path).
    * It returns the trash location correctly for the path specified no matter
    * the path is in encryption zone or not.
-   *
-   * @return the path.
    */
   public abstract Path getCurrentTrashDir();
 
@@ -111,7 +102,7 @@ public abstract class TrashPolicy extends Configured {
    * Policy
    * @param path path to be deleted
    * @return current trash directory for the path to be deleted
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public Path getCurrentTrashDir(Path path) throws IOException {
     throw new UnsupportedOperationException();
@@ -120,9 +111,6 @@ public abstract class TrashPolicy extends Configured {
   /** 
    * Return a {@link Runnable} that periodically empties the trash of all
    * users, intended to be run by the superuser.
-   *
-   * @throws IOException raised on errors performing I/O.
-   * @return Runnable.
    */
   public abstract Runnable getEmptier() throws IOException;
 

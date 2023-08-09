@@ -21,7 +21,6 @@ package org.apache.hadoop.security;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
@@ -163,7 +162,7 @@ public class TestLdapGroupsMappingWithOneQuery
     public boolean isSecondaryQueryCalled() {
       return secondaryQueryCalled;
     }
-    Set<String> lookupGroup(SearchResult result, DirContext c,
+    List<String> lookupGroup(SearchResult result, DirContext c,
                                     int goUpHierarchy) throws NamingException {
       secondaryQueryCalled = true;
       return super.lookupGroup(result, c, goUpHierarchy);

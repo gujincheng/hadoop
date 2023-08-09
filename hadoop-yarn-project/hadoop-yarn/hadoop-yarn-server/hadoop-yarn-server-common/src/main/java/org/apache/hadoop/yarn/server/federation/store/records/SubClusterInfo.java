@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.yarn.server.federation.store.records;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -45,7 +43,6 @@ public abstract class SubClusterInfo {
 
   @Private
   @Unstable
-  @SuppressWarnings("checkstyle:ParameterNumber")
   public static SubClusterInfo newInstance(SubClusterId subClusterId,
       String amRMServiceAddress, String clientRMServiceAddress,
       String rmAdminServiceAddress, String rmWebServiceAddress,
@@ -57,7 +54,6 @@ public abstract class SubClusterInfo {
 
   @Private
   @Unstable
-  @SuppressWarnings("checkstyle:ParameterNumber")
   public static SubClusterInfo newInstance(SubClusterId subClusterId,
       String amRMServiceAddress, String clientRMServiceAddress,
       String rmAdminServiceAddress, String rmWebServiceAddress,
@@ -256,49 +252,48 @@ public abstract class SubClusterInfo {
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("SubClusterInfo: [")
-        .append("SubClusterId: ").append(getSubClusterId()).append(", ")
-        .append("AMRMServiceAddress: ").append(getAMRMServiceAddress()).append(", ")
-        .append("ClientRMServiceAddress: ").append(getClientRMServiceAddress()).append(", ")
-        .append("RMAdminServiceAddress: ").append(getRMAdminServiceAddress()).append(", ")
-        .append("RMWebServiceAddress: ").append(getRMWebServiceAddress()).append(", ")
-        .append("State: ").append(getState()).append(", ")
-        .append("LastStartTime: ").append(getLastStartTime()).append(", ")
-        .append("Capability: ").append(getCapability())
-        .append("]");
-    return sb.toString();
+    return "SubClusterInfo [getSubClusterId() = " + getSubClusterId()
+        + ", getAMRMServiceAddress() = " + getAMRMServiceAddress()
+        + ", getClientRMServiceAddress() = " + getClientRMServiceAddress()
+        + ", getRMAdminServiceAddress() = " + getRMAdminServiceAddress()
+        + ", getRMWebServiceAddress() = " + getRMWebServiceAddress()
+        + ", getState() = " + getState() + ", getLastStartTime() = "
+        + getLastStartTime() + ", getCapability() = " + getCapability() + "]";
   }
 
   @Override
   public boolean equals(Object obj) {
-
     if (this == obj) {
       return true;
     }
-
     if (obj == null) {
       return false;
     }
-
     if (getClass() != obj.getClass()) {
       return false;
     }
-
-    if (obj instanceof SubClusterInfo) {
-      SubClusterInfo other = (SubClusterInfo) obj;
-      return new EqualsBuilder()
-          .append(this.getSubClusterId(), other.getSubClusterId())
-          .append(this.getAMRMServiceAddress(), other.getAMRMServiceAddress())
-          .append(this.getClientRMServiceAddress(), other.getClientRMServiceAddress())
-          .append(this.getRMAdminServiceAddress(), other.getRMAdminServiceAddress())
-          .append(this.getRMWebServiceAddress(), other.getRMWebServiceAddress())
-          .append(this.getState(), other.getState())
-          .append(this.getLastStartTime(), other.getLastStartTime())
-          .isEquals();
+    SubClusterInfo other = (SubClusterInfo) obj;
+    if (!this.getSubClusterId().equals(other.getSubClusterId())) {
+      return false;
     }
-
-    return false;
+    if (!this.getAMRMServiceAddress().equals(other.getAMRMServiceAddress())) {
+      return false;
+    }
+    if (!this.getClientRMServiceAddress()
+        .equals(other.getClientRMServiceAddress())) {
+      return false;
+    }
+    if (!this.getRMAdminServiceAddress()
+        .equals(other.getRMAdminServiceAddress())) {
+      return false;
+    }
+    if (!this.getRMWebServiceAddress().equals(other.getRMWebServiceAddress())) {
+      return false;
+    }
+    if (!this.getState().equals(other.getState())) {
+      return false;
+    }
+    return this.getLastStartTime() == other.getLastStartTime();
     // Capability and HeartBeat fields are not included as they are temporal
     // (i.e. timestamps), so they change during the lifetime of the same
     // sub-cluster
@@ -306,16 +301,23 @@ public abstract class SubClusterInfo {
 
   @Override
   public int hashCode() {
-
-    return new HashCodeBuilder()
-        .append(this.getSubClusterId())
-        .append(this.getAMRMServiceAddress())
-        .append(this.getClientRMServiceAddress())
-        .append(this.getRMAdminServiceAddress())
-        .append(this.getRMWebServiceAddress())
-        .append(this.getState())
-        .append(this.getLastStartTime())
-        .toHashCode();
+    final int prime = 31;
+    int result = 1;
+    result = prime * result
+        + ((getSubClusterId() == null) ? 0 : getSubClusterId().hashCode());
+    result = prime * result + ((getAMRMServiceAddress() == null) ? 0
+        : getAMRMServiceAddress().hashCode());
+    result = prime * result + ((getClientRMServiceAddress() == null) ? 0
+        : getClientRMServiceAddress().hashCode());
+    result = prime * result + ((getRMAdminServiceAddress() == null) ? 0
+        : getRMAdminServiceAddress().hashCode());
+    result = prime * result + ((getRMWebServiceAddress() == null) ? 0
+        : getRMWebServiceAddress().hashCode());
+    result =
+        prime * result + ((getState() == null) ? 0 : getState().hashCode());
+    result = prime * result
+        + (int) (getLastStartTime() ^ (getLastStartTime() >>> 32));
+    return result;
     // Capability and HeartBeat fields are not included as they are temporal
     // (i.e. timestamps), so they change during the lifetime of the same
     // sub-cluster

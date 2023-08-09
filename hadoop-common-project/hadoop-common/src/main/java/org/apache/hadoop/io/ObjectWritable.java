@@ -54,22 +54,13 @@ public class ObjectWritable implements Writable, Configurable {
     this.instance = instance;
   }
 
-  /**
-   * Return the instance, or null if none.
-   * @return the instance, or null if none.
-   */
+  /** Return the instance, or null if none. */
   public Object get() { return instance; }
   
-  /**
-   * Return the class this is meant to be.
-   * @return the class this is meant to be.
-   */
+  /** Return the class this is meant to be. */
   public Class getDeclaredClass() { return declaredClass; }
   
-  /**
-   * Reset the instance.
-   * @param instance instance.
-   */
+  /** Reset the instance. */
   public void set(Object instance) {
     this.declaredClass = instance.getClass();
     this.instance = instance;
@@ -129,16 +120,8 @@ public class ObjectWritable implements Writable, Configurable {
     }
   }
 
-  /**
-   * Write a {@link Writable}, {@link String}, primitive type, or an array of
-   * the preceding.
-   *
-   * @param out DataOutput.
-   * @param instance instance.
-   * @param conf Configuration.
-   * @param declaredClass declaredClass.
-   * @throws IOException raised on errors performing I/O.
-   */
+  /** Write a {@link Writable}, {@link String}, primitive type, or an array of
+   * the preceding. */
   public static void writeObject(DataOutput out, Object instance,
                                  Class declaredClass, 
                                  Configuration conf) throws IOException {
@@ -154,13 +137,6 @@ public class ObjectWritable implements Writable, Configurable {
      * usages, to preserve the ability to interchange files with other clusters 
      * that may not be running the same version of software.  Sometime in ~2013 
      * we can consider removing this parameter and always using the compact format.
-     *
-     * @param conf configuration.
-     * @param out dataoutput.
-     * @param declaredClass declaredClass.
-     * @param instance instance.
-     * @throws IOException raised on errors performing I/O.
-     *
      */
     public static void writeObject(DataOutput out, Object instance,
         Class declaredClass, Configuration conf, boolean allowCompactArrays) 
@@ -234,30 +210,15 @@ public class ObjectWritable implements Writable, Configurable {
   }
   
   
-  /**
-   * Read a {@link Writable}, {@link String}, primitive type, or an array of
-   * the preceding.
-   *
-   * @param conf configuration.
-   * @param in DataInput.
-   * @return Object.
-   * @throws IOException raised on errors performing I/O.
-   */
+  /** Read a {@link Writable}, {@link String}, primitive type, or an array of
+   * the preceding. */
   public static Object readObject(DataInput in, Configuration conf)
     throws IOException {
     return readObject(in, null, conf);
   }
     
-  /**
-   * Read a {@link Writable}, {@link String}, primitive type, or an array of
-   * the preceding.
-   *
-   * @param in DataInput.
-   * @param objectWritable objectWritable.
-   * @param conf configuration.
-   * @return Object.
-   * @throws IOException raised on errors performing I/O.
-   */
+  /** Read a {@link Writable}, {@link String}, primitive type, or an array of
+   * the preceding. */
   @SuppressWarnings("unchecked")
   public static Object readObject(DataInput in, ObjectWritable objectWritable, Configuration conf)
     throws IOException {
@@ -404,10 +365,6 @@ public class ObjectWritable implements Writable, Configurable {
    * Find and load the class with given name <tt>className</tt> by first finding
    * it in the specified <tt>conf</tt>. If the specified <tt>conf</tt> is null,
    * try load it directly.
-   *
-   * @param conf configuration.
-   * @param className classname.
-   * @return Class.
    */
   public static Class<?> loadClass(Configuration conf, String className) {
     Class<?> declaredClass = null;

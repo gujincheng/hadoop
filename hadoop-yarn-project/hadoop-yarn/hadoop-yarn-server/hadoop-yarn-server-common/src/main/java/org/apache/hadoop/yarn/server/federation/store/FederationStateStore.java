@@ -20,24 +20,17 @@ package org.apache.hadoop.yarn.server.federation.store;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateVersionIncompatibleException;
 import org.apache.hadoop.yarn.server.records.Version;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * FederationStore extends the three interfaces used to coordinate the state of
  * a federated cluster: {@link FederationApplicationHomeSubClusterStore},
- * {@link FederationMembershipStateStore}, {@link FederationPolicyStore}, and
- * {@link FederationReservationHomeSubClusterStore}.
+ * {@link FederationMembershipStateStore}, and {@link FederationPolicyStore}.
  *
  */
-public interface FederationStateStore extends
-    FederationApplicationHomeSubClusterStore, FederationMembershipStateStore,
-    FederationPolicyStore, FederationReservationHomeSubClusterStore,
-    FederationDelegationTokenStateStore {
-
-  Logger LOG = LoggerFactory.getLogger(FederationStateStore.class);
+public interface FederationStateStore
+    extends FederationApplicationHomeSubClusterStore,
+    FederationMembershipStateStore, FederationPolicyStore {
 
   /**
    * Initialize the FederationStore.
@@ -65,40 +58,7 @@ public interface FederationStateStore extends
    * Load the version information from the federation state store.
    *
    * @return the {@link Version} of the federation state store
-   * @throws Exception an exception occurred in load version.
    */
-  Version loadVersion() throws Exception;
+  Version loadVersion();
 
-  /**
-   * Store the Version information in federation state store.
-   *
-   * @throws Exception an exception occurred in store version.
-   */
-  void storeVersion() throws Exception;
-
-  /**
-   * Check the version of federation stateStore.
-   *
-   * @throws Exception an exception occurred in check version.
-   */
-  default void checkVersion() throws Exception {
-    Version loadedVersion = loadVersion();
-    LOG.info("Loaded Router State Version Info = {}.", loadedVersion);
-    Version currentVersion = getCurrentVersion();
-    if (loadedVersion != null && loadedVersion.equals(currentVersion)) {
-      return;
-    }
-    // if there is no version info, treat it as CURRENT_VERSION_INFO;
-    if (loadedVersion == null) {
-      loadedVersion = currentVersion;
-    }
-    if (loadedVersion.isCompatibleTo(currentVersion)) {
-      LOG.info("Storing Router State Version Info {}.", currentVersion);
-      storeVersion();
-    } else {
-      throw new FederationStateVersionIncompatibleException(
-         "Expecting Router state version " + currentVersion +
-         ", but loading version " + loadedVersion);
-    }
-  }
 }

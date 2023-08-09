@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.io.IOUtils;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Longs;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
@@ -47,7 +47,7 @@ class RedundantEditLogInputStream extends EditLogInputStream {
 
   /** Limit logging about fast forwarding the stream to every 5 seconds max. */
   private static final long FAST_FORWARD_LOGGING_INTERVAL_MS = 5000;
-  private static final LogThrottlingHelper FAST_FORWARD_LOGGING_HELPER =
+  private final LogThrottlingHelper fastForwardLoggingHelper =
       new LogThrottlingHelper(FAST_FORWARD_LOGGING_INTERVAL_MS);
 
   /**
@@ -182,7 +182,7 @@ class RedundantEditLogInputStream extends EditLogInputStream {
       case SKIP_UNTIL:
        try {
           if (prevTxId != HdfsServerConstants.INVALID_TXID) {
-            LogAction logAction = FAST_FORWARD_LOGGING_HELPER.record();
+            LogAction logAction = fastForwardLoggingHelper.record();
             if (logAction.shouldLog()) {
               LOG.info("Fast-forwarding stream '" + streams[curIdx].getName() +
                   "' to transaction ID " + (prevTxId + 1) +

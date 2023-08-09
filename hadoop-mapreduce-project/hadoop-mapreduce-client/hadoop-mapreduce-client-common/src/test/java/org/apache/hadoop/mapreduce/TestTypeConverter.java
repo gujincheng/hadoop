@@ -20,9 +20,6 @@ package org.apache.hadoop.mapreduce;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -45,7 +42,8 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestTypeConverter {
@@ -55,26 +53,26 @@ public class TestTypeConverter {
       TypeConverter.fromYarn(applicationState, FinalApplicationStatus.FAILED);
     }
     // ad hoc test of NEW_SAVING, which is newly added
-    assertEquals(State.PREP, TypeConverter.fromYarn(
+    Assert.assertEquals(State.PREP, TypeConverter.fromYarn(
         YarnApplicationState.NEW_SAVING, FinalApplicationStatus.FAILED));
-
+    
     for (TaskType taskType : TaskType.values()) {
       TypeConverter.fromYarn(taskType);
     }
-
+    
     for (JobState jobState : JobState.values()) {
       TypeConverter.fromYarn(jobState);
     }
-
+    
     for (QueueState queueState : QueueState.values()) {
       TypeConverter.fromYarn(queueState);
     }
-
+    
     for (TaskState taskState : TaskState.values()) {
       TypeConverter.fromYarn(taskState);
     }
   }
-
+  
   @Test
   public void testFromYarn() throws Exception {
     int appStartTime = 612354;
@@ -100,10 +98,10 @@ public class TestTypeConverter {
     appUsageRpt.setUsedResources(r);
     applicationReport.setApplicationResourceUsageReport(appUsageRpt);
     JobStatus jobStatus = TypeConverter.fromYarn(applicationReport, "dummy-jobfile");
-    assertEquals(appStartTime, jobStatus.getStartTime());
-    assertEquals(appFinishTime, jobStatus.getFinishTime());
-    assertEquals(state.toString(), jobStatus.getState().toString());
-    assertEquals(JobPriority.NORMAL, jobStatus.getPriority());
+    Assert.assertEquals(appStartTime, jobStatus.getStartTime());
+    Assert.assertEquals(appFinishTime, jobStatus.getFinishTime());    
+    Assert.assertEquals(state.toString(), jobStatus.getState().toString());
+    Assert.assertEquals(JobPriority.NORMAL, jobStatus.getPriority());
   }
 
   @Test
@@ -124,7 +122,7 @@ public class TestTypeConverter {
     try {
       JobStatus status = TypeConverter.fromYarn(mockReport, jobFile);
     } catch (NullPointerException npe) {
-      fail("Type converstion from YARN fails for jobs without " +
+      Assert.fail("Type converstion from YARN fails for jobs without " +
           "ApplicationUsageReport");
     }
 
@@ -139,21 +137,20 @@ public class TestTypeConverter {
     appUsageRpt.setUsedResources(r);
     when(mockReport.getApplicationResourceUsageReport()).thenReturn(appUsageRpt);
     JobStatus status = TypeConverter.fromYarn(mockReport, jobFile);
-    assertNotNull(status, "fromYarn returned null status");
-    assertEquals("dummy-path/job.xml", status.getJobFile(), "jobFile set incorrectly");
-    assertEquals("dummy-queue", status.getQueue(), "queue set incorrectly");
-    assertEquals("dummy-tracking-url", status.getTrackingUrl(), "trackingUrl set incorrectly");
-    assertEquals("dummy-user", status.getUsername(), "user set incorrectly");
-    assertEquals("dummy-tracking-url", status.getSchedulingInfo(),
-        "schedulingInfo set incorrectly");
-    assertEquals(6789, status.getJobID().getId(), "jobId set incorrectly");
-    assertEquals(JobStatus.State.KILLED, status.getState(), "state set incorrectly");
-    assertEquals(2048, status.getNeededMem(), "needed mem info set incorrectly");
-    assertEquals(1, status.getNumReservedSlots(), "num rsvd slots info set incorrectly");
-    assertEquals(3, status.getNumUsedSlots(), "num used slots info set incorrectly");
-    assertEquals(2048, status.getReservedMem(), "rsvd mem info set incorrectly");
-    assertEquals(2048, status.getUsedMem(), "used mem info set incorrectly");
-    assertEquals(JobPriority.HIGH, status.getPriority(), "priority set incorrectly");
+    Assert.assertNotNull("fromYarn returned null status", status);
+    Assert.assertEquals("jobFile set incorrectly", "dummy-path/job.xml", status.getJobFile());
+    Assert.assertEquals("queue set incorrectly", "dummy-queue", status.getQueue());
+    Assert.assertEquals("trackingUrl set incorrectly", "dummy-tracking-url", status.getTrackingUrl());
+    Assert.assertEquals("user set incorrectly", "dummy-user", status.getUsername());
+    Assert.assertEquals("schedulingInfo set incorrectly", "dummy-tracking-url", status.getSchedulingInfo());
+    Assert.assertEquals("jobId set incorrectly", 6789, status.getJobID().getId());
+    Assert.assertEquals("state set incorrectly", JobStatus.State.KILLED, status.getState());
+    Assert.assertEquals("needed mem info set incorrectly", 2048, status.getNeededMem());
+    Assert.assertEquals("num rsvd slots info set incorrectly", 1, status.getNumReservedSlots());
+    Assert.assertEquals("num used slots info set incorrectly", 3, status.getNumUsedSlots());
+    Assert.assertEquals("rsvd mem info set incorrectly", 2048, status.getReservedMem());
+    Assert.assertEquals("used mem info set incorrectly", 2048, status.getUsedMem());
+    Assert.assertEquals("priority set incorrectly", JobPriority.HIGH, status.getPriority());
   }
 
   @Test
@@ -163,9 +160,9 @@ public class TestTypeConverter {
     queueInfo.setQueueState(org.apache.hadoop.yarn.api.records.QueueState.STOPPED);
     org.apache.hadoop.mapreduce.QueueInfo returned =
         TypeConverter.fromYarn(queueInfo, new Configuration());
-    assertEquals(returned.getState().toString(),
-        StringUtils.toLowerCase(queueInfo.getQueueState().toString()),
-        "queueInfo translation didn't work.");
+    Assert.assertEquals("queueInfo translation didn't work.",
+        returned.getState().toString(),
+        StringUtils.toLowerCase(queueInfo.getQueueState().toString()));
   }
 
   /**
@@ -176,21 +173,21 @@ public class TestTypeConverter {
   public void testFromYarnQueue() {
     //Define child queue
     org.apache.hadoop.yarn.api.records.QueueInfo child =
-        Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
+      Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
     Mockito.when(child.getQueueState()).thenReturn(QueueState.RUNNING);
 
     //Define parent queue
     org.apache.hadoop.yarn.api.records.QueueInfo queueInfo =
-        Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
+      Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
     List<org.apache.hadoop.yarn.api.records.QueueInfo> children =
-        new ArrayList<org.apache.hadoop.yarn.api.records.QueueInfo>();
+      new ArrayList<org.apache.hadoop.yarn.api.records.QueueInfo>();
     children.add(child); //Add one child
     Mockito.when(queueInfo.getChildQueues()).thenReturn(children);
     Mockito.when(queueInfo.getQueueState()).thenReturn(QueueState.RUNNING);
 
     //Call the function we're testing
     org.apache.hadoop.mapreduce.QueueInfo returned =
-        TypeConverter.fromYarn(queueInfo, new Configuration());
+      TypeConverter.fromYarn(queueInfo, new Configuration());
 
     //Verify that the converted queue has the 1 child we had added
     assertThat(returned.getQueueChildren().size())
@@ -207,7 +204,7 @@ public class TestTypeConverter {
     JobReport jobReport = Records.newRecord(JobReport.class);
     ApplicationId applicationId = ApplicationId.newInstance(0, 0);
     jobId.setAppId(applicationId);
-    jobId.setId(0);
+    jobId.setId(0);    
     jobReport.setJobId(jobId);
     jobReport.setJobState(state);
     jobReport.setStartTime(jobStartTime);
@@ -215,9 +212,9 @@ public class TestTypeConverter {
     jobReport.setUser("TestTypeConverter-user");
     jobReport.setJobPriority(Priority.newInstance(0));
     JobStatus jobStatus = TypeConverter.fromYarn(jobReport, "dummy-jobfile");
-    assertEquals(jobStartTime, jobStatus.getStartTime());
-    assertEquals(jobFinishTime, jobStatus.getFinishTime());
-    assertEquals(state.toString(), jobStatus.getState().toString());
-    assertEquals(JobPriority.DEFAULT, jobStatus.getPriority());
+    Assert.assertEquals(jobStartTime, jobStatus.getStartTime());
+    Assert.assertEquals(jobFinishTime, jobStatus.getFinishTime());    
+    Assert.assertEquals(state.toString(), jobStatus.getState().toString());
+    Assert.assertEquals(JobPriority.DEFAULT, jobStatus.getPriority());
   }
 }

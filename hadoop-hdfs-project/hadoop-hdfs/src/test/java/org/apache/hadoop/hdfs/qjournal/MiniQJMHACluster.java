@@ -35,7 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class MiniQJMHACluster implements AutoCloseable {
+public class MiniQJMHACluster {
   private MiniDFSCluster cluster;
   private MiniJournalCluster journalCluster;
   private final Configuration conf;
@@ -189,15 +189,4 @@ public class MiniQJMHACluster implements AutoCloseable {
     cluster.shutdown();
     journalCluster.shutdown();
   }
-
-  @Override
-  public void close() {
-    try {
-      shutdown();
-    } catch (IOException shutdownFailure) {
-      LOG.warn("Exception while closing journal cluster", shutdownFailure);
-    }
-
-  }
-
 }

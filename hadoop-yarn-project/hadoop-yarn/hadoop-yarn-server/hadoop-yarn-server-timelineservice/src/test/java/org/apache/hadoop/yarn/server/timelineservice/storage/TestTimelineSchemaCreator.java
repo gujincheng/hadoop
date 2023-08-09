@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.storage;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * Test cases for {@link TimelineSchemaCreator}.
@@ -31,13 +29,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class TestTimelineSchemaCreator {
 
   @Test
-  void testTimelineSchemaCreation() throws Exception {
+  public void testTimelineSchemaCreation() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.TIMELINE_SERVICE_SCHEMA_CREATOR_CLASS,
         "org.apache.hadoop.yarn.server.timelineservice.storage" +
             ".DummyTimelineSchemaCreator");
     TimelineSchemaCreator timelineSchemaCreator = new TimelineSchemaCreator();
-    assertEquals(0, timelineSchemaCreator
+    Assert.assertEquals(0, timelineSchemaCreator
         .createTimelineSchema(new String[]{}, conf));
   }
 }

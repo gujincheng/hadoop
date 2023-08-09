@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.CentralizedOpportunisticContainerAllocator;
 import org.slf4j.Logger;
@@ -257,9 +257,7 @@ public class OpportunisticContainerAllocatorAMService
 
     int limitMin, limitMax;
 
-    if (comparator == NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH ||
-        comparator ==
-            NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH_THEN_RESOURCES) {
+    if (comparator == NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH) {
       limitMin = rmContext.getYarnConfiguration()
           .getInt(YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH,
               YarnConfiguration.

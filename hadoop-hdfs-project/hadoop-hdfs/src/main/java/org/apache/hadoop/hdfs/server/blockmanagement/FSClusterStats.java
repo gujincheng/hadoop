@@ -53,23 +53,13 @@ public interface FSClusterStats {
   public int getNumDatanodesInService();
 
   /**
-   * An indication of the average load of non-decommission(ing|ed) nodes
-   * eligible for block placement.
+   * an indication of the average load of non-decommission(ing|ed) nodes
+   * eligible for block placement
    *
    * @return average of the in service number of block transfers and block
    *         writes that are currently occurring on the cluster.
    */
   public double getInServiceXceiverAverage();
-
-  /**
-   * An indication of the average load of volumes at non-decommission(ing|ed)
-   * nodes eligible for block placement.
-   *
-   * @return average of in service number of block transfers and block
-   *         writes that are currently occurring on the volumes of the
-   *         cluster.
-   */
-  double getInServiceXceiverAverageForVolume();
 
   /**
    * Indicates the storage statistics per storage type.

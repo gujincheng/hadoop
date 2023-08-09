@@ -187,7 +187,7 @@ public class SnappyDecompressor implements Decompressor {
    * @param off Start offset of the data
    * @param len Size of the buffer
    * @return The actual number of bytes of compressed data.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   @Override
   public int decompress(byte[] b, int off, int len)

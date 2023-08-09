@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentials;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -35,17 +35,13 @@ import org.apache.hadoop.fs.s3a.Retries;
 
 /**
  * Base class for session credential support.
- *
- * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
- * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Private
-@Deprecated
 public abstract class AbstractSessionCredentialsProvider
     extends AbstractAWSCredentialProvider {
 
   /** Credentials, created in {@link #init()}. */
-  private volatile AWSCredentials awsCredentials;
+  private AWSCredentials awsCredentials;
 
   /** Atomic flag for on-demand initialization. */
   private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -54,7 +50,7 @@ public abstract class AbstractSessionCredentialsProvider
    * The (possibly translated) initialization exception.
    * Used for testing.
    */
-  private volatile IOException initializationException;
+  private IOException initializationException;
 
   /**
    * Constructor.
@@ -73,9 +69,9 @@ public abstract class AbstractSessionCredentialsProvider
    * @throws IOException on any failure.
    */
   @Retries.OnceTranslated
-  protected synchronized void init() throws IOException {
+  protected void init() throws IOException {
     // stop re-entrant attempts
-    if (isInitialized()) {
+    if (initialized.getAndSet(true)) {
       return;
     }
     try {
@@ -84,8 +80,6 @@ public abstract class AbstractSessionCredentialsProvider
     } catch (IOException e) {
       initializationException = e;
       throw e;
-    } finally {
-      initialized.set(true);
     }
   }
 
@@ -134,15 +128,13 @@ public abstract class AbstractSessionCredentialsProvider
     }
     if (awsCredentials == null) {
       throw new CredentialInitializationException(
-          "Provider " + this + " has no credentials: " +
-             (initializationException != null ? initializationException.toString() : ""),
-          initializationException);
+          "Provider " + this + " has no credentials");
     }
     return awsCredentials;
   }
 
   public final boolean hasCredentials() {
-    return awsCredentials != null;
+    return awsCredentials == null;
   }
 
   @Override

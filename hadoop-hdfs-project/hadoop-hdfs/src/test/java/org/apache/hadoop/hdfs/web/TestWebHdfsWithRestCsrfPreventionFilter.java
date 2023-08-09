@@ -29,7 +29,6 @@ import java.net.URI;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -161,8 +160,6 @@ public class TestWebHdfsWithRestCsrfPreventionFilter {
     if (nnRestCsrf && !clientRestCsrf) {
       expectException();
     }
-    assertTrue("WebHdfs supports truncate",
-        webhdfs.hasPathCapability(FILE, CommonPathCapabilities.FS_TRUNCATE));
     assertTrue(webhdfs.truncate(FILE, 0L));
   }
 

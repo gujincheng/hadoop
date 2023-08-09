@@ -216,7 +216,7 @@ public class GangliaSink30 extends AbstractGangliaSink {
    * @param value The value of the metric
    * @param gConf The GangliaConf for this metric
    * @param gSlope The slope for this metric
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   protected void emitMetric(String groupName, String name, String type,
       String value, GangliaConf gConf, GangliaSlope gSlope) throws IOException {

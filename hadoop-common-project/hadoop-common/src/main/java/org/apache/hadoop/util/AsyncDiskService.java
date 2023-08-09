@@ -94,9 +94,6 @@ public class AsyncDiskService {
   
   /**
    * Execute the task sometime in the future, using ThreadPools.
-   *
-   * @param root root.
-   * @param task task.
    */
   public synchronized void execute(String root, Runnable task) {
     ThreadPoolExecutor executor = executors.get(root);
@@ -126,7 +123,7 @@ public class AsyncDiskService {
    * 
    * @param milliseconds  The number of milliseconds to wait
    * @return   true if all thread pools are terminated without time limit
-   * @throws InterruptedException if the thread is interrupted.
+   * @throws InterruptedException 
    */
   public synchronized boolean awaitTermination(long milliseconds) 
       throws InterruptedException {
@@ -148,8 +145,6 @@ public class AsyncDiskService {
   
   /**
    * Shut down all ThreadPools immediately.
-   *
-   * @return Runnable List.
    */
   public synchronized List<Runnable> shutdownNow() {
     

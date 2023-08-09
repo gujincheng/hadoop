@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.util;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

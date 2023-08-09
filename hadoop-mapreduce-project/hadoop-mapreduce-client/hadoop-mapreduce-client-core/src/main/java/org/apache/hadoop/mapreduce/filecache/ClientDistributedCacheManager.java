@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.security.TokenCache;
-import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.security.Credentials;
 
 /**
@@ -83,7 +82,7 @@ public class ClientDistributedCacheManager {
    */
   public static void determineTimestamps(Configuration job,
       Map<URI, FileStatus> statCache) throws IOException {
-    URI[] tarchives = JobContextImpl.getCacheArchives(job);
+    URI[] tarchives = DistributedCache.getCacheArchives(job);
     if (tarchives != null) {
       FileStatus status = getFileStatus(job, tarchives[0], statCache);
       StringBuilder archiveFileSizes =
@@ -101,7 +100,7 @@ public class ClientDistributedCacheManager {
       setArchiveTimestamps(job, archiveTimestamps.toString());
     }
   
-    URI[] tfiles = JobContextImpl.getCacheFiles(job);
+    URI[] tfiles = DistributedCache.getCacheFiles(job);
     if (tfiles != null) {
       FileStatus status = getFileStatus(job, tfiles[0], statCache);
       StringBuilder fileSizes =
@@ -128,8 +127,8 @@ public class ClientDistributedCacheManager {
    */
   public static void getDelegationTokens(Configuration job,
       Credentials credentials) throws IOException {
-    URI[] tarchives = JobContextImpl.getCacheArchives(job);
-    URI[] tfiles = JobContextImpl.getCacheFiles(job);
+    URI[] tarchives = DistributedCache.getCacheArchives(job);
+    URI[] tfiles = DistributedCache.getCacheFiles(job);
     
     int size = (tarchives!=null? tarchives.length : 0) + (tfiles!=null ? tfiles.length :0);
     Path[] ps = new Path[size];
@@ -160,7 +159,7 @@ public class ClientDistributedCacheManager {
    */
   public static void determineCacheVisibilities(Configuration job,
       Map<URI, FileStatus> statCache) throws IOException {
-    URI[] tarchives = JobContextImpl.getCacheArchives(job);
+    URI[] tarchives = DistributedCache.getCacheArchives(job);
     if (tarchives != null) {
       StringBuilder archiveVisibilities =
         new StringBuilder(String.valueOf(isPublic(job, tarchives[0], statCache)));
@@ -170,7 +169,7 @@ public class ClientDistributedCacheManager {
       }
       setArchiveVisibilities(job, archiveVisibilities.toString());
     }
-    URI[] tfiles = JobContextImpl.getCacheFiles(job);
+    URI[] tfiles = DistributedCache.getCacheFiles(job);
     if (tfiles != null) {
       StringBuilder fileVisibilities =
         new StringBuilder(String.valueOf(isPublic(job, tfiles[0], statCache)));

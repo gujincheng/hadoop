@@ -27,7 +27,7 @@ import java.util.Iterator;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A low memory footprint {@link GSet} implementation,
@@ -52,13 +52,10 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
    * Elements of {@link LightWeightGSet}.
    */
   public interface LinkedElement {
-    /**
-     * Set the next element.
-     * @param next inputNext.
-     */
+    /** Set the next element. */
     void setNext(LinkedElement next);
 
-    /** @return Get the next element. */
+    /** Get the next element. */
     LinkedElement getNext();
   }
 
@@ -180,8 +177,6 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
    * Remove the element corresponding to the key,
    * given key.hashCode() == index.
    *
-   * @param key key.
-   * @param index index.
    * @return If such element exists, return it.
    *         Otherwise, return null.
    */
@@ -275,11 +270,7 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
     return b.toString();
   }
 
-  /**
-   * Print detailed information of this object.
-   *
-   * @param out out.
-   */
+  /** Print detailed information of this object. */
   public void printDetails(final PrintStream out) {
     out.print(this + ", entries = [");
     for(int i = 0; i < entries.length; i++) {
@@ -366,10 +357,6 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
    * Let e = round(log_2 t).
    * Then, we choose capacity = 2^e/(size of reference),
    * unless it is outside the close interval [1, 2^30].
-   *
-   * @param mapName mapName.
-   * @param percentage percentage.
-   * @return compute capacity.
    */
   public static int computeCapacity(double percentage, String mapName) {
     return computeCapacity(Runtime.getRuntime().maxMemory(), percentage,

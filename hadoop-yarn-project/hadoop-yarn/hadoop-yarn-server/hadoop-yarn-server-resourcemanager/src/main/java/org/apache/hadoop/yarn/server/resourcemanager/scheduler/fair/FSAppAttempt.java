@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -131,7 +131,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   /**
    * Get metrics reference from containing queue.
-   * @return metrics reference from containing queue.
    */
   public QueueMetrics getMetrics() {
     return queue.getMetrics();
@@ -667,11 +666,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   @Override
-  public synchronized boolean recoverContainer(SchedulerNode node,
+  public synchronized void recoverContainer(SchedulerNode node,
       RMContainer rmContainer) {
     writeLock.lock();
     try {
-      final boolean recovered = super.recoverContainer(node, rmContainer);
+      super.recoverContainer(node, rmContainer);
 
       if (!rmContainer.getState().equals(RMContainerState.COMPLETED)) {
         getQueue().incUsedResource(rmContainer.getContainer().getResource());
@@ -686,8 +685,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         getQueue().addAMResourceUsage(resource);
         setAmRunning(true);
       }
-
-      return recovered;
     } finally {
       writeLock.unlock();
     }
@@ -696,7 +693,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   /**
    * Reserve a spot for {@code container} on this {@code node}. If
    * the container is {@code alreadyReserved} on the node, simply
-   * update relevant bookkeeping. This dispatches ro relevant handlers
+   * update relevant bookeeping. This dispatches ro relevant handlers
    * in {@link FSSchedulerNode}..
    * return whether reservation was possible with the current threshold limits
    */
@@ -1396,12 +1393,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return;
     }
 
-    StringBuilder diagnosticMessage = new StringBuilder();
-    diagnosticMessage.append(" (Resource request: ")
+    StringBuilder diagnosticMessageBldr = new StringBuilder();
+    diagnosticMessageBldr.append(" (Resource request: ")
         .append(resource)
         .append(reason);
     updateAMContainerDiagnostics(AMState.INACTIVATED,
-        diagnosticMessage.toString());
+        diagnosticMessageBldr.toString());
   }
 
   /*

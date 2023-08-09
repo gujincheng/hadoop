@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +85,8 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.VersionInfo;
-import org.slf4j.event.Level;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 
 /**
  * Main class for a series of name-node benchmarks.
@@ -149,9 +150,9 @@ public class NNThroughputBenchmark implements Tool {
     LOG.info("Log level = " + logLevel.toString());
     // change log level to NameNode logs
     DFSTestUtil.setNameNodeLogLevel(logLevel);
-    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(
+    GenericTestUtils.setLogLevel(LogManager.getLogger(
             NetworkTopology.class.getName()), logLevel);
-    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(
+    GenericTestUtils.setLogLevel(LogManager.getLogger(
             Groups.class.getName()), logLevel);
   }
 
@@ -352,7 +353,7 @@ public class NNThroughputBenchmark implements Tool {
       if(llIndex >= 0) {
         if(args.size() <= llIndex + 1)
           printUsage();
-        logLevel = Level.valueOf(args.get(llIndex+1));
+        logLevel = Level.toLevel(args.get(llIndex+1), Level.ERROR);
         args.remove(llIndex+1);
         args.remove(llIndex);
       }
@@ -569,20 +570,12 @@ public class NNThroughputBenchmark implements Tool {
       // int generatedFileIdx = 0;
       LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
       fileNames = new String[numThreads][];
-      try {
-        for(int idx=0; idx < numThreads; idx++) {
-          int threadOps = opsPerThread[idx];
-          fileNames[idx] = new String[threadOps];
-          for(int jdx=0; jdx < threadOps; jdx++) {
-            fileNames[idx][jdx] = nameGenerator.
-                    getNextFileName("ThroughputBench");
-          }
-        }
-      } catch (ArrayIndexOutOfBoundsException e) {
-        LOG.error("The current environment allows {} files to be created. " +
-            "If you want to test more files, please update the -filesPerDir parameter.",
-                nameGenerator.getFileCount());
-        throw e;
+      for(int idx=0; idx < numThreads; idx++) {
+        int threadOps = opsPerThread[idx];
+        fileNames[idx] = new String[threadOps];
+        for(int jdx=0; jdx < threadOps; jdx++)
+          fileNames[idx][jdx] = nameGenerator.
+                                  getNextFileName("ThroughputBench");
       }
     }
 
@@ -677,20 +670,12 @@ public class NNThroughputBenchmark implements Tool {
           false);
       LOG.info("Generate " + numOpsRequired + " inputs for " + getOpName());
       dirPaths = new String[numThreads][];
-      try {
-        for(int idx=0; idx < numThreads; idx++) {
-          int threadOps = opsPerThread[idx];
-          dirPaths[idx] = new String[threadOps];
-          for(int jdx=0; jdx < threadOps; jdx++) {
-            dirPaths[idx][jdx] = nameGenerator.
-                    getNextFileName("ThroughputBench");
-          }
-        }
-      } catch (ArrayIndexOutOfBoundsException e) {
-        LOG.error("The current environment allows {} directories to be created. " +
-            "If you want to test more directories, please update the -dirsPerDir parameter.",
-                nameGenerator.getFileCount());
-        throw e;
+      for(int idx=0; idx < numThreads; idx++) {
+        int threadOps = opsPerThread[idx];
+        dirPaths[idx] = new String[threadOps];
+        for(int jdx=0; jdx < threadOps; jdx++)
+          dirPaths[idx][jdx] = nameGenerator.
+              getNextFileName("ThroughputBench");
       }
     }
 
@@ -833,53 +818,6 @@ public class NNThroughputBenchmark implements Tool {
       clientProto.delete(fileNames[daemonId][inputIdx], false);
       long end = Time.now();
       return end-start;
-    }
-  }
-
-  /**
-   * Append file statistics.
-   * Measure how many append calls the name-node can handle per second.
-   */
-  class AppendFileStats extends OpenFileStats {
-    // Operation types
-    static final String OP_APPEND_NAME = "append";
-    public static final String APPEND_NEW_BLK = "-appendNewBlk";
-    static final String OP_APPEND_USAGE =
-        "-op " + OP_APPEND_NAME + OP_USAGE_ARGS + " [" + APPEND_NEW_BLK + ']';
-    private boolean appendNewBlk = false;
-
-    AppendFileStats(List<String> args) {
-      super(args);
-    }
-
-    @Override
-    String getOpName() {
-      return OP_APPEND_NAME;
-    }
-
-    @Override
-    void parseArguments(List<String> args) {
-      appendNewBlk = args.contains(APPEND_NEW_BLK);
-      if (this.appendNewBlk) {
-        args.remove(APPEND_NEW_BLK);
-      }
-      super.parseArguments(args);
-    }
-
-    @Override
-    long executeOp(int daemonId, int inputIdx, String ignore)
-        throws IOException {
-      long start = Time.now();
-      String src = fileNames[daemonId][inputIdx];
-      EnumSetWritable<CreateFlag> enumSet = null;
-      if (appendNewBlk) {
-        enumSet = new EnumSetWritable<>(EnumSet.of(CreateFlag.NEW_BLOCK));
-      } else {
-        enumSet = new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND));
-      }
-      clientProto.append(src, "TestClient", enumSet);
-      long end = Time.now();
-      return end - start;
     }
   }
 
@@ -1509,7 +1447,6 @@ public class NNThroughputBenchmark implements Tool {
         + " | \n\t" + MkdirsStats.OP_MKDIRS_USAGE
         + " | \n\t" + OpenFileStats.OP_OPEN_USAGE
         + " | \n\t" + DeleteFileStats.OP_DELETE_USAGE
-        + " | \n\t" + AppendFileStats.OP_APPEND_USAGE
         + " | \n\t" + FileStatusStats.OP_FILE_STATUS_USAGE
         + " | \n\t" + RenameFileStats.OP_RENAME_USAGE
         + " | \n\t" + BlockReportStats.OP_BLOCK_REPORT_USAGE
@@ -1570,10 +1507,6 @@ public class NNThroughputBenchmark implements Tool {
       }
       if(runAll || DeleteFileStats.OP_DELETE_NAME.equals(type)) {
         opStat = new DeleteFileStats(args);
-        ops.add(opStat);
-      }
-      if (runAll || AppendFileStats.OP_APPEND_NAME.equals(type)) {
-        opStat = new AppendFileStats(args);
         ops.add(opStat);
       }
       if(runAll || FileStatusStats.OP_FILE_STATUS_NAME.equals(type)) {

@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azure;
 import java.net.HttpURLConnection;
 import java.security.InvalidKeyException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.microsoft.azure.storage.Constants.HeaderConstants;
@@ -37,6 +39,8 @@ import com.microsoft.azure.storage.StorageException;
  */
 @InterfaceAudience.Private
 public final class SendRequestIntercept extends StorageEvent<SendingRequestEvent> {
+
+  public static final Log LOG = LogFactory.getLog(SendRequestIntercept.class);
 
   private static final String ALLOW_ALL_REQUEST_PRECONDITIONS = "*";
 

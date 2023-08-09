@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -35,13 +34,12 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.io.retry.MultiException;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
+import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -58,7 +56,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
 
-import org.slf4j.event.Level;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 public class TestRequestHedgingProxyProvider {
 
@@ -103,8 +101,6 @@ public class TestRequestHedgingProxyProvider {
     RequestHedgingProxyProvider<ClientProtocol> provider =
         new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
             createFactory(badMock, goodMock));
-    Assert.assertTrue(Proxy.getInvocationHandler(
-        provider.getProxy().proxy) instanceof RpcInvocationHandler);
     long[] stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Mockito.verify(badMock).getStats();

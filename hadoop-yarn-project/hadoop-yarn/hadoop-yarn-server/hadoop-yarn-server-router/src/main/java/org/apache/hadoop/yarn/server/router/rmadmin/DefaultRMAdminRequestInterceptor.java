@@ -56,14 +56,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Extends the {@link AbstractRMAdminRequestInterceptor} class and provides an
@@ -82,18 +78,37 @@ public class DefaultRMAdminRequestInterceptor
   public void init(String userName) {
     super.init(userName);
     try {
-      final Configuration conf = this.getConf();
-      rmAdminProxy = user.doAs(
-          (PrivilegedExceptionAction<ResourceManagerAdministrationProtocol>) () ->
-               ClientRMProxy.createRMProxy(conf, ResourceManagerAdministrationProtocol.class));
-    } catch (Exception e) {
-      StringBuilder message = new StringBuilder();
-      message.append("Error while creating Router RMAdmin Service");
-      if (user != null) {
-        message.append(", user: " + user);
+      // Do not create a proxy user if user name matches the user name on
+      // current UGI
+      if (userName.equalsIgnoreCase(
+          UserGroupInformation.getCurrentUser().getUserName())) {
+        user = UserGroupInformation.getCurrentUser();
+      } else {
+        user = UserGroupInformation.createProxyUser(userName,
+            UserGroupInformation.getCurrentUser());
       }
-      LOG.error(message.toString(), e);
-      throw new YarnRuntimeException(message.toString(), e);
+
+      final Configuration conf = this.getConf();
+
+      rmAdminProxy = user.doAs(
+          new PrivilegedExceptionAction<ResourceManagerAdministrationProtocol>() {
+            @Override
+            public ResourceManagerAdministrationProtocol run()
+                throws Exception {
+              return ClientRMProxy.createRMProxy(conf,
+                  ResourceManagerAdministrationProtocol.class);
+            }
+          });
+    } catch (IOException e) {
+      String message = "Error while creating Router RMAdmin Service for user:";
+      if (user != null) {
+        message += ", user: " + user;
+      }
+
+      LOG.info(message);
+      throw new YarnRuntimeException(message, e);
+    } catch (Exception e) {
+      throw new YarnRuntimeException(e);
     }
   }
 
@@ -108,6 +123,7 @@ public class DefaultRMAdminRequestInterceptor
   @VisibleForTesting
   public void setRMAdmin(ResourceManagerAdministrationProtocol rmAdmin) {
     this.rmAdminProxy = rmAdmin;
+
   }
 
   @Override
@@ -204,17 +220,5 @@ public class DefaultRMAdminRequestInterceptor
       NodesToAttributesMappingRequest request)
       throws YarnException, IOException {
     return rmAdminProxy.mapAttributesToNodes(request);
-  }
-
-  @Override
-  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
-      throws YarnException, IOException {
-    return rmAdminProxy.deregisterSubCluster(request);
-  }
-
-  @Override
-  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
-      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
-    return rmAdminProxy.saveFederationQueuePolicy(request);
   }
 }

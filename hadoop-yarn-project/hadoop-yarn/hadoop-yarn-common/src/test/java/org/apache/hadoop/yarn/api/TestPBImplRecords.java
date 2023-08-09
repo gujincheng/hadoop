@@ -16,14 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.yarn.api;
-
 import java.io.IOException;
 import java.util.Arrays;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
 import org.apache.commons.lang3.Range;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
@@ -133,14 +127,13 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
-import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -191,12 +184,11 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerRetryContextPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.EnhancedHeadroomPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ExecutionTypeRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.LocalResourcePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributeInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributeKeyPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributeInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeAttributePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeLabelPBImpl;
@@ -207,7 +199,6 @@ import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionContractPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionMessagePBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionResourceRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.QueueConfigurationsPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueUserACLInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
@@ -238,8 +229,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerRetryContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ExecutionTypeRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeKeyProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeLabelProto;
@@ -251,7 +242,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionContractProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionMessageProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.QueueConfigurationsProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueUserACLInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceBlacklistRequestProto;
@@ -380,15 +370,19 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReplaceLabelsOn
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResourceRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResourceResponsePBImpl;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 /**
  * Test class for YARN API protocol records.
  */
 public class TestPBImplRecords extends BasePBImplRecordsTest {
 
-  @BeforeAll
+  @BeforeClass
   public static void setup() throws Exception {
     typeValueCache.put(Range.class, Range.between(1000L, 2000L));
     typeValueCache.put(URL.class, URL.newInstance(
@@ -436,13 +430,11 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(UpdatedContainer.class);
     generateByNewInstance(ContainerUpdateRequest.class);
     generateByNewInstance(ContainerUpdateResponse.class);
-    generateByNewInstance(EnhancedHeadroom.class);
     // genByNewInstance does not apply to QueueInfo, cause
     // it is recursive(has sub queues)
-    typeValueCache.put(QueueInfo.class, QueueInfo.
-        newInstance("root", "root", 1.0f,
+    typeValueCache.put(QueueInfo.class, QueueInfo.newInstance("root", 1.0f,
         1.0f, 0.1f, null, null, QueueState.RUNNING, ImmutableSet.of("x", "y"),
-        "x && y", null, false, -1.0f, 10, null, false));
+        "x && y", null, false, null, false));
     generateByNewInstance(QueueStatistics.class);
     generateByNewInstance(QueueUserACLInfo.class);
     generateByNewInstance(YarnClusterMetrics.class);
@@ -476,326 +468,326 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   }
 
   @Test
-  void testAllocateRequestPBImpl() throws Exception {
+  public void testAllocateRequestPBImpl() throws Exception {
     validatePBImplRecord(AllocateRequestPBImpl.class, AllocateRequestProto.class);
   }
 
   @Test
-  void testAllocateResponsePBImpl() throws Exception {
+  public void testAllocateResponsePBImpl() throws Exception {
     validatePBImplRecord(AllocateResponsePBImpl.class, AllocateResponseProto.class);
   }
 
   @Test
-  void testCancelDelegationTokenRequestPBImpl() throws Exception {
+  public void testCancelDelegationTokenRequestPBImpl() throws Exception {
     validatePBImplRecord(CancelDelegationTokenRequestPBImpl.class,
         CancelDelegationTokenRequestProto.class);
   }
 
   @Test
-  void testCancelDelegationTokenResponsePBImpl() throws Exception {
+  public void testCancelDelegationTokenResponsePBImpl() throws Exception {
     validatePBImplRecord(CancelDelegationTokenResponsePBImpl.class,
         CancelDelegationTokenResponseProto.class);
   }
 
   @Test
-  void testFinishApplicationMasterRequestPBImpl() throws Exception {
+  public void testFinishApplicationMasterRequestPBImpl() throws Exception {
     validatePBImplRecord(FinishApplicationMasterRequestPBImpl.class,
         FinishApplicationMasterRequestProto.class);
   }
 
   @Test
-  void testFinishApplicationMasterResponsePBImpl() throws Exception {
+  public void testFinishApplicationMasterResponsePBImpl() throws Exception {
     validatePBImplRecord(FinishApplicationMasterResponsePBImpl.class,
         FinishApplicationMasterResponseProto.class);
   }
 
   @Test
-  void testGetApplicationAttemptReportRequestPBImpl() throws Exception {
+  public void testGetApplicationAttemptReportRequestPBImpl() throws Exception {
     validatePBImplRecord(GetApplicationAttemptReportRequestPBImpl.class,
         GetApplicationAttemptReportRequestProto.class);
   }
 
   @Test
-  void testGetApplicationAttemptReportResponsePBImpl() throws Exception {
+  public void testGetApplicationAttemptReportResponsePBImpl() throws Exception {
     validatePBImplRecord(GetApplicationAttemptReportResponsePBImpl.class,
         GetApplicationAttemptReportResponseProto.class);
   }
 
   @Test
-  void testGetApplicationAttemptsRequestPBImpl() throws Exception {
+  public void testGetApplicationAttemptsRequestPBImpl() throws Exception {
     validatePBImplRecord(GetApplicationAttemptsRequestPBImpl.class,
         GetApplicationAttemptsRequestProto.class);
   }
 
   @Test
-  void testGetApplicationAttemptsResponsePBImpl() throws Exception {
+  public void testGetApplicationAttemptsResponsePBImpl() throws Exception {
     validatePBImplRecord(GetApplicationAttemptsResponsePBImpl.class,
         GetApplicationAttemptsResponseProto.class);
   }
 
   @Test
-  void testGetApplicationReportRequestPBImpl() throws Exception {
+  public void testGetApplicationReportRequestPBImpl() throws Exception {
     validatePBImplRecord(GetApplicationReportRequestPBImpl.class,
         GetApplicationReportRequestProto.class);
   }
 
   @Test
-  void testGetApplicationReportResponsePBImpl() throws Exception {
+  public void testGetApplicationReportResponsePBImpl() throws Exception {
     validatePBImplRecord(GetApplicationReportResponsePBImpl.class,
         GetApplicationReportResponseProto.class);
   }
 
   @Test
-  void testGetApplicationsRequestPBImpl() throws Exception {
+  public void testGetApplicationsRequestPBImpl() throws Exception {
     validatePBImplRecord(GetApplicationsRequestPBImpl.class,
         GetApplicationsRequestProto.class);
   }
 
   @Test
-  void testGetApplicationsResponsePBImpl() throws Exception {
+  public void testGetApplicationsResponsePBImpl() throws Exception {
     validatePBImplRecord(GetApplicationsResponsePBImpl.class,
         GetApplicationsResponseProto.class);
   }
 
   @Test
-  void testGetClusterMetricsRequestPBImpl() throws Exception {
+  public void testGetClusterMetricsRequestPBImpl() throws Exception {
     validatePBImplRecord(GetClusterMetricsRequestPBImpl.class,
         GetClusterMetricsRequestProto.class);
   }
 
   @Test
-  void testGetClusterMetricsResponsePBImpl() throws Exception {
+  public void testGetClusterMetricsResponsePBImpl() throws Exception {
     validatePBImplRecord(GetClusterMetricsResponsePBImpl.class,
         GetClusterMetricsResponseProto.class);
   }
 
   @Test
-  void testGetClusterNodesRequestPBImpl() throws Exception {
+  public void testGetClusterNodesRequestPBImpl() throws Exception {
     validatePBImplRecord(GetClusterNodesRequestPBImpl.class,
         GetClusterNodesRequestProto.class);
   }
 
   @Test
-  void testGetClusterNodesResponsePBImpl() throws Exception {
+  public void testGetClusterNodesResponsePBImpl() throws Exception {
     validatePBImplRecord(GetClusterNodesResponsePBImpl.class,
         GetClusterNodesResponseProto.class);
   }
 
   @Test
-  void testGetContainerReportRequestPBImpl() throws Exception {
+  public void testGetContainerReportRequestPBImpl() throws Exception {
     validatePBImplRecord(GetContainerReportRequestPBImpl.class,
         GetContainerReportRequestProto.class);
   }
 
   @Test
-  void testGetContainerReportResponsePBImpl() throws Exception {
+  public void testGetContainerReportResponsePBImpl() throws Exception {
     validatePBImplRecord(GetContainerReportResponsePBImpl.class,
         GetContainerReportResponseProto.class);
   }
 
   @Test
-  void testGetContainersRequestPBImpl() throws Exception {
+  public void testGetContainersRequestPBImpl() throws Exception {
     validatePBImplRecord(GetContainersRequestPBImpl.class,
         GetContainersRequestProto.class);
   }
 
   @Test
-  void testGetContainersResponsePBImpl() throws Exception {
+  public void testGetContainersResponsePBImpl() throws Exception {
     validatePBImplRecord(GetContainersResponsePBImpl.class,
         GetContainersResponseProto.class);
   }
 
   @Test
-  void testGetContainerStatusesRequestPBImpl() throws Exception {
+  public void testGetContainerStatusesRequestPBImpl() throws Exception {
     validatePBImplRecord(GetContainerStatusesRequestPBImpl.class,
         GetContainerStatusesRequestProto.class);
   }
 
   @Test
-  void testGetContainerStatusesResponsePBImpl() throws Exception {
+  public void testGetContainerStatusesResponsePBImpl() throws Exception {
     validatePBImplRecord(GetContainerStatusesResponsePBImpl.class,
         GetContainerStatusesResponseProto.class);
   }
 
   @Test
-  void testGetDelegationTokenRequestPBImpl() throws Exception {
+  public void testGetDelegationTokenRequestPBImpl() throws Exception {
     validatePBImplRecord(GetDelegationTokenRequestPBImpl.class,
         GetDelegationTokenRequestProto.class);
   }
 
   @Test
-  void testGetDelegationTokenResponsePBImpl() throws Exception {
+  public void testGetDelegationTokenResponsePBImpl() throws Exception {
     validatePBImplRecord(GetDelegationTokenResponsePBImpl.class,
         GetDelegationTokenResponseProto.class);
   }
 
   @Test
-  void testGetNewApplicationRequestPBImpl() throws Exception {
+  public void testGetNewApplicationRequestPBImpl() throws Exception {
     validatePBImplRecord(GetNewApplicationRequestPBImpl.class,
         GetNewApplicationRequestProto.class);
   }
 
   @Test
-  void testGetNewApplicationResponsePBImpl() throws Exception {
+  public void testGetNewApplicationResponsePBImpl() throws Exception {
     validatePBImplRecord(GetNewApplicationResponsePBImpl.class,
         GetNewApplicationResponseProto.class);
   }
 
   @Test
-  void testGetQueueInfoRequestPBImpl() throws Exception {
+  public void testGetQueueInfoRequestPBImpl() throws Exception {
     validatePBImplRecord(GetQueueInfoRequestPBImpl.class,
         GetQueueInfoRequestProto.class);
   }
 
   @Test
-  void testGetQueueInfoResponsePBImpl() throws Exception {
+  public void testGetQueueInfoResponsePBImpl() throws Exception {
     validatePBImplRecord(GetQueueInfoResponsePBImpl.class,
         GetQueueInfoResponseProto.class);
   }
 
   @Test
-  void testGetQueueUserAclsInfoRequestPBImpl() throws Exception {
+  public void testGetQueueUserAclsInfoRequestPBImpl() throws Exception {
     validatePBImplRecord(GetQueueUserAclsInfoRequestPBImpl.class,
         GetQueueUserAclsInfoRequestProto.class);
   }
 
   @Test
-  void testGetQueueUserAclsInfoResponsePBImpl() throws Exception {
+  public void testGetQueueUserAclsInfoResponsePBImpl() throws Exception {
     validatePBImplRecord(GetQueueUserAclsInfoResponsePBImpl.class,
         GetQueueUserAclsInfoResponseProto.class);
   }
 
   @Test
-  void testKillApplicationRequestPBImpl() throws Exception {
+  public void testKillApplicationRequestPBImpl() throws Exception {
     validatePBImplRecord(KillApplicationRequestPBImpl.class,
         KillApplicationRequestProto.class);
   }
 
   @Test
-  void testKillApplicationResponsePBImpl() throws Exception {
+  public void testKillApplicationResponsePBImpl() throws Exception {
     validatePBImplRecord(KillApplicationResponsePBImpl.class,
         KillApplicationResponseProto.class);
   }
 
   @Test
-  void testMoveApplicationAcrossQueuesRequestPBImpl() throws Exception {
+  public void testMoveApplicationAcrossQueuesRequestPBImpl() throws Exception {
     validatePBImplRecord(MoveApplicationAcrossQueuesRequestPBImpl.class,
         MoveApplicationAcrossQueuesRequestProto.class);
   }
 
   @Test
-  void testMoveApplicationAcrossQueuesResponsePBImpl() throws Exception {
+  public void testMoveApplicationAcrossQueuesResponsePBImpl() throws Exception {
     validatePBImplRecord(MoveApplicationAcrossQueuesResponsePBImpl.class,
         MoveApplicationAcrossQueuesResponseProto.class);
   }
 
   @Test
-  void testRegisterApplicationMasterRequestPBImpl() throws Exception {
+  public void testRegisterApplicationMasterRequestPBImpl() throws Exception {
     validatePBImplRecord(RegisterApplicationMasterRequestPBImpl.class,
         RegisterApplicationMasterRequestProto.class);
   }
 
   @Test
-  void testRegisterApplicationMasterResponsePBImpl() throws Exception {
+  public void testRegisterApplicationMasterResponsePBImpl() throws Exception {
     validatePBImplRecord(RegisterApplicationMasterResponsePBImpl.class,
         RegisterApplicationMasterResponseProto.class);
   }
 
   @Test
-  void testRenewDelegationTokenRequestPBImpl() throws Exception {
+  public void testRenewDelegationTokenRequestPBImpl() throws Exception {
     validatePBImplRecord(RenewDelegationTokenRequestPBImpl.class,
         RenewDelegationTokenRequestProto.class);
   }
 
   @Test
-  void testRenewDelegationTokenResponsePBImpl() throws Exception {
+  public void testRenewDelegationTokenResponsePBImpl() throws Exception {
     validatePBImplRecord(RenewDelegationTokenResponsePBImpl.class,
         RenewDelegationTokenResponseProto.class);
   }
 
   @Test
-  void testStartContainerRequestPBImpl() throws Exception {
+  public void testStartContainerRequestPBImpl() throws Exception {
     validatePBImplRecord(StartContainerRequestPBImpl.class,
         StartContainerRequestProto.class);
   }
 
   @Test
-  void testStartContainersRequestPBImpl() throws Exception {
+  public void testStartContainersRequestPBImpl() throws Exception {
     validatePBImplRecord(StartContainersRequestPBImpl.class,
         StartContainersRequestProto.class);
   }
 
   @Test
-  void testStartContainersResponsePBImpl() throws Exception {
+  public void testStartContainersResponsePBImpl() throws Exception {
     validatePBImplRecord(StartContainersResponsePBImpl.class,
         StartContainersResponseProto.class);
   }
 
   @Test
-  void testStopContainersRequestPBImpl() throws Exception {
+  public void testStopContainersRequestPBImpl() throws Exception {
     validatePBImplRecord(StopContainersRequestPBImpl.class,
         StopContainersRequestProto.class);
   }
 
   @Test
-  void testStopContainersResponsePBImpl() throws Exception {
+  public void testStopContainersResponsePBImpl() throws Exception {
     validatePBImplRecord(StopContainersResponsePBImpl.class,
         StopContainersResponseProto.class);
   }
 
   @Test
-  void testIncreaseContainersResourceRequestPBImpl() throws Exception {
+  public void testIncreaseContainersResourceRequestPBImpl() throws Exception {
     validatePBImplRecord(IncreaseContainersResourceRequestPBImpl.class,
         IncreaseContainersResourceRequestProto.class);
   }
 
   @Test
-  void testIncreaseContainersResourceResponsePBImpl() throws Exception {
+  public void testIncreaseContainersResourceResponsePBImpl() throws Exception {
     validatePBImplRecord(IncreaseContainersResourceResponsePBImpl.class,
         IncreaseContainersResourceResponseProto.class);
   }
 
   @Test
-  void testSubmitApplicationRequestPBImpl() throws Exception {
+  public void testSubmitApplicationRequestPBImpl() throws Exception {
     validatePBImplRecord(SubmitApplicationRequestPBImpl.class,
         SubmitApplicationRequestProto.class);
   }
 
   @Test
-  void testSubmitApplicationResponsePBImpl() throws Exception {
+  public void testSubmitApplicationResponsePBImpl() throws Exception {
     validatePBImplRecord(SubmitApplicationResponsePBImpl.class,
         SubmitApplicationResponseProto.class);
   }
 
-  // ignore cause ApplicationIdPBImpl is immutable
   @Test
-  @Disabled
-  void testApplicationAttemptIdPBImpl() throws Exception {
+  @Ignore
+  // ignore cause ApplicationIdPBImpl is immutable
+  public void testApplicationAttemptIdPBImpl() throws Exception {
     validatePBImplRecord(ApplicationAttemptIdPBImpl.class,
         ApplicationAttemptIdProto.class);
   }
 
   @Test
-  void testApplicationAttemptReportPBImpl() throws Exception {
+  public void testApplicationAttemptReportPBImpl() throws Exception {
     validatePBImplRecord(ApplicationAttemptReportPBImpl.class,
         ApplicationAttemptReportProto.class);
   }
 
-  // ignore cause ApplicationIdPBImpl is immutable
   @Test
-  @Disabled
-  void testApplicationIdPBImpl() throws Exception {
+  @Ignore
+  // ignore cause ApplicationIdPBImpl is immutable
+  public void testApplicationIdPBImpl() throws Exception {
     validatePBImplRecord(ApplicationIdPBImpl.class, ApplicationIdProto.class);
   }
 
   @Test
-  void testApplicationReportPBImpl() throws Exception {
+  public void testApplicationReportPBImpl() throws Exception {
     validatePBImplRecord(ApplicationReportPBImpl.class,
         ApplicationReportProto.class);
   }
 
   @Test
-  void testApplicationResourceUsageReportPBImpl() throws Exception {
+  public void testApplicationResourceUsageReportPBImpl() throws Exception {
     excludedPropertiesMap.put(ApplicationResourceUsageReportPBImpl.class.getClass(),
         Arrays.asList("PreemptedResourceSecondsMap", "ResourceSecondsMap"));
     validatePBImplRecord(ApplicationResourceUsageReportPBImpl.class,
@@ -803,551 +795,539 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
   }
 
   @Test
-  void testApplicationSubmissionContextPBImpl() throws Exception {
+  public void testApplicationSubmissionContextPBImpl() throws Exception {
     validatePBImplRecord(ApplicationSubmissionContextPBImpl.class,
         ApplicationSubmissionContextProto.class);
-
+    
     ApplicationSubmissionContext ctx =
         ApplicationSubmissionContext.newInstance(null, null, null, null, null,
             false, false, 0, Resources.none(), null, false, null, null);
-
-    assertNotNull(ctx.getResource());
+    
+    Assert.assertNotNull(ctx.getResource());
   }
 
-  // ignore cause ApplicationIdPBImpl is immutable
   @Test
-  @Disabled
-  void testContainerIdPBImpl() throws Exception {
+  @Ignore
+  // ignore cause ApplicationIdPBImpl is immutable
+  public void testContainerIdPBImpl() throws Exception {
     validatePBImplRecord(ContainerIdPBImpl.class, ContainerIdProto.class);
   }
 
   @Test
-  void testContainerRetryPBImpl() throws Exception {
+  public void testContainerRetryPBImpl() throws Exception {
     validatePBImplRecord(ContainerRetryContextPBImpl.class,
         ContainerRetryContextProto.class);
   }
 
   @Test
-  void testContainerLaunchContextPBImpl() throws Exception {
+  public void testContainerLaunchContextPBImpl() throws Exception {
     validatePBImplRecord(ContainerLaunchContextPBImpl.class,
         ContainerLaunchContextProto.class);
   }
 
   @Test
-  void testResourceLocalizationRequest() throws Exception {
+  public void testResourceLocalizationRequest() throws Exception {
     validatePBImplRecord(ResourceLocalizationRequestPBImpl.class,
         YarnServiceProtos.ResourceLocalizationRequestProto.class);
   }
 
   @Test
-  void testResourceLocalizationResponse() throws Exception {
+  public void testResourceLocalizationResponse() throws Exception {
     validatePBImplRecord(ResourceLocalizationResponsePBImpl.class,
         YarnServiceProtos.ResourceLocalizationResponseProto.class);
   }
 
   @Test
-  void testContainerPBImpl() throws Exception {
+  public void testContainerPBImpl() throws Exception {
     validatePBImplRecord(ContainerPBImpl.class, ContainerProto.class);
   }
 
   @Test
-  void testContainerReportPBImpl() throws Exception {
+  public void testContainerReportPBImpl() throws Exception {
     validatePBImplRecord(ContainerReportPBImpl.class, ContainerReportProto.class);
   }
 
   @Test
-  void testUpdateContainerRequestPBImpl() throws Exception {
+  public void testUpdateContainerRequestPBImpl() throws Exception {
     validatePBImplRecord(UpdateContainerRequestPBImpl.class,
         YarnServiceProtos.UpdateContainerRequestProto.class);
   }
 
   @Test
-  void testContainerStatusPBImpl() throws Exception {
+  public void testContainerStatusPBImpl() throws Exception {
     validatePBImplRecord(ContainerStatusPBImpl.class, ContainerStatusProto.class);
   }
 
   @Test
-  void testLocalResourcePBImpl() throws Exception {
+  public void testLocalResourcePBImpl() throws Exception {
     validatePBImplRecord(LocalResourcePBImpl.class, LocalResourceProto.class);
   }
 
   @Test
-  void testNMTokenPBImpl() throws Exception {
+  public void testNMTokenPBImpl() throws Exception {
     validatePBImplRecord(NMTokenPBImpl.class, NMTokenProto.class);
   }
 
-  // ignore cause ApplicationIdPBImpl is immutable
   @Test
-  @Disabled
-  void testNodeIdPBImpl() throws Exception {
+  @Ignore
+  // ignore cause ApplicationIdPBImpl is immutable
+  public void testNodeIdPBImpl() throws Exception {
     validatePBImplRecord(NodeIdPBImpl.class, NodeIdProto.class);
   }
 
   @Test
-  void testNodeReportPBImpl() throws Exception {
+  public void testNodeReportPBImpl() throws Exception {
     validatePBImplRecord(NodeReportPBImpl.class, NodeReportProto.class);
   }
 
   @Test
-  void testPreemptionContainerPBImpl() throws Exception {
+  public void testPreemptionContainerPBImpl() throws Exception {
     validatePBImplRecord(PreemptionContainerPBImpl.class,
         PreemptionContainerProto.class);
   }
 
   @Test
-  void testPreemptionContractPBImpl() throws Exception {
+  public void testPreemptionContractPBImpl() throws Exception {
     validatePBImplRecord(PreemptionContractPBImpl.class,
         PreemptionContractProto.class);
   }
 
   @Test
-  void testPreemptionMessagePBImpl() throws Exception {
+  public void testPreemptionMessagePBImpl() throws Exception {
     validatePBImplRecord(PreemptionMessagePBImpl.class,
         PreemptionMessageProto.class);
   }
 
   @Test
-  void testPreemptionResourceRequestPBImpl() throws Exception {
+  public void testPreemptionResourceRequestPBImpl() throws Exception {
     validatePBImplRecord(PreemptionResourceRequestPBImpl.class,
         PreemptionResourceRequestProto.class);
   }
 
   @Test
-  void testPriorityPBImpl() throws Exception {
+  public void testPriorityPBImpl() throws Exception {
     validatePBImplRecord(PriorityPBImpl.class, PriorityProto.class);
   }
 
   @Test
-  void testQueueInfoPBImpl() throws Exception {
+  public void testQueueInfoPBImpl() throws Exception {
     validatePBImplRecord(QueueInfoPBImpl.class, QueueInfoProto.class);
   }
 
   @Test
-  void testQueueConfigurationsPBImpl() throws Exception {
-    validatePBImplRecord(QueueConfigurationsPBImpl.class,
-        QueueConfigurationsProto.class);
-  }
-
-  @Test
-  void testQueueUserACLInfoPBImpl() throws Exception {
+  public void testQueueUserACLInfoPBImpl() throws Exception {
     validatePBImplRecord(QueueUserACLInfoPBImpl.class,
         QueueUserACLInfoProto.class);
   }
 
   @Test
-  void testResourceBlacklistRequestPBImpl() throws Exception {
+  public void testResourceBlacklistRequestPBImpl() throws Exception {
     validatePBImplRecord(ResourceBlacklistRequestPBImpl.class,
         ResourceBlacklistRequestProto.class);
   }
 
-  // ignore as ResourceOptionPBImpl is immutable
   @Test
-  @Disabled
-  void testResourceOptionPBImpl() throws Exception {
+  @Ignore
+  // ignore as ResourceOptionPBImpl is immutable
+  public void testResourceOptionPBImpl() throws Exception {
     validatePBImplRecord(ResourceOptionPBImpl.class, ResourceOptionProto.class);
   }
 
   @Test
-  void testResourcePBImpl() throws Exception {
+  public void testResourcePBImpl() throws Exception {
     validatePBImplRecord(ResourcePBImpl.class, ResourceProto.class);
   }
 
   @Test
-  void testResourceRequestPBImpl() throws Exception {
+  public void testResourceRequestPBImpl() throws Exception {
     validatePBImplRecord(ResourceRequestPBImpl.class, ResourceRequestProto.class);
   }
 
   @Test
-  void testResourceSizingPBImpl() throws Exception {
+  public void testResourceSizingPBImpl() throws Exception {
     validatePBImplRecord(ResourceSizingPBImpl.class, ResourceSizingProto.class);
   }
 
   @Test
-  void testSchedulingRequestPBImpl() throws Exception {
+  public void testSchedulingRequestPBImpl() throws Exception {
     validatePBImplRecord(SchedulingRequestPBImpl.class,
         SchedulingRequestProto.class);
   }
 
   @Test
-  void testSerializedExceptionPBImpl() throws Exception {
+  public void testSerializedExceptionPBImpl() throws Exception {
     validatePBImplRecord(SerializedExceptionPBImpl.class,
         SerializedExceptionProto.class);
   }
 
   @Test
-  void testStrictPreemptionContractPBImpl() throws Exception {
+  public void testStrictPreemptionContractPBImpl() throws Exception {
     validatePBImplRecord(StrictPreemptionContractPBImpl.class,
         StrictPreemptionContractProto.class);
   }
 
   @Test
-  void testTokenPBImpl() throws Exception {
+  public void testTokenPBImpl() throws Exception {
     validatePBImplRecord(TokenPBImpl.class, TokenProto.class);
   }
 
   @Test
-  void testURLPBImpl() throws Exception {
+  public void testURLPBImpl() throws Exception {
     validatePBImplRecord(URLPBImpl.class, URLProto.class);
   }
 
   @Test
-  void testYarnClusterMetricsPBImpl() throws Exception {
+  public void testYarnClusterMetricsPBImpl() throws Exception {
     validatePBImplRecord(YarnClusterMetricsPBImpl.class,
         YarnClusterMetricsProto.class);
   }
 
   @Test
-  void testRefreshAdminAclsRequestPBImpl() throws Exception {
+  public void testRefreshAdminAclsRequestPBImpl() throws Exception {
     validatePBImplRecord(RefreshAdminAclsRequestPBImpl.class,
         RefreshAdminAclsRequestProto.class);
   }
 
   @Test
-  void testRefreshAdminAclsResponsePBImpl() throws Exception {
+  public void testRefreshAdminAclsResponsePBImpl() throws Exception {
     validatePBImplRecord(RefreshAdminAclsResponsePBImpl.class,
         RefreshAdminAclsResponseProto.class);
   }
 
   @Test
-  void testRefreshNodesRequestPBImpl() throws Exception {
+  public void testRefreshNodesRequestPBImpl() throws Exception {
     validatePBImplRecord(RefreshNodesRequestPBImpl.class,
         RefreshNodesRequestProto.class);
   }
 
   @Test
-  void testRefreshNodesResponsePBImpl() throws Exception {
+  public void testRefreshNodesResponsePBImpl() throws Exception {
     validatePBImplRecord(RefreshNodesResponsePBImpl.class,
         RefreshNodesResponseProto.class);
   }
 
   @Test
-  void testRefreshQueuesRequestPBImpl() throws Exception {
+  public void testRefreshQueuesRequestPBImpl() throws Exception {
     validatePBImplRecord(RefreshQueuesRequestPBImpl.class,
         RefreshQueuesRequestProto.class);
   }
 
   @Test
-  void testRefreshQueuesResponsePBImpl() throws Exception {
+  public void testRefreshQueuesResponsePBImpl() throws Exception {
     validatePBImplRecord(RefreshQueuesResponsePBImpl.class,
         RefreshQueuesResponseProto.class);
   }
 
   @Test
-  void testRefreshNodesResourcesRequestPBImpl() throws Exception {
+  public void testRefreshNodesResourcesRequestPBImpl() throws Exception {
     validatePBImplRecord(RefreshNodesResourcesRequestPBImpl.class,
         RefreshNodesResourcesRequestProto.class);
   }
 
   @Test
-  void testRefreshNodesResourcesResponsePBImpl() throws Exception {
+  public void testRefreshNodesResourcesResponsePBImpl() throws Exception {
     validatePBImplRecord(RefreshNodesResourcesResponsePBImpl.class,
         RefreshNodesResourcesResponseProto.class);
   }
 
   @Test
-  void testRefreshServiceAclsRequestPBImpl() throws Exception {
+  public void testRefreshServiceAclsRequestPBImpl() throws Exception {
     validatePBImplRecord(RefreshServiceAclsRequestPBImpl.class,
         RefreshServiceAclsRequestProto.class);
   }
 
   @Test
-  void testRefreshServiceAclsResponsePBImpl() throws Exception {
+  public void testRefreshServiceAclsResponsePBImpl() throws Exception {
     validatePBImplRecord(RefreshServiceAclsResponsePBImpl.class,
         RefreshServiceAclsResponseProto.class);
   }
 
   @Test
-  void testRefreshSuperUserGroupsConfigurationRequestPBImpl()
+  public void testRefreshSuperUserGroupsConfigurationRequestPBImpl()
       throws Exception {
     validatePBImplRecord(RefreshSuperUserGroupsConfigurationRequestPBImpl.class,
         RefreshSuperUserGroupsConfigurationRequestProto.class);
   }
 
   @Test
-  void testRefreshSuperUserGroupsConfigurationResponsePBImpl()
+  public void testRefreshSuperUserGroupsConfigurationResponsePBImpl()
       throws Exception {
     validatePBImplRecord(RefreshSuperUserGroupsConfigurationResponsePBImpl.class,
         RefreshSuperUserGroupsConfigurationResponseProto.class);
   }
 
   @Test
-  void testRefreshUserToGroupsMappingsRequestPBImpl() throws Exception {
+  public void testRefreshUserToGroupsMappingsRequestPBImpl() throws Exception {
     validatePBImplRecord(RefreshUserToGroupsMappingsRequestPBImpl.class,
         RefreshUserToGroupsMappingsRequestProto.class);
   }
 
   @Test
-  void testRefreshUserToGroupsMappingsResponsePBImpl() throws Exception {
+  public void testRefreshUserToGroupsMappingsResponsePBImpl() throws Exception {
     validatePBImplRecord(RefreshUserToGroupsMappingsResponsePBImpl.class,
         RefreshUserToGroupsMappingsResponseProto.class);
   }
 
   @Test
-  void testUpdateNodeResourceRequestPBImpl() throws Exception {
+  public void testUpdateNodeResourceRequestPBImpl() throws Exception {
     validatePBImplRecord(UpdateNodeResourceRequestPBImpl.class,
         UpdateNodeResourceRequestProto.class);
   }
 
   @Test
-  void testUpdateNodeResourceResponsePBImpl() throws Exception {
+  public void testUpdateNodeResourceResponsePBImpl() throws Exception {
     validatePBImplRecord(UpdateNodeResourceResponsePBImpl.class,
         UpdateNodeResourceResponseProto.class);
   }
 
   @Test
-  void testReservationSubmissionRequestPBImpl() throws Exception {
+  public void testReservationSubmissionRequestPBImpl() throws Exception {
     validatePBImplRecord(ReservationSubmissionRequestPBImpl.class,
         ReservationSubmissionRequestProto.class);
   }
 
   @Test
-  void testReservationSubmissionResponsePBImpl() throws Exception {
+  public void testReservationSubmissionResponsePBImpl() throws Exception {
     validatePBImplRecord(ReservationSubmissionResponsePBImpl.class,
         ReservationSubmissionResponseProto.class);
   }
 
   @Test
-  void testReservationUpdateRequestPBImpl() throws Exception {
+  public void testReservationUpdateRequestPBImpl() throws Exception {
     validatePBImplRecord(ReservationUpdateRequestPBImpl.class,
         ReservationUpdateRequestProto.class);
   }
 
   @Test
-  void testReservationUpdateResponsePBImpl() throws Exception {
+  public void testReservationUpdateResponsePBImpl() throws Exception {
     validatePBImplRecord(ReservationUpdateResponsePBImpl.class,
         ReservationUpdateResponseProto.class);
   }
 
   @Test
-  void testReservationDeleteRequestPBImpl() throws Exception {
+  public void testReservationDeleteRequestPBImpl() throws Exception {
     validatePBImplRecord(ReservationDeleteRequestPBImpl.class,
         ReservationDeleteRequestProto.class);
   }
 
   @Test
-  void testReservationDeleteResponsePBImpl() throws Exception {
+  public void testReservationDeleteResponsePBImpl() throws Exception {
     validatePBImplRecord(ReservationDeleteResponsePBImpl.class,
         ReservationDeleteResponseProto.class);
   }
 
   @Test
-  void testReservationListRequestPBImpl() throws Exception {
+  public void testReservationListRequestPBImpl() throws Exception {
     validatePBImplRecord(ReservationListRequestPBImpl.class,
-        ReservationListRequestProto.class);
+            ReservationListRequestProto.class);
   }
 
   @Test
-  void testReservationListResponsePBImpl() throws Exception {
+  public void testReservationListResponsePBImpl() throws Exception {
     validatePBImplRecord(ReservationListResponsePBImpl.class,
-        ReservationListResponseProto.class);
+            ReservationListResponseProto.class);
   }
 
   @Test
-  void testAddToClusterNodeLabelsRequestPBImpl() throws Exception {
+  public void testAddToClusterNodeLabelsRequestPBImpl() throws Exception {
     validatePBImplRecord(AddToClusterNodeLabelsRequestPBImpl.class,
         AddToClusterNodeLabelsRequestProto.class);
   }
-
+  
   @Test
-  void testAddToClusterNodeLabelsResponsePBImpl() throws Exception {
+  public void testAddToClusterNodeLabelsResponsePBImpl() throws Exception {
     validatePBImplRecord(AddToClusterNodeLabelsResponsePBImpl.class,
         AddToClusterNodeLabelsResponseProto.class);
   }
-
+  
   @Test
-  void testRemoveFromClusterNodeLabelsRequestPBImpl() throws Exception {
+  public void testRemoveFromClusterNodeLabelsRequestPBImpl() throws Exception {
     validatePBImplRecord(RemoveFromClusterNodeLabelsRequestPBImpl.class,
         RemoveFromClusterNodeLabelsRequestProto.class);
   }
-
+  
   @Test
-  void testRemoveFromClusterNodeLabelsResponsePBImpl() throws Exception {
+  public void testRemoveFromClusterNodeLabelsResponsePBImpl() throws Exception {
     validatePBImplRecord(RemoveFromClusterNodeLabelsResponsePBImpl.class,
         RemoveFromClusterNodeLabelsResponseProto.class);
   }
-
+  
   @Test
-  void testGetClusterNodeLabelsRequestPBImpl() throws Exception {
+  public void testGetClusterNodeLabelsRequestPBImpl() throws Exception {
     validatePBImplRecord(GetClusterNodeLabelsRequestPBImpl.class,
         GetClusterNodeLabelsRequestProto.class);
   }
 
   @Test
-  void testGetClusterNodeLabelsResponsePBImpl() throws Exception {
+  public void testGetClusterNodeLabelsResponsePBImpl() throws Exception {
     validatePBImplRecord(GetClusterNodeLabelsResponsePBImpl.class,
         GetClusterNodeLabelsResponseProto.class);
   }
-
+  
   @Test
-  void testReplaceLabelsOnNodeRequestPBImpl() throws Exception {
+  public void testReplaceLabelsOnNodeRequestPBImpl() throws Exception {
     validatePBImplRecord(ReplaceLabelsOnNodeRequestPBImpl.class,
         ReplaceLabelsOnNodeRequestProto.class);
   }
 
   @Test
-  void testReplaceLabelsOnNodeResponsePBImpl() throws Exception {
+  public void testReplaceLabelsOnNodeResponsePBImpl() throws Exception {
     validatePBImplRecord(ReplaceLabelsOnNodeResponsePBImpl.class,
         ReplaceLabelsOnNodeResponseProto.class);
   }
-
+  
   @Test
-  void testGetNodeToLabelsRequestPBImpl() throws Exception {
+  public void testGetNodeToLabelsRequestPBImpl() throws Exception {
     validatePBImplRecord(GetNodesToLabelsRequestPBImpl.class,
         GetNodesToLabelsRequestProto.class);
   }
 
   @Test
-  void testGetNodeToLabelsResponsePBImpl() throws Exception {
+  public void testGetNodeToLabelsResponsePBImpl() throws Exception {
     validatePBImplRecord(GetNodesToLabelsResponsePBImpl.class,
         GetNodesToLabelsResponseProto.class);
   }
 
   @Test
-  void testGetLabelsToNodesRequestPBImpl() throws Exception {
+  public void testGetLabelsToNodesRequestPBImpl() throws Exception {
     validatePBImplRecord(GetLabelsToNodesRequestPBImpl.class,
         GetLabelsToNodesRequestProto.class);
   }
 
   @Test
-  void testGetLabelsToNodesResponsePBImpl() throws Exception {
+  public void testGetLabelsToNodesResponsePBImpl() throws Exception {
     validatePBImplRecord(GetLabelsToNodesResponsePBImpl.class,
         GetLabelsToNodesResponseProto.class);
   }
-
+  
   @Test
-  void testNodeLabelAttributesPBImpl() throws Exception {
+  public void testNodeLabelAttributesPBImpl() throws Exception {
     validatePBImplRecord(NodeLabelPBImpl.class,
         NodeLabelProto.class);
   }
-
+  
   @Test
-  void testCheckForDecommissioningNodesRequestPBImpl() throws Exception {
+  public void testCheckForDecommissioningNodesRequestPBImpl() throws Exception {
     validatePBImplRecord(CheckForDecommissioningNodesRequestPBImpl.class,
         CheckForDecommissioningNodesRequestProto.class);
   }
 
   @Test
-  void testCheckForDecommissioningNodesResponsePBImpl() throws Exception {
+  public void testCheckForDecommissioningNodesResponsePBImpl() throws Exception {
     validatePBImplRecord(CheckForDecommissioningNodesResponsePBImpl.class,
         CheckForDecommissioningNodesResponseProto.class);
   }
 
   @Test
-  void testExecutionTypeRequestPBImpl() throws Exception {
+  public void testExecutionTypeRequestPBImpl() throws Exception {
     validatePBImplRecord(ExecutionTypeRequestPBImpl.class,
         ExecutionTypeRequestProto.class);
   }
 
   @Test
-  void testGetAllResourceProfilesResponsePBImpl() throws Exception {
+  public void testGetAllResourceProfilesResponsePBImpl() throws Exception {
     validatePBImplRecord(GetAllResourceProfilesResponsePBImpl.class,
         GetAllResourceProfilesResponseProto.class);
   }
 
   @Test
-  void testGetResourceProfileRequestPBImpl() throws Exception {
+  public void testGetResourceProfileRequestPBImpl() throws Exception {
     validatePBImplRecord(GetResourceProfileRequestPBImpl.class,
         GetResourceProfileRequestProto.class);
   }
 
   @Test
-  void testGetResourceProfileResponsePBImpl() throws Exception {
+  public void testGetResourceProfileResponsePBImpl() throws Exception {
     validatePBImplRecord(GetResourceProfileResponsePBImpl.class,
         GetResourceProfileResponseProto.class);
   }
 
   @Test
-  void testResourceTypesInfoPBImpl() throws Exception {
+  public void testResourceTypesInfoPBImpl() throws Exception {
     validatePBImplRecord(ResourceTypeInfoPBImpl.class,
         YarnProtos.ResourceTypeInfoProto.class);
   }
 
   @Test
-  void testGetAllResourceTypesInfoRequestPBImpl() throws Exception {
+  public void testGetAllResourceTypesInfoRequestPBImpl() throws Exception {
     validatePBImplRecord(GetAllResourceTypeInfoRequestPBImpl.class,
         YarnServiceProtos.GetAllResourceTypeInfoRequestProto.class);
   }
 
   @Test
-  void testGetAllResourceTypesInfoResponsePBImpl() throws Exception {
+  public void testGetAllResourceTypesInfoResponsePBImpl() throws Exception {
     validatePBImplRecord(GetAllResourceTypeInfoResponsePBImpl.class,
         YarnServiceProtos.GetAllResourceTypeInfoResponseProto.class);
   }
 
   @Test
-  void testNodeAttributeKeyPBImpl() throws Exception {
+  public void testNodeAttributeKeyPBImpl() throws Exception {
     validatePBImplRecord(NodeAttributeKeyPBImpl.class,
         NodeAttributeKeyProto.class);
   }
 
   @Test
-  void testNodeToAttributeValuePBImpl() throws Exception {
+  public void testNodeToAttributeValuePBImpl() throws Exception {
     validatePBImplRecord(NodeToAttributeValuePBImpl.class,
         NodeToAttributeValueProto.class);
   }
 
   @Test
-  void testNodeAttributePBImpl() throws Exception {
+  public void testNodeAttributePBImpl() throws Exception {
     validatePBImplRecord(NodeAttributePBImpl.class, NodeAttributeProto.class);
   }
 
   @Test
-  void testNodeAttributeInfoPBImpl() throws Exception {
+  public void testNodeAttributeInfoPBImpl() throws Exception {
     validatePBImplRecord(NodeAttributeInfoPBImpl.class,
         NodeAttributeInfoProto.class);
   }
 
   @Test
-  void testNodeToAttributesPBImpl() throws Exception {
+  public void testNodeToAttributesPBImpl() throws Exception {
     validatePBImplRecord(NodeToAttributesPBImpl.class,
         NodeToAttributesProto.class);
   }
 
   @Test
-  void testNodesToAttributesMappingRequestPBImpl() throws Exception {
+  public void testNodesToAttributesMappingRequestPBImpl() throws Exception {
     validatePBImplRecord(NodesToAttributesMappingRequestPBImpl.class,
         NodesToAttributesMappingRequestProto.class);
   }
 
   @Test
-  void testGetAttributesToNodesRequestPBImpl() throws Exception {
+  public void testGetAttributesToNodesRequestPBImpl() throws Exception {
     validatePBImplRecord(GetAttributesToNodesRequestPBImpl.class,
         YarnServiceProtos.GetAttributesToNodesRequestProto.class);
   }
 
   @Test
-  void testGetAttributesToNodesResponsePBImpl() throws Exception {
+  public void testGetAttributesToNodesResponsePBImpl() throws Exception {
     validatePBImplRecord(GetAttributesToNodesResponsePBImpl.class,
         YarnServiceProtos.GetAttributesToNodesResponseProto.class);
   }
 
   @Test
-  void testGetClusterNodeAttributesRequestPBImpl() throws Exception {
+  public void testGetClusterNodeAttributesRequestPBImpl() throws Exception {
     validatePBImplRecord(GetClusterNodeAttributesRequestPBImpl.class,
         YarnServiceProtos.GetClusterNodeAttributesRequestProto.class);
   }
 
   @Test
-  void testGetClusterNodeAttributesResponsePBImpl() throws Exception {
+  public void testGetClusterNodeAttributesResponsePBImpl() throws Exception {
     validatePBImplRecord(GetClusterNodeAttributesResponsePBImpl.class,
         YarnServiceProtos.GetClusterNodeAttributesResponseProto.class);
   }
 
   @Test
-  void testGetNodesToAttributesRequestPBImpl() throws Exception {
+  public void testGetNodesToAttributesRequestPBImpl() throws Exception {
     validatePBImplRecord(GetNodesToAttributesRequestPBImpl.class,
         YarnServiceProtos.GetNodesToAttributesRequestProto.class);
   }
 
   @Test
-  void testGetNodesToAttributesResponsePBImpl() throws Exception {
+  public void testGetNodesToAttributesResponsePBImpl() throws Exception {
     validatePBImplRecord(GetNodesToAttributesResponsePBImpl.class,
         YarnServiceProtos.GetNodesToAttributesResponseProto.class);
-  }
-
-  @Test
-  void testGetEnhancedHeadroomPBImpl() throws Exception {
-    validatePBImplRecord(EnhancedHeadroomPBImpl.class,
-        YarnServiceProtos.EnhancedHeadroomProto.class);
   }
 }

@@ -42,14 +42,14 @@ public interface RefreshUserMappingsProtocol {
 
   /**
    * Refresh user to group mappings.
-   * @throws IOException  raised on errors performing I/O.
+   * @throws IOException
    */
   @Idempotent
   public void refreshUserToGroupsMappings() throws IOException;
   
   /**
    * Refresh superuser proxy group list
-   * @throws IOException  raised on errors performing I/O.
+   * @throws IOException
    */
   @Idempotent
   public void refreshSuperUserGroupsConfiguration() throws IOException;

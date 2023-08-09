@@ -56,8 +56,7 @@ public class TestRouterWithSecureStartup {
   @Test
   public void testStartupWithoutKeytab() throws Exception {
     testCluster(DFS_ROUTER_KEYTAB_FILE_KEY,
-        "Running in secure mode, but config doesn't have a keytab for "
-            + "key: dfs.federation.router.keytab.file");
+        "Running in secure mode, but config doesn't have a keytab");
   }
 
   @Test

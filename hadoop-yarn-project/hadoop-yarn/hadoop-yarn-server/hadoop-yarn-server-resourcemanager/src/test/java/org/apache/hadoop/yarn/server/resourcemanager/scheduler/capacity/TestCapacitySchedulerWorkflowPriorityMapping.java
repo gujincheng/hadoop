@@ -18,21 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A1;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A2;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A_CAPACITY;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A1_CAPACITY;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A2_CAPACITY;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1_CAPACITY;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2_CAPACITY;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3_CAPACITY;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B_CAPACITY;
-
 import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
@@ -48,21 +33,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WorkflowPriorityMappingsManager.WorkflowPriorityMapping;
-import org.junit.After;
 import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
-public class TestCapacitySchedulerWorkflowPriorityMapping {
+public class TestCapacitySchedulerWorkflowPriorityMapping
+    extends CapacitySchedulerTestBase {
   private MockRM mockRM = null;
-
-  @After
-  public void tearDown() {
-    if (mockRM != null) {
-      mockRM.stop();
-    }
-  }
 
   private static void setWorkFlowPriorityMappings(
       CapacitySchedulerConfiguration conf) {
@@ -86,7 +64,7 @@ public class TestCapacitySchedulerWorkflowPriorityMapping {
     List<WorkflowPriorityMapping> mappings = Arrays.asList(
         new WorkflowPriorityMapping("workflow1", B, Priority.newInstance(2)),
         new WorkflowPriorityMapping("workflow2", A1, Priority.newInstance(3)),
-        new WorkflowPriorityMapping("Workflow3", A, Priority.newInstance(4)));
+        new WorkflowPriorityMapping("workflow3", A, Priority.newInstance(4)));
     conf.setWorkflowPriorityMappings(mappings);
   }
 
@@ -107,10 +85,16 @@ public class TestCapacitySchedulerWorkflowPriorityMapping {
     mockRM.start();
     cs.start();
 
-    Map<String, Object> expected = ImmutableMap.of(
-        A, ImmutableMap.of("workflow3", Priority.newInstance(4)),
-        B, ImmutableMap.of("workflow1", Priority.newInstance(2)),
-        A1, ImmutableMap.of("workflow2", Priority.newInstance(3)));
+    Map<String, Map<String, Object>> expected = ImmutableMap.of(
+        A, ImmutableMap.of("workflow3",
+        new WorkflowPriorityMapping(
+            "workflow3", A, Priority.newInstance(4))),
+        B, ImmutableMap.of("workflow1",
+        new WorkflowPriorityMapping(
+            "workflow1", B, Priority.newInstance(2))),
+        A1, ImmutableMap.of("workflow2",
+        new WorkflowPriorityMapping(
+            "workflow2", A1, Priority.newInstance(3))));
     assertEquals(expected, cs.getWorkflowPriorityMappingsManager()
         .getWorkflowPriorityMappings());
 

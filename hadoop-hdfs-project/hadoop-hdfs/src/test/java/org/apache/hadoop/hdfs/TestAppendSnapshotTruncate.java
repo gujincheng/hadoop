@@ -45,13 +45,13 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite.ReplaceData
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TestFileTruncate;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.apache.hadoop.util.Preconditions;
-import org.slf4j.event.Level;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Test randomly mixing append, snapshot and truncate operations.
@@ -60,7 +60,7 @@ import org.slf4j.event.Level;
  */
 public class TestAppendSnapshotTruncate {
   static {
-    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.TRACE);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.ALL);
   }
   private static final Logger LOG =
       LoggerFactory.getLogger(TestAppendSnapshotTruncate.class);

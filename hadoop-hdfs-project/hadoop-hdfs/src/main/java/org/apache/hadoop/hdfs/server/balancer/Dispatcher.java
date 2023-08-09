@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -84,8 +83,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /** Dispatching block replica moves between datanodes. */
 @InterfaceAudience.Private
@@ -129,7 +128,6 @@ public class Dispatcher {
   private final long getBlocksSize;
   private final long getBlocksMinBlockSize;
   private final long blockMoveTimeout;
-  private final long hotBlockTimeInterval;
   /**
    * If no block can be moved out of a {@link Source} after this configured
    * amount of time, the Source should give up choosing the next possible move.
@@ -164,7 +162,7 @@ public class Dispatcher {
       }
     }
 
-    /** Allocate a single lot of items. */
+    /** Aloocate a single lot of items */
     int allocate() {
       return allocate(lotSize);
     }
@@ -241,7 +239,6 @@ public class Dispatcher {
     private DDatanode proxySource;
     private StorageGroup target;
 
-    @VisibleForTesting
     PendingMove(Source source, StorageGroup target) {
       this.source = source;
       this.target = target;
@@ -283,7 +280,6 @@ public class Dispatcher {
     /**
      * @return true if the given block is good for the tentative move.
      */
-    @VisibleForTesting
     boolean markMovedIfGoodBlock(DBlock block, StorageType targetStorageType) {
       synchronized (block) {
         synchronized (movedBlocks) {
@@ -407,15 +403,13 @@ public class Dispatcher {
         LOG.info("Successfully moved " + this);
       } catch (IOException e) {
         LOG.warn("Failed to move " + this, e);
-        nnc.getBlocksFailed().incrementAndGet();
         target.getDDatanode().setHasFailure();
         // Check that the failure is due to block pinning errors.
         if (e instanceof BlockPinningException) {
           // Pinned block can't be moved. Add this block into failure list.
           // Later in the next iteration mover will exclude these blocks from
           // pending moves.
-          target.getDDatanode().addBlockPinningFailures(
-              this.reportedBlock.getBlock().getBlockId(), this.getSource());
+          target.getDDatanode().addBlockPinningFailures(this);
           return;
         }
 
@@ -660,7 +654,7 @@ public class Dispatcher {
       public boolean equals(Object obj) {
         if (this == obj) {
           return true;
-        } else if (!(obj instanceof StorageGroup)) {
+        } else if (obj == null || !(obj instanceof StorageGroup)) {
           return false;
         } else {
           final StorageGroup that = (StorageGroup) obj;
@@ -680,8 +674,7 @@ public class Dispatcher {
     /** blocks being moved but not confirmed yet */
     private final List<PendingMove> pendings;
     private volatile boolean hasFailure = false;
-    private final Map<Long, Set<DatanodeInfo>> blockPinningFailures =
-        new ConcurrentHashMap<>();
+    private Map<Long, Set<DatanodeInfo>> blockPinningFailures = new HashMap<>();
     private volatile boolean hasSuccess = false;
     private ExecutorService moveExecutor;
 
@@ -767,17 +760,16 @@ public class Dispatcher {
       this.hasFailure = true;
     }
 
-    private void addBlockPinningFailures(long blockId, DatanodeInfo source) {
-      blockPinningFailures.compute(blockId, (key, pinnedLocations) -> {
-        Set<DatanodeInfo> newPinnedLocations;
+    void addBlockPinningFailures(PendingMove pendingBlock) {
+      synchronized (blockPinningFailures) {
+        long blockId = pendingBlock.reportedBlock.getBlock().getBlockId();
+        Set<DatanodeInfo> pinnedLocations = blockPinningFailures.get(blockId);
         if (pinnedLocations == null) {
-          newPinnedLocations = new HashSet<>();
-        } else {
-          newPinnedLocations = pinnedLocations;
+          pinnedLocations = new HashSet<>();
+          blockPinningFailures.put(blockId, pinnedLocations);
         }
-        newPinnedLocations.add(source);
-        return newPinnedLocations;
-      });
+        pinnedLocations.add(pendingBlock.getSource());
+      }
     }
 
     Map<Long, Set<DatanodeInfo>> getBlockPinningFailureList() {
@@ -838,8 +830,7 @@ public class Dispatcher {
     private long getBlockList() throws IOException, IllegalArgumentException {
       final long size = Math.min(getBlocksSize, blocksToReceive);
       final BlocksWithLocations newBlksLocs =
-          nnc.getBlocks(getDatanodeInfo(), size, getBlocksMinBlockSize,
-              hotBlockTimeInterval);
+          nnc.getBlocks(getDatanodeInfo(), size, getBlocksMinBlockSize);
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("getBlocks(" + getDatanodeInfo() + ", "
@@ -1072,15 +1063,14 @@ public class Dispatcher {
       int maxNoMoveInterval, Configuration conf) {
     this(nnc, includedNodes, excludedNodes, movedWinWidth,
         moverThreads, dispatcherThreads, maxConcurrentMovesPerNode,
-        0L, 0L, 0, maxNoMoveInterval, -1, 0, conf);
+        0L, 0L, 0, maxNoMoveInterval, -1, conf);
   }
 
   Dispatcher(NameNodeConnector nnc, Set<String> includedNodes,
       Set<String> excludedNodes, long movedWinWidth, int moverThreads,
       int dispatcherThreads, int maxConcurrentMovesPerNode,
       long getBlocksSize, long getBlocksMinBlockSize, int blockMoveTimeout,
-      int maxNoMoveInterval, long maxIterationTime, long hotBlockTimeInterval,
-      Configuration conf) {
+      int maxNoMoveInterval, long maxIterationTime, Configuration conf) {
     this.nnc = nnc;
     this.excludedNodes = excludedNodes;
     this.includedNodes = includedNodes;
@@ -1096,7 +1086,6 @@ public class Dispatcher {
 
     this.getBlocksSize = getBlocksSize;
     this.getBlocksMinBlockSize = getBlocksMinBlockSize;
-    this.hotBlockTimeInterval = hotBlockTimeInterval;
     this.blockMoveTimeout = blockMoveTimeout;
     this.maxNoMoveInterval = maxNoMoveInterval;
 
@@ -1127,7 +1116,7 @@ public class Dispatcher {
     return nnc.getBytesMoved().get();
   }
 
-  long getBlocksMoved() {
+  long getBblocksMoved() {
     return nnc.getBlocksMoved().get();
   }
 
@@ -1217,7 +1206,12 @@ public class Dispatcher {
       p.proxySource.removePendingBlock(p);
       return;
     }
-    moveExecutor.execute(p::dispatch);
+    moveExecutor.execute(new Runnable() {
+      @Override
+      public void run() {
+        p.dispatch();
+      }
+    });
   }
 
   public boolean dispatchAndCheckContinue() throws InterruptedException {
@@ -1234,7 +1228,7 @@ public class Dispatcher {
    */
   private long dispatchBlockMoves() throws InterruptedException {
     final long bytesLastMoved = getBytesMoved();
-    final long blocksLastMoved = getBlocksMoved();
+    final long blocksLastMoved = getBblocksMoved();
     final Future<?>[] futures = new Future<?>[sources.size()];
 
     int concurrentThreads = Math.min(sources.size(),
@@ -1284,7 +1278,7 @@ public class Dispatcher {
     waitForMoveCompletion(targets);
     LOG.info("Total bytes (blocks) moved in this iteration {} ({})",
         StringUtils.byteDesc(getBytesMoved() - bytesLastMoved),
-        (getBlocksMoved() - blocksLastMoved));
+        (getBblocksMoved() - blocksLastMoved));
 
     return getBytesMoved() - bytesLastMoved;
   }
@@ -1363,7 +1357,6 @@ public class Dispatcher {
    * 2. the block does not have a replica/internalBlock on the target;
    * 3. doing the move does not reduce the number of racks that the block has
    */
-  @VisibleForTesting
   boolean isGoodBlockCandidate(StorageGroup source, StorageGroup target,
       StorageType targetStorageType, DBlock block) {
     if (source.equals(target)) {

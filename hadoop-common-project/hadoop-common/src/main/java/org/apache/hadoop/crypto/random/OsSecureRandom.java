@@ -24,7 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Random;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -74,12 +73,7 @@ public class OsSecureRandom extends Random implements Closeable, Configurable {
 
   public OsSecureRandom() {
   }
-
-  @VisibleForTesting
-  public boolean isClosed() {
-    return stream == null;
-  }
-
+  
   @Override
   synchronized public void setConf(Configuration conf) {
     this.conf = conf;

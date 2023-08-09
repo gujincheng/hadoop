@@ -348,7 +348,7 @@ public class TestContainerResourceUsage {
       // If keepRunningContainers is false, all live containers should now
       // be completed. Calculate the resource usage metrics for all of them.
       for (RMContainer c : rmContainers) {
-        MockRM.waitForContainerCompletion(rm, nm, amContainerId, c);
+        waitforContainerCompletion(rm, nm, amContainerId, c);
         AggregateAppResourceUsage ru = calculateContainerResourceMetrics(c);
         memorySeconds += ru.getMemorySeconds();
         vcoreSeconds += ru.getVcoreSeconds();
@@ -400,7 +400,7 @@ public class TestContainerResourceUsage {
 
     // Calculate container usage metrics for second attempt.
     for (RMContainer c : rmContainers) {
-      MockRM.waitForContainerCompletion(rm, nm, amContainerId, c);
+      waitforContainerCompletion(rm, nm, amContainerId, c);
       AggregateAppResourceUsage ru = calculateContainerResourceMetrics(c);
       memorySeconds += ru.getMemorySeconds();
       vcoreSeconds += ru.getVcoreSeconds();
@@ -415,6 +415,20 @@ public class TestContainerResourceUsage {
 
     rm.stop();
     return;
+  }
+
+  private void waitforContainerCompletion(MockRM rm, MockNM nm,
+      ContainerId amContainerId, RMContainer container) throws Exception {
+    ContainerId containerId = container.getContainerId();
+    if (null != rm.scheduler.getRMContainer(containerId)) {
+      if (containerId.equals(amContainerId)) {
+        rm.waitForState(nm, containerId, RMContainerState.COMPLETED);
+      } else {
+        rm.waitForState(nm, containerId, RMContainerState.KILLED);
+      }
+    } else {
+      rm.drainEvents();
+    }
   }
 
   private AggregateAppResourceUsage calculateContainerResourceMetrics(

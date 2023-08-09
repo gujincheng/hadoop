@@ -41,7 +41,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class AbstractServiceLauncherTestBase extends Assert implements
     LauncherExitCodes {
@@ -58,7 +57,7 @@ public class AbstractServiceLauncherTestBase extends Assert implements
    * All tests have a short life.
    */
   @Rule
-  public Timeout testTimeout = new Timeout(15000, TimeUnit.MILLISECONDS);
+  public Timeout testTimeout = new Timeout(15000);
 
   /**
    * Rule to provide the method name.

@@ -50,8 +50,7 @@ public class FederationProtocolPBTranslator<P extends GeneratedMessageV3,
    * stream.
    *
    * @param p The existing proto object to use to initialize the translator.
-   * @throws IllegalArgumentException If the given proto message is not instance of the class of
-   * the proto handler this translator holds.
+   * @throws IllegalArgumentException
    */
   @SuppressWarnings("unchecked")
   public void setProto(Message p) {
@@ -93,7 +92,7 @@ public class FederationProtocolPBTranslator<P extends GeneratedMessageV3,
 
   /**
    * Get the serialized proto object. If the translator was created from a byte
-   * stream, returns the initial byte stream. Otherwise, creates a new byte
+   * stream, returns the intitial byte stream. Otherwise creates a new byte
    * stream from the cached builder.
    *
    * @return Protobuf message object
@@ -134,9 +133,8 @@ public class FederationProtocolPBTranslator<P extends GeneratedMessageV3,
 
   /**
    * Read instance from base64 data.
-   *
-   * @param base64String String containing Base64 data.
-   * @throws IOException If the protobuf message build fails.
+   * @param base64String
+   * @throws IOException
    */
   @SuppressWarnings("unchecked")
   public void readInstance(String base64String) throws IOException {

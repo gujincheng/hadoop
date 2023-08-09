@@ -32,8 +32,6 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -83,7 +81,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
         }
         assertEquals(length, bytesRead);
         assertContentReadCorrectly(fileContent,
-            (int) (seekPos + totalBytesRead - length), length, buffer, testFilePath);
+            (int) (seekPos + totalBytesRead - length), length, buffer);
 
         assertTrue(abfsInputStream.getFCursor() >= seekPos + totalBytesRead);
         assertTrue(abfsInputStream.getFCursorAfterLastRead() >= seekPos + totalBytesRead);
@@ -105,25 +103,6 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       Path testFilePath = createFileWithContent(fs, fileName, fileContent);
       testExceptionInOptimization(fs, testFilePath, fileSize - HUNDRED,
           fileSize / 4, fileContent);
-    }
-  }
-
-  /**
-   * Testing the back reference being passed down to AbfsInputStream.
-   */
-  @Test
-  public void testAzureBlobFileSystemBackReferenceInInputStream()
-      throws IOException {
-    Path path = path(getMethodName());
-    // Create a file then open it to verify if this input stream contains any
-    // back reference.
-    try (FSDataOutputStream out = getFileSystem().create(path);
-        FSDataInputStream in = getFileSystem().open(path)) {
-      AbfsInputStream abfsInputStream = (AbfsInputStream) in.getWrappedStream();
-
-      Assertions.assertThat(abfsInputStream.getFsBackRef().isNull())
-          .describedAs("BackReference in input stream should not be null")
-          .isFalse();
     }
   }
 
@@ -154,7 +133,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
         actualLength = length - delta;
       }
       assertEquals(bytesRead, actualLength);
-      assertContentReadCorrectly(fileContent, seekPos, (int) actualLength, buffer, testFilePath);
+      assertContentReadCorrectly(fileContent, seekPos, (int) actualLength, buffer);
       assertEquals(fileContent.length, abfsInputStream.getFCursor());
       assertEquals(fileContent.length, abfsInputStream.getFCursorAfterLastRead());
       assertEquals(actualLength, abfsInputStream.getBCursor());
@@ -221,24 +200,24 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
   }
 
   protected void assertContentReadCorrectly(byte[] actualFileContent, int from,
-      int len, byte[] contentRead, Path testFilePath) {
+      int len, byte[] contentRead) {
     for (int i = 0; i < len; i++) {
-      assertEquals("The test file path is " + testFilePath, contentRead[i], actualFileContent[i + from]);
+      assertEquals(contentRead[i], actualFileContent[i + from]);
     }
   }
 
   protected void assertBuffersAreNotEqual(byte[] actualContent,
-      byte[] contentRead, AbfsConfiguration conf, Path testFilePath) {
-    assertBufferEquality(actualContent, contentRead, conf, false, testFilePath);
+      byte[] contentRead, AbfsConfiguration conf) {
+    assertBufferEquality(actualContent, contentRead, conf, false);
   }
 
   protected void assertBuffersAreEqual(byte[] actualContent, byte[] contentRead,
-      AbfsConfiguration conf, Path testFilePath) {
-    assertBufferEquality(actualContent, contentRead, conf, true, testFilePath);
+      AbfsConfiguration conf) {
+    assertBufferEquality(actualContent, contentRead, conf, true);
   }
 
   private void assertBufferEquality(byte[] actualContent, byte[] contentRead,
-      AbfsConfiguration conf, boolean assertEqual, Path testFilePath) {
+      AbfsConfiguration conf, boolean assertEqual) {
     int bufferSize = conf.getReadBufferSize();
     int actualContentSize = actualContent.length;
     int n = (actualContentSize < bufferSize) ? actualContentSize : bufferSize;
@@ -249,9 +228,9 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       }
     }
     if (assertEqual) {
-      assertEquals("The test file path is " + testFilePath, n, matches);
+      assertEquals(n, matches);
     } else {
-      assertNotEquals("The test file path is " + testFilePath, n, matches);
+      assertNotEquals(n, matches);
     }
   }
 

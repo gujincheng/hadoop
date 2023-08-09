@@ -89,9 +89,6 @@ public class StopWatch implements Closeable {
   }
 
   /**
-   * now.
-   *
-   * @param timeUnit timeUnit.
    * @return current elapsed time in specified timeunit.
    */
   public long now(TimeUnit timeUnit) {

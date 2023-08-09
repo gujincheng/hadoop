@@ -136,7 +136,6 @@ public class Token<T extends TokenIdentifier> implements Writable {
         while (tokenIdentifiers.hasNext()) {
           try {
             TokenIdentifier id = tokenIdentifiers.next();
-            LOG.debug("Added {}:{} into tokenKindMap", id.getKind(), id.getClass());
             tokenKindMap.put(id.getKind(), id.getClass());
           } catch (ServiceConfigurationError | LinkageError e) {
             // failure to load a token implementation
@@ -194,7 +193,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
   /**
    * Set the token kind. This is only intended to be used by services that
    * wrap another service's token.
-   * @param newKind newKind.
+   * @param newKind
    */
   @InterfaceAudience.Private
   public synchronized void setKind(Text newKind) {
@@ -368,7 +367,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
   /**
    * Encode this token as a url safe string.
    * @return the encoded string
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public String encodeToUrlString() throws IOException {
     return encodeWritable(this);
@@ -377,7 +376,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
   /**
    * Decode the given url safe string into this token.
    * @param newValue the encoded string
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public void decodeFromUrlString(String newValue) throws IOException {
     decodeWritable(this, newValue);
@@ -482,7 +481,6 @@ public class Token<T extends TokenIdentifier> implements Writable {
   /**
    * Is this token managed so that it can be renewed or cancelled?
    * @return true, if it can be renewed and cancelled.
-   * @throws IOException raised on errors performing I/O.
    */
   public boolean isManaged() throws IOException {
     return getRenewer().isManaged(this);
@@ -490,10 +488,9 @@ public class Token<T extends TokenIdentifier> implements Writable {
 
   /**
    * Renew this delegation token.
-   * @param conf configuration.
    * @return the new expiration time
-   * @throws IOException raised on errors performing I/O.
-   * @throws InterruptedException if the thread is interrupted.
+   * @throws IOException
+   * @throws InterruptedException
    */
   public long renew(Configuration conf
                     ) throws IOException, InterruptedException {
@@ -502,10 +499,8 @@ public class Token<T extends TokenIdentifier> implements Writable {
 
   /**
    * Cancel this delegation token.
-   *
-   * @param conf configuration.
-   * @throws IOException raised on errors performing I/O.
-   * @throws InterruptedException if the thread is interrupted.
+   * @throws IOException
+   * @throws InterruptedException
    */
   public void cancel(Configuration conf
                      ) throws IOException, InterruptedException {

@@ -67,7 +67,7 @@ Wildcard entries in the `CLASSPATH` are now supported by libhdfs.
 Thread Safe
 -----------
 
-libhdfs is thread safe.
+libdhfs is thread safe.
 
 *   Concurrency and Hadoop FS "handles"
 

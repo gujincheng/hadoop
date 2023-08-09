@@ -21,16 +21,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.random.OsSecureRandom;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_KEY;
+import static org.junit.Assert.assertNull;
 
 public class TestCryptoStreamsWithOpensslAesCtrCryptoCodec 
     extends TestCryptoStreams {
@@ -53,7 +51,6 @@ public class TestCryptoStreamsWithOpensslAesCtrCryptoCodec
   public void testCodecClosesRandom() throws Exception {
     GenericTestUtils.assumeInNativeProfile();
     Configuration conf = new Configuration();
-    conf.set(HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY, "AES/CTR/NoPadding");
     conf.set(HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_KEY,
         OpensslAesCtrCryptoCodec.class.getName());
     conf.set(
@@ -64,13 +61,13 @@ public class TestCryptoStreamsWithOpensslAesCtrCryptoCodec
         "Unable to instantiate codec " + OpensslAesCtrCryptoCodec.class
             .getName() + ", is the required " + "version of OpenSSL installed?",
         codecWithRandom);
-    OsSecureRandom random = (OsSecureRandom)
-            ((OpensslAesCtrCryptoCodec) codecWithRandom).getRandom();
+    OsSecureRandom random =
+        (OsSecureRandom) Whitebox.getInternalState(codecWithRandom, "random");
     // trigger the OsSecureRandom to create an internal FileInputStream
     random.nextBytes(new byte[10]);
-    assertFalse(random.isClosed());
+    assertNotNull(Whitebox.getInternalState(random, "stream"));
     // verify closing the codec closes the codec's random's stream.
     codecWithRandom.close();
-    assertTrue(random.isClosed());
+    assertNull(Whitebox.getInternalState(random, "stream"));
   }
 }

@@ -18,12 +18,6 @@
 
 package org.apache.hadoop.yarn.client;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
-
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -35,15 +29,20 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.Assert;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class TestClientRMProxy {
   @Test
-  void testGetRMDelegationTokenService() {
+  public void testGetRMDelegationTokenService() {
     String defaultRMAddress = YarnConfiguration.DEFAULT_RM_ADDRESS;
     YarnConfiguration conf = new YarnConfiguration();
 
@@ -52,8 +51,8 @@ public class TestClientRMProxy {
     String[] services = tokenService.toString().split(",");
     assertEquals(1, services.length);
     for (String service : services) {
-      assertTrue(service.contains(defaultRMAddress),
-          "Incorrect token service name");
+      assertTrue("Incorrect token service name",
+          service.contains(defaultRMAddress));
     }
 
     // HA is enabled
@@ -67,13 +66,13 @@ public class TestClientRMProxy {
     services = tokenService.toString().split(",");
     assertEquals(2, services.length);
     for (String service : services) {
-      assertTrue(service.contains(defaultRMAddress),
-          "Incorrect token service name");
+      assertTrue("Incorrect token service name",
+          service.contains(defaultRMAddress));
     }
   }
 
   @Test
-  void testGetAMRMTokenService() {
+  public void testGetAMRMTokenService() {
     String defaultRMAddress = YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS;
     YarnConfiguration conf = new YarnConfiguration();
 
@@ -82,8 +81,8 @@ public class TestClientRMProxy {
     String[] services = tokenService.toString().split(",");
     assertEquals(1, services.length);
     for (String service : services) {
-      assertTrue(service.contains(defaultRMAddress),
-          "Incorrect token service name");
+      assertTrue("Incorrect token service name",
+          service.contains(defaultRMAddress));
     }
 
     // HA is enabled
@@ -97,8 +96,8 @@ public class TestClientRMProxy {
     services = tokenService.toString().split(",");
     assertEquals(2, services.length);
     for (String service : services) {
-      assertTrue(service.contains(defaultRMAddress),
-          "Incorrect token service name");
+      assertTrue("Incorrect token service name",
+          service.contains(defaultRMAddress));
     }
   }
 
@@ -110,7 +109,7 @@ public class TestClientRMProxy {
    * @throws Exception an Exception occurred
    */
   @Test
-  void testProxyUserCorrectUGI() throws Exception {
+  public void testProxyUserCorrectUGI() throws Exception {
     final YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
@@ -130,7 +129,7 @@ public class TestClientRMProxy {
     UserGroupInformation realUser = UserGroupInformation.getCurrentUser();
     UserGroupInformation proxyUser =
         UserGroupInformation.createProxyUserForTesting("proxy", realUser,
-            new String[]{"group1"});
+        new String[] {"group1"});
 
     // Create the RMProxy using the proxyUser
     ApplicationClientProtocol rmProxy = proxyUser.doAs(
@@ -164,7 +163,7 @@ public class TestClientRMProxy {
         UGICapturingHadoopYarnProtoRPC.lastCurrentUser;
     assertNotNull(lastCurrentUser);
     assertEquals("proxy", lastCurrentUser.getShortUserName());
-    assertEquals(UserGroupInformation.AuthenticationMethod.PROXY,
+    Assert.assertEquals(UserGroupInformation.AuthenticationMethod.PROXY,
         lastCurrentUser.getAuthenticationMethod());
     assertEquals(UserGroupInformation.getCurrentUser(),
         lastCurrentUser.getRealUser());
@@ -188,7 +187,7 @@ public class TestClientRMProxy {
       try {
         currentUser = UserGroupInformation.getCurrentUser();
       } catch (IOException ioe) {
-        fail("Unable to get current user\n"
+        Assert.fail("Unable to get current user\n"
             + StringUtils.stringifyException(ioe));
       }
       lastCurrentUser = currentUser;

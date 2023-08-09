@@ -37,7 +37,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -330,8 +330,8 @@ public class LeaseRenewer {
           public void run() {
             try {
               if (LOG.isDebugEnabled()) {
-                LOG.debug("Lease renewer daemon for {} with renew id {} started",
-                    clientsString(), id);
+                LOG.debug("Lease renewer daemon for " + clientsString()
+                    + " with renew id " + id + " started");
               }
               LeaseRenewer.this.run(id);
             } catch(InterruptedException e) {
@@ -341,8 +341,8 @@ public class LeaseRenewer {
                 Factory.INSTANCE.remove(LeaseRenewer.this);
               }
               if (LOG.isDebugEnabled()) {
-                LOG.debug("Lease renewer daemon for {} with renew id {} exited",
-                    clientsString(), id);
+                LOG.debug("Lease renewer daemon for " + clientsString()
+                    + " with renew id " + id + " exited");
               }
             }
           }
@@ -444,13 +444,13 @@ public class LeaseRenewer {
         try {
           renew();
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Lease renewer daemon for {} with renew id {} executed",
-                clientsString(), id);
+            LOG.debug("Lease renewer daemon for " + clientsString()
+                + " with renew id " + id + " executed");
           }
           lastRenewed = Time.monotonicNow();
         } catch (SocketTimeoutException ie) {
-          LOG.warn("Failed to renew lease for {} for {} seconds.  Aborting ...",
-              clientsString(), (elapsed/1000), ie);
+          LOG.warn("Failed to renew lease for " + clientsString() + " for "
+              + (elapsed/1000) + " seconds.  Aborting ...", ie);
           List<DFSClient> dfsclientsCopy;
           synchronized (this) {
             DFSClientFaultInjector.get().delayWhenRenewLeaseTimeout();
@@ -462,8 +462,8 @@ public class LeaseRenewer {
           }
           break;
         } catch (IOException ie) {
-          LOG.warn("Failed to renew lease for {} for {} seconds.  Will retry shortly ...",
-              clientsString(), (elapsed/1000), ie);
+          LOG.warn("Failed to renew lease for " + clientsString() + " for "
+              + (elapsed/1000) + " seconds.  Will retry shortly ...", ie);
         }
       }
 
@@ -471,11 +471,11 @@ public class LeaseRenewer {
         if (id != currentId || isRenewerExpired()) {
           if (LOG.isDebugEnabled()) {
             if (id != currentId) {
-              LOG.debug("Lease renewer daemon for {} with renew id {} is not current",
-                  clientsString(), id);
+              LOG.debug("Lease renewer daemon for " + clientsString()
+                  + " with renew id " + id + " is not current");
             } else {
-              LOG.debug("Lease renewer daemon for {} with renew id {} expired",
-                  clientsString(), id);
+              LOG.debug("Lease renewer daemon for " + clientsString()
+                  + " with renew id " + id + " expired");
             }
           }
           //no longer the current daemon or expired

@@ -19,45 +19,41 @@
 
 package org.apache.hadoop.yarn.api;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.Test;
 
 public class TestApplicationAttemptId {
 
   @Test
-  void testApplicationAttemptId() {
+  public void testApplicationAttemptId() {
     ApplicationAttemptId a1 = createAppAttemptId(10l, 1, 1);
     ApplicationAttemptId a2 = createAppAttemptId(10l, 1, 2);
     ApplicationAttemptId a3 = createAppAttemptId(10l, 2, 1);
     ApplicationAttemptId a4 = createAppAttemptId(8l, 1, 4);
     ApplicationAttemptId a5 = createAppAttemptId(10l, 1, 1);
-
-    assertEquals(a1, a5);
-    assertNotEquals(a1, a2);
-    assertNotEquals(a1, a3);
-    assertNotEquals(a1, a4);
-
-    assertTrue(a1.compareTo(a5) == 0);
-    assertTrue(a1.compareTo(a2) < 0);
-    assertTrue(a1.compareTo(a3) < 0);
-    assertTrue(a1.compareTo(a4) > 0);
-
-    assertTrue(a1.hashCode() == a5.hashCode());
-    assertFalse(a1.hashCode() == a2.hashCode());
-    assertFalse(a1.hashCode() == a3.hashCode());
-    assertFalse(a1.hashCode() == a4.hashCode());
-
+    
+    Assert.assertTrue(a1.equals(a5));
+    Assert.assertFalse(a1.equals(a2));
+    Assert.assertFalse(a1.equals(a3));
+    Assert.assertFalse(a1.equals(a4));
+    
+    Assert.assertTrue(a1.compareTo(a5) == 0);
+    Assert.assertTrue(a1.compareTo(a2) < 0);
+    Assert.assertTrue(a1.compareTo(a3) < 0);
+    Assert.assertTrue(a1.compareTo(a4) > 0);
+    
+    Assert.assertTrue(a1.hashCode() == a5.hashCode());
+    Assert.assertFalse(a1.hashCode() == a2.hashCode());
+    Assert.assertFalse(a1.hashCode() == a3.hashCode());
+    Assert.assertFalse(a1.hashCode() == a4.hashCode());
+    
     long ts = System.currentTimeMillis();
     ApplicationAttemptId a6 = createAppAttemptId(ts, 543627, 33492611);
-    assertEquals("appattempt_10_0001_000001", a1.toString());
-    assertEquals("appattempt_" + ts + "_543627_33492611", a6.toString());
+    Assert.assertEquals("appattempt_10_0001_000001", a1.toString());
+    Assert.assertEquals("appattempt_" + ts + "_543627_33492611", a6.toString());
   }
 
   private ApplicationAttemptId createAppAttemptId(

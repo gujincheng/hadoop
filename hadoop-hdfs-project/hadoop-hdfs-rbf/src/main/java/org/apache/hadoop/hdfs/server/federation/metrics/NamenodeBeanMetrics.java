@@ -41,11 +41,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
-import org.apache.hadoop.hdfs.server.federation.router.RouterClientProtocol;
+import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.router.SubClusterTimeoutException;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -54,8 +53,6 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamespaceInfoR
 import org.apache.hadoop.hdfs.server.namenode.NameNodeMXBean;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeStatusMXBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
-import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
@@ -198,7 +195,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getUsedCapacity();
     } catch (IOException e) {
-      LOG.debug("Failed to get the used capacity", e);
+      LOG.debug("Failed to get the used capacity", e.getMessage());
     }
     return 0;
   }
@@ -208,7 +205,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getRemainingCapacity();
     } catch (IOException e) {
-      LOG.debug("Failed to get remaining capacity", e);
+      LOG.debug("Failed to get remaining capacity", e.getMessage());
     }
     return 0;
   }
@@ -218,7 +215,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getTotalCapacity();
     } catch (IOException e) {
-      LOG.debug("Failed to Get total capacity", e);
+      LOG.debug("Failed to Get total capacity", e.getMessage());
     }
     return 0;
   }
@@ -228,7 +225,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getProvidedSpace();
     } catch (IOException e) {
-      LOG.debug("Failed to get provided capacity", e);
+      LOG.debug("Failed to get provided capacity", e.getMessage());
     }
     return 0;
   }
@@ -295,7 +292,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumBlocks();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks", e);
+      LOG.debug("Failed to get number of blocks", e.getMessage());
     }
     return 0;
   }
@@ -305,7 +302,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfMissingBlocks();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of missing blocks", e);
+      LOG.debug("Failed to get number of missing blocks", e.getMessage());
     }
     return 0;
   }
@@ -316,7 +313,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfBlocksPendingReplication();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks pending replica", e);
+      LOG.debug("Failed to get number of blocks pending replica",
+          e.getMessage());
     }
     return 0;
   }
@@ -326,7 +324,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfBlocksPendingReplication();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks pending replica", e);
+      LOG.debug("Failed to get number of blocks pending replica",
+          e.getMessage());
     }
     return 0;
   }
@@ -337,7 +336,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfBlocksUnderReplicated();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks under replicated", e);
+      LOG.debug("Failed to get number of blocks under replicated",
+          e.getMessage());
     }
     return 0;
   }
@@ -347,7 +347,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfBlocksUnderReplicated();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks under replicated", e);
+      LOG.debug("Failed to get number of blocks under replicated",
+          e.getMessage());
     }
     return 0;
   }
@@ -357,51 +358,29 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfBlocksPendingDeletion();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks pending deletion", e);
+      LOG.debug("Failed to get number of blocks pending deletion",
+          e.getMessage());
     }
     return 0;
   }
 
   @Override
   public long getScheduledReplicationBlocks() {
-    try {
-      return getRBFMetrics().getScheduledReplicationBlocks();
-    } catch (IOException e) {
-      LOG.debug("Failed to get number of scheduled replication blocks", e);
-    }
-    return 0;
+    return -1;
   }
 
   @Override
   public long getNumberOfMissingBlocksWithReplicationFactorOne() {
-    try {
-      return getRBFMetrics().getNumberOfMissingBlocksWithReplicationFactorOne();
-    } catch (IOException e) {
-      LOG.debug("Failed to get number of missing blocks with replication "
-          + "factor one.", e);
-    }
     return 0;
   }
 
   @Override
   public long getHighestPriorityLowRedundancyReplicatedBlocks() {
-    try {
-      return getRBFMetrics().getHighestPriorityLowRedundancyReplicatedBlocks();
-    } catch (IOException e) {
-      LOG.debug("Failed to get number of highest priority low redundancy "
-          + "replicated blocks.", e);
-    }
     return 0;
   }
 
   @Override
   public long getHighestPriorityLowRedundancyECBlocks() {
-    try {
-      return getRBFMetrics().getHighestPriorityLowRedundancyECBlocks();
-    } catch (IOException e) {
-      LOG.debug("Failed to get number of highest priority low redundancy EC "
-          + "blocks.", e);
-    }
     return 0;
   }
 
@@ -412,11 +391,6 @@ public class NamenodeBeanMetrics
 
   @Override
   public int getCorruptFilesCount() {
-    try {
-      return getRBFMetrics().getCorruptFilesCount();
-    } catch (IOException e) {
-      LOG.debug("Failed to get number of corrupt files", e);
-    }
     return 0;
   }
 
@@ -464,13 +438,10 @@ public class NamenodeBeanMetrics
   private String getNodesImpl(final DatanodeReportType type) {
     final Map<String, Map<String, Object>> info = new HashMap<>();
     try {
-      RouterClientProtocol clientProtocol =
-          this.router.getRpcServer().getClientProtocolModule();
-      DatanodeStorageReport[] datanodeStorageReports =
-          clientProtocol.getDatanodeStorageReport(type, false, dnReportTimeOut);
-      for (DatanodeStorageReport datanodeStorageReport : datanodeStorageReports) {
-        DatanodeInfo node = datanodeStorageReport.getDatanodeInfo();
-        StorageReport[] storageReports = datanodeStorageReport.getStorageReports();
+      RouterRpcServer rpcServer = this.router.getRpcServer();
+      DatanodeInfo[] datanodes =
+          rpcServer.getDatanodeReport(type, false, dnReportTimeOut);
+      for (DatanodeInfo node : datanodes) {
         Map<String, Object> innerinfo = new HashMap<>();
         innerinfo.put("infoAddr", node.getInfoAddr());
         innerinfo.put("infoSecureAddr", node.getInfoSecureAddr());
@@ -490,9 +461,7 @@ public class NamenodeBeanMetrics
         innerinfo.put("blockPoolUsed", node.getBlockPoolUsed());
         innerinfo.put("blockPoolUsedPercent", node.getBlockPoolUsedPercent());
         innerinfo.put("volfails", -1); // node.getVolumeFailures()
-        innerinfo.put("blockPoolUsedPercentStdDev",
-            Util.getBlockPoolUsedPercentStdDev(storageReports));
-        info.put(node.getXferAddrWithHostname(),
+        info.put(node.getHostName() + ":" + node.getXferPort(),
             Collections.unmodifiableMap(innerinfo));
       }
     } catch (StandbyException e) {
@@ -573,7 +542,7 @@ public class NamenodeBeanMetrics
     try {
       return getRouter().getStartTime();
     } catch (IOException e) {
-      LOG.debug("Failed to get the router startup time", e);
+      LOG.debug("Failed to get the router startup time", e.getMessage());
     }
     return 0;
   }
@@ -634,7 +603,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumFiles();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of files", e);
+      LOG.debug("Failed to get number of files", e.getMessage());
     }
     return 0;
   }
@@ -649,7 +618,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumLiveNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of live nodes", e);
+      LOG.debug("Failed to get number of live nodes", e.getMessage());
     }
     return 0;
   }
@@ -659,7 +628,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumDeadNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of dead nodes", e);
+      LOG.debug("Failed to get number of dead nodes", e.getMessage());
     }
     return 0;
   }
@@ -669,7 +638,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumStaleNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of stale nodes", e);
+      LOG.debug("Failed to get number of stale nodes", e.getMessage());
     }
     return 0;
   }
@@ -680,7 +649,7 @@ public class NamenodeBeanMetrics
       return getRBFMetrics().getNumDecomLiveNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get the number of live decommissioned datanodes",
-          e);
+          e.getMessage());
     }
     return 0;
   }
@@ -691,7 +660,7 @@ public class NamenodeBeanMetrics
       return getRBFMetrics().getNumDecomDeadNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get the number of dead decommissioned datanodes",
-          e);
+          e.getMessage());
     }
     return 0;
   }
@@ -701,7 +670,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumDecommissioningNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of decommissioning nodes", e);
+      LOG.debug("Failed to get number of decommissioning nodes",
+          e.getMessage());
     }
     return 0;
   }
@@ -711,7 +681,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumInMaintenanceLiveDataNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of live in maintenance nodes", e);
+      LOG.debug("Failed to get number of live in maintenance nodes",
+          e.getMessage());
     }
     return 0;
   }
@@ -721,7 +692,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumInMaintenanceDeadDataNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of dead in maintenance nodes", e);
+      LOG.debug("Failed to get number of dead in maintenance nodes",
+          e.getMessage());
     }
     return 0;
   }
@@ -731,7 +703,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumEnteringMaintenanceDataNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of entering maintenance nodes", e);
+      LOG.debug("Failed to get number of entering maintenance nodes",
+          e.getMessage());
     }
     return 0;
   }
@@ -819,7 +792,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().isSecurityEnabled();
     } catch (IOException e) {
-      LOG.debug("Failed to get security status", e);
+      LOG.debug("Failed to get security status.",
+          e.getMessage());
     }
     return false;
   }
@@ -871,21 +845,6 @@ public class NamenodeBeanMetrics
 
   @Override
   public long getCurrentTokensCount() {
-    return 0;
-  }
-
-  @Override
-  public int getPendingSPSPaths() {
-    try {
-      return getRBFMetrics().getPendingSPSPaths();
-    } catch (IOException e) {
-      LOG.debug("Failed to get number of paths to be processed by sps", e);
-    }
-    return 0;
-  }
-
-  @Override
-  public float getReconstructionQueuesInitProgress() {
     return 0;
   }
 

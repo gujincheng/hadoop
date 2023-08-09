@@ -274,17 +274,14 @@ public class ApplicationStateDataPBImpl extends ApplicationStateData {
 
       RpcHeaderProtos.RPCCallerContextProto.Builder b = RpcHeaderProtos.RPCCallerContextProto
           .newBuilder();
-      if (callerContext.isContextValid()) {
+      if (callerContext.getContext() != null) {
         b.setContext(callerContext.getContext());
       }
       if (callerContext.getSignature() != null) {
         b.setSignature(ByteString.copyFrom(callerContext.getSignature()));
       }
 
-      if(callerContext.isContextValid()
-          || callerContext.getSignature() != null) {
-        builder.setCallerContext(b);
-      }
+      builder.setCallerContext(b);
     }
   }
 

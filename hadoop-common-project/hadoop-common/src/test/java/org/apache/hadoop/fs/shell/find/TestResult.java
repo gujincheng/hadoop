@@ -23,12 +23,10 @@ import org.junit.Rule;
 import org.junit.rules.Timeout;
 import org.junit.Test;
 
-import java.util.concurrent.TimeUnit;
-
 public class TestResult {
 
   @Rule
-  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
+  public Timeout globalTimeout = new Timeout(10000);
 
   // test the PASS value
   @Test

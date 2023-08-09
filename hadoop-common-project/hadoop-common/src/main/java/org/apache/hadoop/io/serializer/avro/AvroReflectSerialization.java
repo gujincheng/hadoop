@@ -64,7 +64,7 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
 
   private void getPackages() {
     String[] pkgList  = getConf().getStrings(AVRO_REFLECT_PACKAGES);
-    packages = new HashSet<>();
+    packages = new HashSet<String>();
     if (pkgList != null) {
       for (String pkg : pkgList) {
         packages.add(pkg.trim());

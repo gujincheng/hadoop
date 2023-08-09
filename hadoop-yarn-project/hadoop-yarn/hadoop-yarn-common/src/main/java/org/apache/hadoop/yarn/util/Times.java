@@ -19,9 +19,8 @@
 package org.apache.hadoop.yarn.util;
 
 import java.text.ParseException;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,16 +31,23 @@ public class Times {
   private static final Logger LOG =
       LoggerFactory.getLogger(Times.class);
 
-  static final String ISO8601_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+  static final String ISO8601DATEFORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
 
   // This format should match the one used in yarn.dt.plugins.js
-  static final DateTimeFormatter DATE_FORMAT =
-      DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss Z yyyy").withZone(
-          ZoneId.systemDefault());
+  static final ThreadLocal<SimpleDateFormat> dateFormat =
+      new ThreadLocal<SimpleDateFormat>() {
+        @Override protected SimpleDateFormat initialValue() {
+          return new SimpleDateFormat("EEE MMM dd HH:mm:ss Z yyyy");
+        }
+      };
 
-  static final DateTimeFormatter ISO_OFFSET_DATE_TIME =
-      DateTimeFormatter.ofPattern(ISO8601_DATE_FORMAT).withZone(
-          ZoneId.systemDefault());
+  static final ThreadLocal<SimpleDateFormat> isoFormat =
+      new ThreadLocal<SimpleDateFormat>() {
+        @Override
+        protected SimpleDateFormat initialValue() {
+          return new SimpleDateFormat(ISO8601DATEFORMAT);
+        }
+      };
 
   public static long elapsed(long started, long finished) {
     return Times.elapsed(started, finished, true);
@@ -77,7 +83,8 @@ public class Times {
   }
 
   public static String format(long ts) {
-    return ts > 0 ? DATE_FORMAT.format(Instant.ofEpochMilli(ts)) : "N/A";
+    return ts > 0 ? String.valueOf(dateFormat.get().format(new Date(ts)))
+                  : "N/A";
   }
 
   /**
@@ -87,7 +94,7 @@ public class Times {
    * @return ISO 8601 formatted string.
    */
   public static String formatISO8601(long ts) {
-    return ISO_OFFSET_DATE_TIME.format(Instant.ofEpochMilli(ts));
+    return isoFormat.get().format(new Date(ts));
   }
 
   /**
@@ -102,6 +109,6 @@ public class Times {
     if (isoString == null) {
       throw new ParseException("Invalid input.", -1);
     }
-    return Instant.from(ISO_OFFSET_DATE_TIME.parse(isoString)).toEpochMilli();
+    return isoFormat.get().parse(isoString).getTime();
   }
 }

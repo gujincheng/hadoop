@@ -37,17 +37,22 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptI
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.appmaster.AMSimulator;
 
+import java.util.Map;
 
 public class MockAMLauncher extends ApplicationMasterLauncher
     implements EventHandler<AMLauncherEvent> {
   private static final Logger LOG = LoggerFactory.getLogger(
       MockAMLauncher.class);
 
-  private SLSRunner slsRunner;
+  private Map<ApplicationId, AMSimulator> appIdAMSim;
 
-  public MockAMLauncher(SLSRunner slsRunner, RMContext rmContext) {
+  SLSRunner se;
+
+  public MockAMLauncher(SLSRunner se, RMContext rmContext,
+      Map<ApplicationId, AMSimulator> appIdAMSim) {
     super(rmContext);
-    this.slsRunner = slsRunner;
+    this.appIdAMSim = appIdAMSim;
+    this.se = se;
   }
 
   @Override
@@ -74,11 +79,12 @@ public class MockAMLauncher extends ApplicationMasterLauncher
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void handle(AMLauncherEvent event) {
     ApplicationId appId =
         event.getAppAttempt().getAppAttemptId().getApplicationId();
     // find AMSimulator
-    AMSimulator ams = slsRunner.getAMSimulatorByAppId(appId);
+    AMSimulator ams = appIdAMSim.get(appId);
     if (ams == null) {
       throw new YarnRuntimeException(
           "Didn't find any AMSimulator for applicationId=" + appId);
@@ -97,15 +103,14 @@ public class MockAMLauncher extends ApplicationMasterLauncher
             event.getAppAttempt().getMasterContainer());
         LOG.info("Notify AM launcher launched:" + amContainer.getId());
 
-        slsRunner.getNmMap().get(amContainer.getNodeId())
-            .addNewContainer(amContainer, -1, appId);
-        ams.getRanNodes().add(amContainer.getNodeId());
+        se.getNmMap().get(amContainer.getNodeId())
+            .addNewContainer(amContainer, -1);
         return;
       } catch (Exception e) {
         throw new YarnRuntimeException(e);
       }
     case CLEANUP:
-      slsRunner.getNmMap().get(amContainer.getNodeId())
+      se.getNmMap().get(amContainer.getNodeId())
           .cleanupContainer(amContainer.getId());
       break;
     default:

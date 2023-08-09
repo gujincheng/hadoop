@@ -18,17 +18,16 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import java.io.PrintWriter;
-
 import com.google.inject.Injector;
-import org.junit.jupiter.api.Test;
+
+import java.io.PrintWriter;
 
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 public class TestHtmlPage {
   
@@ -50,8 +49,7 @@ public class TestHtmlPage {
     }
   }
 
-  @Test
-  void testUsual() {
+  @Test public void testUsual() {
     Injector injector = WebAppTests.testPage(TestView.class);
     PrintWriter out = injector.getInstance(PrintWriter.class);
 
@@ -66,10 +64,7 @@ public class TestHtmlPage {
     verify(out).print("test note");
   }
 
-  @Test
-  void testShort() {
-    assertThrows(WebAppException.class, () -> {
-      WebAppTests.testPage(ShortView.class);
-    });
+  @Test(expected=WebAppException.class) public void testShort() {
+    WebAppTests.testPage(ShortView.class);
   }
 }

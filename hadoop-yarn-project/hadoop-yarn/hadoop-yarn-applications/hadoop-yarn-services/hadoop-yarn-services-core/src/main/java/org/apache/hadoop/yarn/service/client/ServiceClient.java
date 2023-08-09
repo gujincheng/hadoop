@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service.client;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
@@ -1493,18 +1493,18 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if ("file".equals(keytabURI.getScheme())) {
       LOG.info("Using a keytab from localhost: " + keytabURI);
     } else {
-      Path keytabPath = new Path(keytabURI);
-      if (!fileSystem.getFileSystem().exists(keytabPath)) {
+      Path keytabOnhdfs = new Path(keytabURI);
+      if (!fileSystem.getFileSystem().exists(keytabOnhdfs)) {
         LOG.warn(service.getName() + "'s keytab (principalName = "
-            + principalName + ") doesn't exist at: " + keytabPath);
+            + principalName + ") doesn't exist at: " + keytabOnhdfs);
         return;
       }
-      LocalResource keytabRes = fileSystem.createAmResource(keytabPath,
+      LocalResource keytabRes = fileSystem.createAmResource(keytabOnhdfs,
           LocalResourceType.FILE, LocalResourceVisibility.PRIVATE);
       localResource.put(String.format(YarnServiceConstants.KEYTAB_LOCATION,
           service.getName()), keytabRes);
       LOG.info("Adding " + service.getName() + "'s keytab for "
-          + "localization, uri = " + keytabPath);
+          + "localization, uri = " + keytabOnhdfs);
     }
   }
 

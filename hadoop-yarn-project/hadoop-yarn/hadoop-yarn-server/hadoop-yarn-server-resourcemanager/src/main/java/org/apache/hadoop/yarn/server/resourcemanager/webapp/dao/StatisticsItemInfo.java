@@ -41,12 +41,6 @@ public class StatisticsItemInfo {
     this.count = count;
   }
 
-  public StatisticsItemInfo(StatisticsItemInfo info) {
-    this.state = info.state;
-    this.type = info.type;
-    this.count = info.count;
-  }
-
   public YarnApplicationState getState() {
     return state;
   }
@@ -59,7 +53,4 @@ public class StatisticsItemInfo {
     return count;
   }
 
-  public void setCount(long count) {
-    this.count = count;
-  }
 }

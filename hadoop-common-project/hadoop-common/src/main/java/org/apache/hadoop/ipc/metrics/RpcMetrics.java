@@ -20,7 +20,7 @@ package org.apache.hadoop.ipc.metrics;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -75,8 +75,6 @@ public class RpcMetrics {
           new MutableQuantiles[intervals.length];
       rpcProcessingTimeQuantiles =
           new MutableQuantiles[intervals.length];
-      rpcResponseTimeQuantiles =
-          new MutableQuantiles[intervals.length];
       deferredRpcProcessingTimeQuantiles =
           new MutableQuantiles[intervals.length];
       for (int i = 0; i < intervals.length; i++) {
@@ -91,10 +89,6 @@ public class RpcMetrics {
         rpcProcessingTimeQuantiles[i] = registry.newQuantiles(
             "rpcProcessingTime" + interval + "s",
             "rpc processing time in " + metricsTimeUnit, "ops",
-            "latency", interval);
-        rpcResponseTimeQuantiles[i] = registry.newQuantiles(
-            "rpcResponseTime" + interval + "s",
-            "rpc response time in " + metricsTimeUnit, "ops",
             "latency", interval);
         deferredRpcProcessingTimeQuantiles[i] = registry.newQuantiles(
             "deferredRpcProcessingTime" + interval + "s",
@@ -120,8 +114,6 @@ public class RpcMetrics {
   MutableQuantiles[] rpcLockWaitTimeQuantiles;
   @Metric("Processing time") MutableRate rpcProcessingTime;
   MutableQuantiles[] rpcProcessingTimeQuantiles;
-  @Metric("Response time") MutableRate rpcResponseTime;
-  MutableQuantiles[] rpcResponseTimeQuantiles;
   @Metric("Deferred Processing time") MutableRate deferredRpcProcessingTime;
   MutableQuantiles[] deferredRpcProcessingTimeQuantiles;
   @Metric("Number of authentication failures")
@@ -136,18 +128,9 @@ public class RpcMetrics {
   MutableCounterLong rpcClientBackoff;
   @Metric("Number of Slow RPC calls")
   MutableCounterLong rpcSlowCalls;
-  @Metric("Number of requeue calls")
-  MutableCounterLong rpcRequeueCalls;
-  @Metric("Number of successful RPC calls")
-  MutableCounterLong rpcCallSuccesses;
 
   @Metric("Number of open connections") public int numOpenConnections() {
     return server.getNumOpenConnections();
-  }
-
-  @Metric("Number of in process handlers")
-  public int getNumInProcessHandler() {
-    return server.getNumInProcessHandler();
   }
 
   @Metric("Number of open connections per user")
@@ -161,16 +144,6 @@ public class RpcMetrics {
 
   @Metric("Number of dropped connections") public long numDroppedConnections() {
     return server.getNumDroppedConnections();
-  }
-
-  @Metric("Number of total requests")
-  public long getTotalRequests() {
-    return server.getTotalRequests();
-  }
-
-  @Metric("Number of total requests per second")
-  public long getTotalRequestsPerSecond() {
-    return server.getTotalRequestsPerSecond();
   }
 
   public TimeUnit getMetricsTimeUnit() {
@@ -292,15 +265,6 @@ public class RpcMetrics {
     }
   }
 
-  public void addRpcResponseTime(long responseTime) {
-    rpcResponseTime.add(responseTime);
-    if (rpcQuantileEnable) {
-      for (MutableQuantiles q : rpcResponseTimeQuantiles) {
-        q.add(responseTime);
-      }
-    }
-  }
-
   public void addDeferredRpcProcessingTime(long processingTime) {
     deferredRpcProcessingTime.add(processingTime);
     if (rpcQuantileEnable) {
@@ -324,21 +288,6 @@ public class RpcMetrics {
   public  void incrSlowRpc() {
     rpcSlowCalls.incr();
   }
-
-  /**
-   * Increments the Requeue Calls counter.
-   */
-  public void incrRequeueCalls() {
-    rpcRequeueCalls.incr();
-  }
-
-  /**
-   * One RPC call success event.
-   */
-  public void incrRpcCallSuccesses() {
-    rpcCallSuccesses.incr();
-  }
-
   /**
    * Returns a MutableRate Counter.
    * @return Mutable Rate
@@ -379,15 +328,6 @@ public class RpcMetrics {
     return rpcSlowCalls.value();
   }
 
-  /**
-   * Returns the number of requeue calls.
-   * @return long
-   */
-  @VisibleForTesting
-  public long getRpcRequeueCalls() {
-    return rpcRequeueCalls.value();
-  }
-
   public MutableRate getDeferredRpcProcessingTime() {
     return deferredRpcProcessingTime;
   }
@@ -407,10 +347,5 @@ public class RpcMetrics {
   @VisibleForTesting
   public MetricsTag getTag(String tagName) {
     return registry.getTag(tagName);
-  }
-
-  @VisibleForTesting
-  public MutableCounterLong getRpcAuthorizationSuccesses() {
-    return rpcAuthorizationSuccesses;
   }
 }

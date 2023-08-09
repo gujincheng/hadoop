@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import java.util.Comparator;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -39,8 +41,6 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
  */
 public interface CapacitySchedulerContext {
   CapacitySchedulerConfiguration getConfiguration();
-
-  CapacitySchedulerQueueContext getQueueContext();
   
   Resource getMinimumResourceCapability();
 
@@ -58,7 +58,6 @@ public interface CapacitySchedulerContext {
 
   /**
    * Get the yarn configuration.
-   * @return yarn configuration.
    */
   Configuration getConf();
 
@@ -103,5 +102,4 @@ public interface CapacitySchedulerContext {
    */
   Clock getClock();
 
-  CapacityScheduler.PendingApplicationComparator getPendingApplicationComparator();
 }

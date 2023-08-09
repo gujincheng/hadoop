@@ -85,7 +85,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Copy constructor.
-   * @param that blocklocation.
    */
   public BlockLocation(BlockLocation that) {
     this.hosts = that.hosts;
@@ -101,10 +100,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Constructor with host, name, offset and length.
-   * @param names names array.
-   * @param hosts host array.
-   * @param offset offset.
-   * @param length length.
    */
   public BlockLocation(String[] names, String[] hosts, long offset, 
                        long length) {
@@ -113,11 +108,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Constructor with host, name, offset, length and corrupt flag.
-   * @param names names.
-   * @param hosts hosts.
-   * @param offset offset.
-   * @param length length.
-   * @param corrupt corrupt.
    */
   public BlockLocation(String[] names, String[] hosts, long offset, 
                        long length, boolean corrupt) {
@@ -126,11 +116,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Constructor with host, name, network topology, offset and length.
-   * @param names names.
-   * @param hosts hosts.
-   * @param topologyPaths topologyPaths.
-   * @param offset offset.
-   * @param length length.
    */
   public BlockLocation(String[] names, String[] hosts, String[] topologyPaths,
                        long offset, long length) {
@@ -140,12 +125,6 @@ public class BlockLocation implements Serializable {
   /**
    * Constructor with host, name, network topology, offset, length 
    * and corrupt flag.
-   * @param names names.
-   * @param hosts hosts.
-   * @param topologyPaths topologyPaths.
-   * @param offset offset.
-   * @param length length.
-   * @param corrupt corrupt.
    */
   public BlockLocation(String[] names, String[] hosts, String[] topologyPaths,
                        long offset, long length, boolean corrupt) {
@@ -198,8 +177,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Get the list of hosts (hostname) hosting this block.
-   * @return hosts array.
-   * @throws IOException If an I/O error occurred.
    */
   public String[] getHosts() throws IOException {
     return hosts;
@@ -207,7 +184,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Get the list of hosts (hostname) hosting a cached replica of the block.
-   * @return cached hosts.
    */
   public String[] getCachedHosts() {
     return cachedHosts;
@@ -215,8 +191,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Get the list of names (IP:xferPort) hosting this block.
-   * @return names array.
-   * @throws IOException If an I/O error occurred.
    */
   public String[] getNames() throws IOException {
     return names;
@@ -225,8 +199,6 @@ public class BlockLocation implements Serializable {
   /**
    * Get the list of network topology paths for each of the hosts.
    * The last component of the path is the "name" (IP:xferPort).
-   * @return topology paths.
-   * @throws IOException If an I/O error occurred.
    */
   public String[] getTopologyPaths() throws IOException {
     return topologyPaths;
@@ -234,7 +206,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Get the storageID of each replica of the block.
-   * @return storage ids.
    */
   public String[] getStorageIds() {
     return storageIds;
@@ -242,7 +213,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Get the storage type of each replica of the block.
-   * @return storage type of each replica of the block.
    */
   public StorageType[] getStorageTypes() {
     return storageTypes;
@@ -250,7 +220,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Get the start offset of file associated with this block.
-   * @return start offset of file associated with this block.
    */
   public long getOffset() {
     return offset;
@@ -258,7 +227,6 @@ public class BlockLocation implements Serializable {
   
   /**
    * Get the length of the block.
-   * @return length of the block.
    */
   public long getLength() {
     return length;
@@ -266,7 +234,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Get the corrupt flag.
-   * @return corrupt flag.
    */
   public boolean isCorrupt() {
     return corrupt;
@@ -274,7 +241,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Return true if the block is striped (erasure coded).
-   * @return if the block is striped true, not false.
    */
   public boolean isStriped() {
     return false;
@@ -282,7 +248,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Set the start offset of file associated with this block.
-   * @param offset start offset.
    */
   public void setOffset(long offset) {
     this.offset = offset;
@@ -290,7 +255,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Set the length of block.
-   * @param length length of block.
    */
   public void setLength(long length) {
     this.length = length;
@@ -298,7 +262,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Set the corrupt flag.
-   * @param corrupt corrupt flag.
    */
   public void setCorrupt(boolean corrupt) {
     this.corrupt = corrupt;
@@ -306,8 +269,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Set the hosts hosting this block.
-   * @param hosts hosts array.
-   * @throws IOException If an I/O error occurred.
    */
   public void setHosts(String[] hosts) throws IOException {
     if (hosts == null) {
@@ -319,7 +280,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Set the hosts hosting a cached replica of this block.
-   * @param cachedHosts cached hosts.
    */
   public void setCachedHosts(String[] cachedHosts) {
     if (cachedHosts == null) {
@@ -331,8 +291,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Set the names (host:port) hosting this block.
-   * @param names names.
-   * @throws IOException If an I/O error occurred.
    */
   public void setNames(String[] names) throws IOException {
     if (names == null) {
@@ -344,9 +302,6 @@ public class BlockLocation implements Serializable {
 
   /**
    * Set the network topology paths of the hosts.
-   *
-   * @param topologyPaths topology paths.
-   * @throws IOException If an I/O error occurred.
    */
   public void setTopologyPaths(String[] topologyPaths) throws IOException {
     if (topologyPaths == null) {

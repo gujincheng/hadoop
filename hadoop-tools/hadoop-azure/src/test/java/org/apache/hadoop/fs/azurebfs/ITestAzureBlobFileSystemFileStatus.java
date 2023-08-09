@@ -27,8 +27,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
-
 /**
  * Test FileStatus.
  */
@@ -39,8 +37,8 @@ public class ITestAzureBlobFileSystemFileStatus extends
   private static final String DEFAULT_UMASK_VALUE = "027";
   private static final String FULL_PERMISSION = "777";
 
-  private static final String TEST_FILE = "testFile";
-  private static final String TEST_FOLDER = "testDir";
+  private static final Path TEST_FILE = new Path("testFile");
+  private static final Path TEST_FOLDER = new Path("testDir");
 
   public ITestAzureBlobFileSystemFileStatus() throws Exception {
     super();
@@ -59,9 +57,8 @@ public class ITestAzureBlobFileSystemFileStatus extends
   public void testFileStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, DEFAULT_UMASK_VALUE);
-    Path testFile = path(TEST_FILE);
-    touch(testFile);
-    validateStatus(fs, testFile, false);
+    touch(TEST_FILE);
+    validateStatus(fs, TEST_FILE, false);
   }
 
   private FileStatus validateStatus(final AzureBlobFileSystem fs, final Path name, final boolean isDir)
@@ -96,10 +93,9 @@ public class ITestAzureBlobFileSystemFileStatus extends
   public void testFolderStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, DEFAULT_UMASK_VALUE);
-    Path testFolder = path(TEST_FOLDER);
-    fs.mkdirs(testFolder);
+    fs.mkdirs(TEST_FOLDER);
 
-    validateStatus(fs, testFolder, true);
+    validateStatus(fs, TEST_FOLDER, true);
   }
 
   @Test
@@ -112,11 +108,11 @@ public class ITestAzureBlobFileSystemFileStatus extends
     Path pathwithouthost2 = new Path("/abfs/file2.txt");
 
     // verify compatibility of this path format
-    fs.create(pathWithHost1).close();
-    assertPathExists(fs, "This path should exist", pathwithouthost1);
+    fs.create(pathWithHost1);
+    assertTrue(fs.exists(pathwithouthost1));
 
-    fs.create(pathwithouthost2).close();
-    assertPathExists(fs, "This path should exist", pathWithHost2);
+    fs.create(pathwithouthost2);
+    assertTrue(fs.exists(pathWithHost2));
 
     // verify get
     FileStatus fileStatus1 = fs.getFileStatus(pathWithHost1);
@@ -129,13 +125,13 @@ public class ITestAzureBlobFileSystemFileStatus extends
   @Test
   public void testLastModifiedTime() throws IOException {
     AzureBlobFileSystem fs = this.getFileSystem();
-    Path testFilePath = path("childfile1.txt");
+    Path testFilePath = new Path("childfile1.txt");
     long createStartTime = System.currentTimeMillis();
     long minCreateStartTime = (createStartTime / 1000) * 1000 - 1;
     //  Dividing and multiplying by 1000 to make last 3 digits 0.
     //  It is observed that modification time is returned with last 3
     //  digits 0 always.
-    fs.create(testFilePath).close();
+    fs.create(testFilePath);
     long createEndTime = System.currentTimeMillis();
     FileStatus fStat = fs.getFileStatus(testFilePath);
     long lastModifiedTime = fStat.getModificationTime();

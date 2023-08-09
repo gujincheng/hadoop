@@ -31,7 +31,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
@@ -43,6 +43,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 public class TestApplicationClassLoader {
   
@@ -135,7 +136,7 @@ public class TestApplicationClassLoader {
 
     InputStream in = appClassloader.getResourceAsStream("resource.txt");
     assertNotNull("Resource should not be null for app classloader", in);
-    assertEquals("hello", IOUtils.toString(in, StandardCharsets.UTF_8));
+    assertEquals("hello", IOUtils.toString(in, Charset.defaultCharset()));
   }
   
   private File makeTestJar() throws IOException {

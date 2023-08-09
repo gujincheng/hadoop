@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +47,8 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public final class ExternalStoragePolicySatisfier {
-  public static final Logger LOG = LoggerFactory.getLogger(ExternalStoragePolicySatisfier.class);
+  public static final Logger LOG = LoggerFactory
+      .getLogger(ExternalStoragePolicySatisfier.class);
 
   private ExternalStoragePolicySatisfier() {
     // This is just a class to start and run external sps.
@@ -59,7 +59,6 @@ public final class ExternalStoragePolicySatisfier {
    */
   public static void main(String[] args) throws Exception {
     NameNodeConnector nnc = null;
-    ExternalSPSContext context = null;
     try {
       StringUtils.startupShutdownMessage(StoragePolicySatisfier.class, args,
           LOG);
@@ -69,10 +68,9 @@ public final class ExternalStoragePolicySatisfier {
       StoragePolicySatisfier sps = new StoragePolicySatisfier(spsConf);
       nnc = getNameNodeConnector(spsConf);
 
-      context = new ExternalSPSContext(sps, nnc);
+      ExternalSPSContext context = new ExternalSPSContext(sps, nnc);
       sps.init(context);
       sps.start(StoragePolicySatisfierMode.EXTERNAL);
-      context.initMetrics(sps);
       if (sps != null) {
         sps.join();
       }
@@ -82,11 +80,6 @@ public final class ExternalStoragePolicySatisfier {
     } finally {
       if (nnc != null) {
         nnc.close();
-      }
-      if (context!= null) {
-        if (context.getSpsBeanMetrics() != null) {
-          context.closeMetrics();
-        }
       }
     }
   }
@@ -103,25 +96,20 @@ public final class ExternalStoragePolicySatisfier {
         socAddr.getHostName());
   }
 
-  public static NameNodeConnector getNameNodeConnector(Configuration conf)
-      throws InterruptedException {
+  private static NameNodeConnector getNameNodeConnector(Configuration conf)
+      throws IOException, InterruptedException {
     final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     final Path externalSPSPathId = HdfsServerConstants.MOVER_ID_PATH;
-    String serverName = ExternalStoragePolicySatisfier.class.getSimpleName();
     while (true) {
       try {
         final List<NameNodeConnector> nncs = NameNodeConnector
             .newNameNodeConnectors(namenodes,
-                serverName,
+                ExternalStoragePolicySatisfier.class.getSimpleName(),
                 externalSPSPathId, conf,
                 NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
         return nncs.get(0);
       } catch (IOException e) {
         LOG.warn("Failed to connect with namenode", e);
-        if (e.getMessage().equals("Another " + serverName + " is running.")) {
-          ExitUtil.terminate(-1,
-              "Exit immediately because another " + serverName + " is running");
-        }
         Thread.sleep(3000); // retry the connection after few secs
       }
     }

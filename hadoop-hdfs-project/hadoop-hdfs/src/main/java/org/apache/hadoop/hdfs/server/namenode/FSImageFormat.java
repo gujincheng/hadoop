@@ -75,8 +75,8 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Contains inner classes for reading or writing the on-disk format for
@@ -798,7 +798,7 @@ public class FSImageFormat {
       if (underConstruction) {
         file.toUnderConstruction(clientName, clientMachine);
       }
-      return fileDiffs == null ? file : file.loadSnapshotFeature(fileDiffs);
+      return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
     } else if (numBlocks == -1) {
       //directory
       

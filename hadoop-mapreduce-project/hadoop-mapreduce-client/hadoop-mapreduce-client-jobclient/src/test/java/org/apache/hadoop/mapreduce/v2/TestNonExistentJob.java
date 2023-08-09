@@ -31,6 +31,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.InetAddress;
 
 import static org.junit.Assert.assertNull;

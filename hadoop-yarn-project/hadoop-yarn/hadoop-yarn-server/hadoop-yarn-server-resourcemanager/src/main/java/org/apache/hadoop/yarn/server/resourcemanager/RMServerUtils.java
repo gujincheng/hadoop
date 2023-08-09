@@ -30,12 +30,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -81,8 +83,6 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility methods to aid serving RM data through the REST and RPC APIs
@@ -241,15 +241,7 @@ public class RMServerUtils {
 
   /**
    * Utility method to validate a list resource requests, by ensuring that the
-   * requested memory/vcore is non-negative and not greater than max.
-   *
-   * @param ask resource request.
-   * @param maximumAllocation Maximum Allocation.
-   * @param queueName queue name.
-   * @param scheduler YarnScheduler.
-   * @param rmContext RMContext.
-   * @param nodeLabelsEnabled the node labels feature enabled.
-   * @throws InvalidResourceRequestException when there is invalid request.
+   * requested memory/vcore is non-negative and not greater than max
    */
   public static void normalizeAndValidateRequests(List<ResourceRequest> ask,
       Resource maximumAllocation, String queueName, YarnScheduler scheduler,
@@ -272,13 +264,9 @@ public class RMServerUtils {
 
   /**
    * Validate increase/decrease request.
-   *
    * <pre>
    * - Throw exception when any other error happens
    * </pre>
-   * @param request SchedContainerChangeRequest.
-   * @param increase true, add container; false, decrease container.
-   * @throws InvalidResourceRequestException when there is invalid request.
    */
   public static void checkSchedContainerChangeRequest(
       SchedContainerChangeRequest request, boolean increase)
@@ -374,7 +362,6 @@ public class RMServerUtils {
    *                             application master.
    * @param appAttemptId         Application attempt Id
    * @throws InvalidContainerReleaseException
-   * an Application Master tries to release containers not belonging to it using.
    */
   public static void
       validateContainerReleaseRequest(List<ContainerId> containerReleaseList,
@@ -407,7 +394,7 @@ public class RMServerUtils {
    * @param module     like AdminService or NodeLabelManager
    * @param LOG        the logger to use
    * @return {@link UserGroupInformation} of the current user
-   * @throws IOException an I/O exception has occurred.
+   * @throws IOException
    */
   public static UserGroupInformation verifyAdminAccess(
       YarnAuthorizationProvider authorizer, String method, String module,
@@ -466,17 +453,6 @@ public class RMServerUtils {
     }
   }
 
-  public static YarnApplicationAttemptState convertRmAppAttemptStateToYarnApplicationAttemptState(
-      RMAppAttemptState currentState,
-      RMAppAttemptState previousState
-  ) {
-    return createApplicationAttemptState(
-        currentState == RMAppAttemptState.FINAL_SAVING
-        ? previousState
-        : currentState
-    );
-  }
-
   public static YarnApplicationAttemptState createApplicationAttemptState(
       RMAppAttemptState rmAppAttemptState) {
     switch (rmAppAttemptState) {
@@ -522,9 +498,7 @@ public class RMServerUtils {
   /**
    * Find all configs whose name starts with
    * YarnConfiguration.RM_PROXY_USER_PREFIX, and add a record for each one by
-   * replacing the prefix with ProxyUsers.CONF_HADOOP_PROXYUSER.
-   *
-   * @param conf Configuration.
+   * replacing the prefix with ProxyUsers.CONF_HADOOP_PROXYUSER
    */
   public static void processRMProxyUsersConf(Configuration conf) {
     Map<String, String> rmProxyUsers = new HashMap<String, String>();

@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
@@ -51,7 +50,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.router.webapp.RouterWebServices.RequestInterceptorChainWrapper;
@@ -75,18 +73,10 @@ public abstract class BaseRouterWebServicesTest {
   private Router router;
   public final static int TEST_MAX_CACHE_SIZE = 10;
 
-  public static final String QUEUE_DEFAULT = "default";
-  public static final String QUEUE_DEFAULT_FULL = CapacitySchedulerConfiguration.ROOT +
-      CapacitySchedulerConfiguration.DOT + QUEUE_DEFAULT;
-  public static final String QUEUE_DEDICATED = "dedicated";
-  public static final String QUEUE_DEDICATED_FULL = CapacitySchedulerConfiguration.ROOT +
-      CapacitySchedulerConfiguration.DOT + QUEUE_DEDICATED;
-
   private RouterWebServices routerWebService;
 
   @Before
-  public void setUp() throws YarnException, IOException {
-
+  public void setUp() {
     this.conf = createConfiguration();
 
     router = spy(new Router());
@@ -103,7 +93,7 @@ public abstract class BaseRouterWebServicesTest {
     String mockPassThroughInterceptorClass =
         PassThroughRESTRequestInterceptor.class.getName();
 
-    // Create a request interceptor pipeline for testing. The last one in the
+    // Create a request intercepter pipeline for testing. The last one in the
     // chain will call the mock resource manager. The others in the chain will
     // simply forward it to the next one in the chain
     config.set(YarnConfiguration.ROUTER_WEBAPP_INTERCEPTOR_CLASS_PIPELINE,
@@ -189,12 +179,6 @@ public abstract class BaseRouterWebServicesTest {
         createHttpServletRequest(user), null, null);
   }
 
-  protected BulkActivitiesInfo getBulkActivities(String user)
-      throws InterruptedException {
-    return routerWebService.getBulkActivities(
-        createHttpServletRequest(user), null, 0);
-  }
-
   protected AppActivitiesInfo getAppActivities(String user)
       throws IOException, InterruptedException {
     return routerWebService.getAppActivities(createHttpServletRequest(user),
@@ -254,8 +238,8 @@ public abstract class BaseRouterWebServicesTest {
         null, createHttpServletRequest(user));
   }
 
-  protected Response removeFromClusterNodeLabels(String user) throws Exception {
-    return routerWebService.removeFromClusterNodeLabels(
+  protected Response removeFromCluserNodeLabels(String user) throws Exception {
+    return routerWebService.removeFromCluserNodeLabels(
         null, createHttpServletRequest(user));
   }
 
@@ -403,17 +387,5 @@ public abstract class BaseRouterWebServicesTest {
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getRemoteUser()).thenReturn(user);
     return request;
-  }
-
-  protected Response updateSchedulerConfiguration(String user)
-      throws IOException, InterruptedException {
-    return routerWebService.updateSchedulerConfiguration(null,
-        createHttpServletRequest(user));
-  }
-
-  protected Response getSchedulerConfiguration(String user)
-      throws IOException, InterruptedException {
-    return routerWebService.
-        getSchedulerConfiguration(createHttpServletRequest(user));
   }
 }

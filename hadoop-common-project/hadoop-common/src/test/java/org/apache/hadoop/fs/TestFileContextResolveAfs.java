@@ -61,8 +61,8 @@ public class TestFileContextResolveAfs {
     fc.createSymlink(localPath, linkPath, true);
     Set<AbstractFileSystem> afsList = fc.resolveAbstractFileSystems(linkPath);
     Assert.assertEquals(1, afsList.size());
-    localFs.delete(linkPath, true);
-    localFs.delete(localPath, true);
+    localFs.deleteOnExit(localPath);
+    localFs.deleteOnExit(linkPath);
     localFs.close();
   }
 }

@@ -28,9 +28,6 @@ public interface NodeFilter {
 
   /**
    * Criteria to accept node in the filtered list.
-   *
-   * @param node SchedulerNode.
-   * @return true, node accept; false, node not accept.
    */
   boolean accept(SchedulerNode node);
 }

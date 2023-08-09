@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /** Filesystem disk space usage statistics.
  * Uses the unix 'df' program to get mount points, and java.io.File for
@@ -65,10 +65,7 @@ public class DF extends Shell {
     return dirPath;
   }
 
-  /**
-   * @return a string indicating which filesystem volume we're checking.
-   * @throws IOException raised on errors performing I/O.
-   */
+  /** @return a string indicating which filesystem volume we're checking. */
   public String getFilesystem() throws IOException {
     if (Shell.WINDOWS) {
       this.filesystem = dirFile.getCanonicalPath().substring(0, 2);
@@ -103,10 +100,7 @@ public class DF extends Shell {
     return (int) (used * 100.0 / cap);
   }
 
-  /**
-   * @return the filesystem mount point for the indicated volume.
-   * @throws IOException raised on errors performing I/O.
-   */
+  /** @return the filesystem mount point for the indicated volume */
   public String getMount() throws IOException {
     // Abort early if specified path does not exist
     if (!dirFile.exists()) {

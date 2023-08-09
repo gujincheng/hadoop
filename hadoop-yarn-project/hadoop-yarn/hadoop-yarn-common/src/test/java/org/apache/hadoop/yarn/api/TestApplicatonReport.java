@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.api;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -27,15 +25,13 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class TestApplicatonReport {
 
   @Test
-  void testApplicationReport() {
+  public void testApplicationReport() {
     long timestamp = System.currentTimeMillis();
     ApplicationReport appReport1 =
         createApplicationReport(1, 1, timestamp);
@@ -43,15 +39,15 @@ public class TestApplicatonReport {
         createApplicationReport(1, 1, timestamp);
     ApplicationReport appReport3 =
         createApplicationReport(1, 1, timestamp);
-    assertEquals(appReport1, appReport2);
-    assertEquals(appReport2, appReport3);
+    Assert.assertEquals(appReport1, appReport2);
+    Assert.assertEquals(appReport2, appReport3);
     appReport1.setApplicationId(null);
-    assertNull(appReport1.getApplicationId());
-    assertNotSame(appReport1, appReport2);
+    Assert.assertNull(appReport1.getApplicationId());
+    Assert.assertNotSame(appReport1, appReport2);
     appReport2.setCurrentApplicationAttemptId(null);
-    assertNull(appReport2.getCurrentApplicationAttemptId());
-    assertNotSame(appReport2, appReport3);
-    assertNull(appReport1.getAMRMToken());
+    Assert.assertNull(appReport2.getCurrentApplicationAttemptId());
+    Assert.assertNotSame(appReport2, appReport3);
+    Assert.assertNull(appReport1.getAMRMToken());
   }
 
   protected static ApplicationReport createApplicationReport(

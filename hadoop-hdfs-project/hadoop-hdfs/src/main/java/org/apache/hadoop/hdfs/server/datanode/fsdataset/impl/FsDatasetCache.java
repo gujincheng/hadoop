@@ -23,8 +23,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_REVOCATION
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_REVOCATION_POLLING_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_REVOCATION_POLLING_MS_DEFAULT;
 
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.FileInputStream;
@@ -45,6 +44,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -473,15 +473,15 @@ public class FsDatasetCache {
         dataset.datanode.getMetrics().incrBlocksCached(1);
         success = true;
       } finally {
-        IOUtils.closeStream(blockIn);
-        IOUtils.closeStream(metaIn);
+        IOUtils.closeQuietly(blockIn);
+        IOUtils.closeQuietly(metaIn);
         if (!success) {
           if (reservedBytes) {
             cacheLoader.release(key, length);
           }
           LOG.debug("Caching of {} was aborted.  We are now caching only {} "
                   + "bytes in total.", key, cacheLoader.getCacheUsed());
-          IOUtils.closeStream(mappableBlock);
+          IOUtils.closeQuietly(mappableBlock);
           numBlocksFailedToCache.increment();
 
           synchronized (FsDatasetCache.this) {
@@ -555,7 +555,7 @@ public class FsDatasetCache {
       Preconditions.checkNotNull(value);
       Preconditions.checkArgument(value.state == State.UNCACHING);
 
-      IOUtils.closeStream(value.mappableBlock);
+      IOUtils.closeQuietly(value.mappableBlock);
       synchronized (FsDatasetCache.this) {
         mappableBlockMap.remove(key);
       }

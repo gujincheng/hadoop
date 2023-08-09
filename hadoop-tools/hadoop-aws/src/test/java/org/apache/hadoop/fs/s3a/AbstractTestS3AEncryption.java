@@ -78,16 +78,8 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
       0, 1, 2, 3, 4, 5, 254, 255, 256, 257, 2 ^ 12 - 1
   };
 
-  /**
-   * Skips the tests if encryption is not enabled in configuration.
-   *
-   * @implNote We can use {@link #createConfiguration()} here since
-   * it does not depend on any per-bucket based configuration.
-   * Otherwise, we would need to grab the configuration from an
-   * instance of {@link S3AFileSystem}.
-   */
   protected void requireEncryptedFileSystem() {
-    skipIfEncryptionTestsDisabled(createConfiguration());
+    skipIfEncryptionTestsDisabled(getFileSystem().getConf());
   }
 
   /**
@@ -99,8 +91,8 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   @Override
   public void setup() throws Exception {
     try {
-      requireEncryptedFileSystem();
       super.setup();
+      requireEncryptedFileSystem();
     } catch (AccessDeniedException e) {
       skip("Bucket does not allow " + getSSEAlgorithm() + " encryption method");
     }
@@ -123,7 +115,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   @Test
   public void testEncryption() throws Throwable {
     requireEncryptedFileSystem();
-    validateEncryptionSecrets(getFileSystem().getEncryptionSecrets());
+    validateEncrytionSecrets(getFileSystem().getEncryptionSecrets());
     for (int size: SIZES) {
       validateEncryptionForFilesize(size);
     }
@@ -135,7 +127,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     byte[] data = dataset(1024, 'a', 'z');
     S3AFileSystem fs = getFileSystem();
     EncryptionSecrets secrets = fs.getEncryptionSecrets();
-    validateEncryptionSecrets(secrets);
+    validateEncrytionSecrets(secrets);
     writeDataset(fs, src, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(fs, src, data);
     // this file will be encrypted
@@ -154,7 +146,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * This makes sure that the settings have propagated properly.
    * @param secrets encryption secrets of the filesystem.
    */
-  protected void validateEncryptionSecrets(final EncryptionSecrets secrets) {
+  protected void validateEncrytionSecrets(final EncryptionSecrets secrets) {
     assertNotNull("No encryption secrets for filesystem", secrets);
     S3AEncryptionMethods sseAlgorithm = getSSEAlgorithm();
     assertEquals("Filesystem has wrong encryption algorithm",

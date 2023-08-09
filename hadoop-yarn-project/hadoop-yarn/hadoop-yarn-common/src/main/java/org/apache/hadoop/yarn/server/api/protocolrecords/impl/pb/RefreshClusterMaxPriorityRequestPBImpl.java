@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshClusterMaxPriorityRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshClusterMaxPriorityRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
 
@@ -28,7 +27,9 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable
-public class RefreshClusterMaxPriorityRequestPBImpl extends RefreshClusterMaxPriorityRequest {
+public class RefreshClusterMaxPriorityRequestPBImpl 
+ extends
+    RefreshClusterMaxPriorityRequest {
 
   RefreshClusterMaxPriorityRequestProto proto =
       RefreshClusterMaxPriorityRequestProto.getDefaultInstance();
@@ -50,13 +51,6 @@ public class RefreshClusterMaxPriorityRequestPBImpl extends RefreshClusterMaxPri
     viaProto = true;
     return proto;
   }
-
-  private void maybeInitBuilder() {
-    if (viaProto || builder == null) {
-      builder = RefreshClusterMaxPriorityRequestProto.newBuilder(proto);
-    }
-    viaProto = false;
-  }
   
   @Override
   public int hashCode() {
@@ -76,21 +70,5 @@ public class RefreshClusterMaxPriorityRequestPBImpl extends RefreshClusterMaxPri
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
-  }
-
-  @Override
-  public String getSubClusterId() {
-    RefreshClusterMaxPriorityRequestProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
-  }
-
-  @Override
-  public void setSubClusterId(String subClusterId) {
-    maybeInitBuilder();
-    if (subClusterId == null) {
-      builder.clearSubClusterId();
-      return;
-    }
-    builder.setSubClusterId(subClusterId);
   }
 }

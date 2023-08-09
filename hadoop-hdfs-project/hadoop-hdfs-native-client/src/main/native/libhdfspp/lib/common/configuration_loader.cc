@@ -18,9 +18,9 @@
 
 #include "configuration_loader.h"
 #include "common/logging.h"
-#include "x-platform/syscall.h"
 
 #include <fstream>
+#include <strings.h>
 #include <sstream>
 #include <map>
 #include <sys/stat.h>
@@ -46,17 +46,17 @@ bool is_valid_bool(const std::string& raw) {
     return false;
   }
 
-  if (XPlatform::Syscall::StringCompareIgnoreCase(raw, "true")) {
+  if (!strcasecmp(raw.c_str(), "true")) {
     return true;
   }
-  if (XPlatform::Syscall::StringCompareIgnoreCase(raw, "false")) {
+  if (!strcasecmp(raw.c_str(), "false")) {
     return true;
   }
   return false;
 }
 
 bool str_to_bool(const std::string& raw) {
-  if (XPlatform::Syscall::StringCompareIgnoreCase(raw, "true")) {
+  if (!strcasecmp(raw.c_str(), "true")) {
     return true;
   }
 

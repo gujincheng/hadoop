@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.hdfs.server.diskbalancer;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import java.util.function.Supplier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -642,7 +642,7 @@ public class TestDiskBalancer {
 
       node = cluster.getDataNodes().get(dataNodeIndex);
       String planJson = plan.toJson();
-      String planID = DigestUtils.sha1Hex(planJson);
+      String planID = DigestUtils.shaHex(planJson);
 
       // Submit the plan and wait till the execution is done.
       node.submitDiskBalancerPlan(planID, 1, PLAN_FILE, planJson,
@@ -740,7 +740,7 @@ public class TestDiskBalancer {
       reconfigThread.start();
 
       String planJson = plan.toJson();
-      String planID = DigestUtils.sha1Hex(planJson);
+      String planID = DigestUtils.shaHex(planJson);
       diskBalancer.submitPlan(planID, 1, PLAN_FILE, planJson, false);
 
       GenericTestUtils.waitFor(new Supplier<Boolean>() {

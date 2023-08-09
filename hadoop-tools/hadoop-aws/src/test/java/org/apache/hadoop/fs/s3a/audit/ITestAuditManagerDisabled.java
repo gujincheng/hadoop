@@ -28,10 +28,9 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.NOOP_SPAN;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.resetAuditOptions;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
 
 /**
- * Verify that audit managers are disabled if set to false.
+ * Verify that by default audit managers are disabled.
  */
 public class ITestAuditManagerDisabled extends AbstractS3ACostTest {
 
@@ -43,12 +42,11 @@ public class ITestAuditManagerDisabled extends AbstractS3ACostTest {
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     resetAuditOptions(conf);
-    conf.setBoolean(AUDIT_ENABLED, false);
     return conf;
   }
 
   /**
-   * Verify that the auditor is the no-op auditor if auditing is disabled.
+   * The default auditor is the no-op auditor.
    */
   @Test
   public void testAuditorDisabled() {

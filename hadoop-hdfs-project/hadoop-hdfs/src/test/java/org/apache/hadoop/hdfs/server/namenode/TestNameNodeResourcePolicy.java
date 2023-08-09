@@ -27,19 +27,7 @@ import java.util.Collection;
 
 import org.junit.Test;
 
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-
 public class TestNameNodeResourcePolicy {
-
-  @Test
-  public void testExcessiveMinimumRedundantResources() {
-    LogCapturer logCapturer =
-        LogCapturer.captureLogs(LoggerFactory.getLogger(NameNodeResourcePolicy.class));
-    assertFalse(testResourceScenario(1, 0, 0, 0, 2));
-    logCapturer.stopCapturing();
-    assertTrue(logCapturer.getOutput().contains("Resources not available."));
-  }
 
   @Test
   public void testSingleRedundantResource() {
@@ -83,7 +71,7 @@ public class TestNameNodeResourcePolicy {
     assertFalse(testResourceScenario(2, 2, 1, 1, 1));
     assertFalse(testResourceScenario(2, 2, 2, 1, 1));
   }
-
+  
   private static boolean testResourceScenario(
       int numRedundantResources,
       int numRequiredResources,

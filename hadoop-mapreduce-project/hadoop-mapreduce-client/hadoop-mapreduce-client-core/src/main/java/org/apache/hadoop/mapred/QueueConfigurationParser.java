@@ -21,10 +21,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.QueueState;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.util.XMLUtils;
-
 import static org.apache.hadoop.mapred.QueueManager.toFullPropertyName;
-
 import org.xml.sax.SAXException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -91,7 +88,7 @@ class QueueConfigurationParser {
   static final String VALUE_TAG = "value";
 
   /**
-   * Default constructor for QueueConfigurationParser.
+   * Default constructor for DeperacatedQueueConfigurationParser
    */
   QueueConfigurationParser() {
     
@@ -161,9 +158,8 @@ class QueueConfigurationParser {
    */
   protected Queue loadResource(InputStream resourceInput)
     throws ParserConfigurationException, SAXException, IOException {
-    DocumentBuilderFactory docBuilderFactory =
-        XMLUtils.newSecureDocumentBuilderFactory();
-
+    DocumentBuilderFactory docBuilderFactory
+      = DocumentBuilderFactory.newInstance();
     //ignore all comments inside the xml file
     docBuilderFactory.setIgnoringComments(true);
 

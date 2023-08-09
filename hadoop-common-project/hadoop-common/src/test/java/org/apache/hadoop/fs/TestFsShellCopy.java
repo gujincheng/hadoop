@@ -19,10 +19,12 @@
 package org.apache.hadoop.fs;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -624,16 +626,15 @@ public class TestFsShellCopy {
     final String noDirName = "noDir";
     final Path noDir = new Path(noDirName);
     lfs.delete(noDir, true);
-    assertThat(lfs.exists(noDir)).isFalse();
+    assertThat(lfs.exists(noDir), is(false));
 
-    assertThat(shellRun("-put", srcPath.toString(), noDirName + "/foo"))
-        .as("Expected failed put to a path without parent directory")
-        .isNotEqualTo(0);
+    assertThat("Expected failed put to a path without parent directory",
+        shellRun("-put", srcPath.toString(), noDirName + "/foo"), is(not(0)));
 
     // Note the trailing '/' in the target path.
-    assertThat(shellRun("-copyFromLocal", srcPath.toString(), noDirName + "/"))
-        .as("Expected failed copyFromLocal to a non-existent directory")
-        .isNotEqualTo(0);
+    assertThat("Expected failed copyFromLocal to a non-existent directory",
+        shellRun("-copyFromLocal", srcPath.toString(), noDirName + "/"),
+        is(not(0)));
   }
 
   @Test

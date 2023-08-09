@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.yarn.service.client;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -26,8 +26,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.eclipse.jetty.server.Server;
@@ -35,10 +36,9 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.*;
 
 /**
@@ -89,7 +89,7 @@ public class TestApiServiceClient {
 
   }
 
-  @BeforeAll
+  @BeforeClass
   public static void setup() throws Exception {
     server = new Server(8088);
     ((QueuedThreadPool)server.getThreadPool()).setMaxThreads(20);
@@ -113,13 +113,13 @@ public class TestApiServiceClient {
     badAsc.serviceInit(conf2);
   }
 
-  @AfterAll
+  @AfterClass
   public static void tearDown() throws Exception {
     server.stop();
   }
 
   @Test
-  void testGetRMWebAddress() throws Exception {
+  public void testGetRMWebAddress() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, "rm1");
@@ -130,17 +130,17 @@ public class TestApiServiceClient {
     String diagnosticsMsg = null;
     try {
       String rmWebAddress = asc1.getRMWebAddress();
-    } catch (IOException e) {
+    } catch (IOException e){
       exceptionCaught = true;
       diagnosticsMsg = e.getMessage();
     }
-    assertTrue(exceptionCaught, "ApiServiceClient failed to throw exception");
-    assertTrue(diagnosticsMsg.contains("Error connecting to localhost:0"),
-        "Exception Message does not match");
+    assertTrue("ApiServiceClient failed to throw exception", exceptionCaught);
+    assertTrue("Exception Message does not match",
+        diagnosticsMsg.contains("Error connecting to localhost:0"));
   }
 
   @Test
-  void testLaunch() {
+  public void testLaunch() {
     String fileName = "target/test-classes/example-app.json";
     String appName = "example-app";
     long lifetime = 3600L;
@@ -154,7 +154,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testBadLaunch() {
+  public void testBadLaunch() {
     String fileName = "unknown_file";
     String appName = "unknown_app";
     long lifetime = 3600L;
@@ -168,18 +168,19 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testStatus() {
+  public void testStatus() {
     String appName = "nonexistent-app";
     try {
       String result = asc.getStatusString(appName);
-      assertEquals(" Service " + appName + " not found", result, "Status reponse don't match");
+      assertEquals("Status reponse don't match",
+          " Service " + appName + " not found", result);
     } catch (IOException | YarnException e) {
       fail();
     }
   }
 
   @Test
-  void testStop() {
+  public void testStop() {
     String appName = "example-app";
     try {
       int result = asc.actionStop(appName);
@@ -190,7 +191,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testBadStop() {
+  public void testBadStop() {
     String appName = "unknown_app";
     try {
       int result = badAsc.actionStop(appName);
@@ -201,7 +202,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testStart() {
+  public void testStart() {
     String appName = "example-app";
     try {
       int result = asc.actionStart(appName);
@@ -212,7 +213,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testBadStart() {
+  public void testBadStart() {
     String appName = "unknown_app";
     try {
       int result = badAsc.actionStart(appName);
@@ -223,7 +224,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testSave() {
+  public void testSave() {
     String fileName = "target/test-classes/example-app.json";
     String appName = "example-app";
     long lifetime = 3600L;
@@ -237,7 +238,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testBadSave() {
+  public void testBadSave() {
     String fileName = "unknown_file";
     String appName = "unknown_app";
     long lifetime = 3600L;
@@ -251,7 +252,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testFlex() {
+  public void testFlex() {
     String appName = "example-app";
     HashMap<String, String> componentCounts = new HashMap<String, String>();
     try {
@@ -263,7 +264,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testBadFlex() {
+  public void testBadFlex() {
     String appName = "unknown_app";
     HashMap<String, String> componentCounts = new HashMap<String, String>();
     try {
@@ -275,7 +276,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testDestroy() {
+  public void testDestroy() {
     String appName = "example-app";
     try {
       int result = asc.actionDestroy(appName);
@@ -286,7 +287,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testBadDestroy() {
+  public void testBadDestroy() {
     String appName = "unknown_app";
     try {
       int result = badAsc.actionDestroy(appName);
@@ -297,7 +298,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testInitiateServiceUpgrade() {
+  public void testInitiateServiceUpgrade() {
     String appName = "example-app";
     String upgradeFileName = "target/test-classes/example-app.json";
     try {
@@ -309,7 +310,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testInstancesUpgrade() {
+  public void testInstancesUpgrade() {
     String appName = "example-app";
     try {
       int result = asc.actionUpgradeInstances(appName, Lists.newArrayList(
@@ -321,7 +322,7 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testComponentsUpgrade() {
+  public void testComponentsUpgrade() {
     String appName = "example-app";
     try {
       int result = asc.actionUpgradeComponents(appName, Lists.newArrayList(
@@ -333,12 +334,12 @@ public class TestApiServiceClient {
   }
 
   @Test
-  void testNoneSecureApiClient() throws IOException {
+  public void testNoneSecureApiClient() throws IOException {
     String url = asc.getServicePath("/foobar");
-    assertTrue(url.contains("user.name"),
-        "User.name flag is missing in service path.");
-    assertTrue(url.contains(System.getProperty("user.name")),
-        "User.name flag is not matching JVM user.");
+    assertTrue("User.name flag is missing in service path.",
+        url.contains("user.name"));
+    assertTrue("User.name flag is not matching JVM user.",
+        url.contains(System.getProperty("user.name")));
   }
 
 }

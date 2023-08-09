@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -37,7 +36,6 @@ import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
-import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -55,6 +53,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException
+        .InvalidResourceType;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -334,36 +334,11 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         .pullJustFinishedContainers());
     response.setAvailableResources(allocation.getResourceLimit());
 
-    QueueMetrics queueMetrics =
-        this.rmContext.getScheduler().getRootQueueMetrics();
-    if (queueMetrics != null) {
-      int totalVirtualCores =
-          queueMetrics.getAllocatedVirtualCores() + queueMetrics
-              .getAvailableVirtualCores();
-      int pendingContainers = queueMetrics.getPendingContainers();
-      response.setEnhancedHeadroom(
-          EnhancedHeadroom.newInstance(pendingContainers, totalVirtualCores));
-    }
-
     addToContainerUpdates(response, allocation,
         ((AbstractYarnScheduler)getScheduler())
             .getApplicationAttempt(appAttemptId).pullUpdateContainerErrors());
 
-    String label="";
-    try {
-      label = rmContext.getScheduler()
-          .getQueueInfo(app.getQueue(), false, false)
-          .getDefaultNodeLabelExpression();
-    } catch (Exception e){
-      //Queue may not exist since it could be auto-created in case of
-      // dynamic queues
-    }
-
-    if (label == null || label.equals("")) {
-      response.setNumClusterNodes(getScheduler().getNumClusterNodes());
-    } else {
-      response.setNumClusterNodes(rmContext.getNodeLabelManager().getActiveNMCountPerLabel(label));
-    }
+    response.setNumClusterNodes(getScheduler().getNumClusterNodes());
 
     // add collector address for this application
     if (timelineServiceV2Enabled) {
@@ -407,7 +382,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         RMNode rmNode = rmNodeEntry.getKey();
         SchedulerNodeReport schedulerNodeReport =
             getScheduler().getNodeReport(rmNode.getNodeID());
-        Resource used = Resources.createResource(0);
+        Resource used = BuilderUtils.newResource(0, 0);
         int numContainers = 0;
         if (schedulerNodeReport != null) {
           used = schedulerNodeReport.getUsedResource();

@@ -20,7 +20,7 @@ package org.apache.hadoop.fs;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem.Statistics.StatisticsData;
@@ -47,8 +47,7 @@ public class FileSystemStorageStatistics extends StorageStatistics {
       "bytesReadDistanceOfOneOrTwo",
       "bytesReadDistanceOfThreeOrFour",
       "bytesReadDistanceOfFiveOrLarger",
-      "bytesReadErasureCoded",
-      "remoteReadTimeMS"
+      "bytesReadErasureCoded"
   };
 
   private static class LongStatisticIterator
@@ -108,8 +107,6 @@ public class FileSystemStorageStatistics extends StorageStatistics {
       return data.getBytesReadDistanceOfFiveOrLarger();
     case "bytesReadErasureCoded":
       return data.getBytesReadErasureCoded();
-    case "remoteReadTimeMS":
-      return data.getRemoteReadTimeMS();
     default:
       return null;
     }

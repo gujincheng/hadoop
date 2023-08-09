@@ -104,21 +104,21 @@ abstract class BalancingPolicy {
       for(StorageReport s : r.getStorageReports()) {
         final StorageType t = s.getStorage().getStorageType();
         totalCapacities.add(t, s.getCapacity());
-        totalUsedSpaces.add(t, s.getCapacity() - s.getRemaining());
+        totalUsedSpaces.add(t, s.getDfsUsed());
       }
     }
     
     @Override
     Double getUtilization(DatanodeStorageReport r, final StorageType t) {
       long capacity = 0L;
-      long totalUsed = 0L;
+      long dfsUsed = 0L;
       for(StorageReport s : r.getStorageReports()) {
         if (s.getStorage().getStorageType() == t) {
           capacity += s.getCapacity();
-          totalUsed += s.getCapacity() - s.getRemaining();
+          dfsUsed += s.getDfsUsed();
         }
       }
-      return capacity == 0L ? null : totalUsed * 100.0 / capacity;
+      return capacity == 0L? null: dfsUsed*100.0/capacity;
     }
   }
 
@@ -138,13 +138,7 @@ abstract class BalancingPolicy {
     void accumulateSpaces(DatanodeStorageReport r) {
       for(StorageReport s : r.getStorageReports()) {
         final StorageType t = s.getStorage().getStorageType();
-        // Use s.getRemaining() + s.getBlockPoolUsed() instead of
-        // s.getCapacity() here to avoid moving blocks towards nodes with
-        // little actual available space.
-        // The util is computed as blockPoolUsed/(remaining+blockPoolUsed),
-        // which means nodes with more remaining space and less blockPoolUsed
-        // will serve as the recipient during the balancing process.
-        totalCapacities.add(t, s.getRemaining() + s.getBlockPoolUsed());
+        totalCapacities.add(t, s.getCapacity());
         totalUsedSpaces.add(t, s.getBlockPoolUsed());
       }
     }
@@ -155,11 +149,11 @@ abstract class BalancingPolicy {
       long blockPoolUsed = 0L;
       for(StorageReport s : r.getStorageReports()) {
         if (s.getStorage().getStorageType() == t) {
-          capacity += s.getRemaining() + s.getBlockPoolUsed();
+          capacity += s.getCapacity();
           blockPoolUsed += s.getBlockPoolUsed();
         }
       }
-      return capacity == 0L ? null : blockPoolUsed * 100.0 / capacity;
+      return capacity == 0L? null: blockPoolUsed*100.0/capacity;
     }
   }
 }

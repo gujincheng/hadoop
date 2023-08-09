@@ -47,6 +47,7 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -104,8 +105,7 @@ class Display extends FsCommand {
     }
 
     protected InputStream getInputStream(PathData item) throws IOException {
-      // Always do sequential reads;
-      return item.openForSequentialIO();
+      return item.fs.open(item.path);
     }
   }
   
@@ -216,8 +216,8 @@ class Display extends FsCommand {
 
   protected class TextRecordInputStream extends InputStream {
     SequenceFile.Reader r;
-    Object key;
-    Object val;
+    Writable key;
+    Writable val;
 
     DataInputBuffer inbuf;
     DataOutputBuffer outbuf;
@@ -227,8 +227,10 @@ class Display extends FsCommand {
       final Configuration lconf = getConf();
       r = new SequenceFile.Reader(lconf, 
           SequenceFile.Reader.file(fpath));
-      key = ReflectionUtils.newInstance(r.getKeyClass(), lconf);
-      val = ReflectionUtils.newInstance(r.getValueClass(), lconf);
+      key = ReflectionUtils.newInstance(
+          r.getKeyClass().asSubclass(Writable.class), lconf);
+      val = ReflectionUtils.newInstance(
+          r.getValueClass().asSubclass(Writable.class), lconf);
       inbuf = new DataInputBuffer();
       outbuf = new DataOutputBuffer();
     }
@@ -237,11 +239,8 @@ class Display extends FsCommand {
     public int read() throws IOException {
       int ret;
       if (null == inbuf || -1 == (ret = inbuf.read())) {
-        key = r.next(key);
-        if (key == null) {
+        if (!r.next(key, val)) {
           return -1;
-        } else {
-          val = r.getCurrentValue(val);
         }
         byte[] tmp = key.toString().getBytes(StandardCharsets.UTF_8);
         outbuf.write(tmp, 0, tmp.length);

@@ -32,10 +32,7 @@ public class NullWritable implements WritableComparable<NullWritable> {
 
   private NullWritable() {}                       // no public ctor
 
-  /**
-   * Returns the single instance of this class.
-   * @return the single instance of this class.
-   */
+  /** Returns the single instance of this class. */
   public static NullWritable get() { return THIS; }
   
   @Override

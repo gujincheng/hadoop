@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -34,12 +35,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
-import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.delegation.TestDelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegationTokenIdentifierData;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -77,7 +77,6 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -113,7 +112,7 @@ public class TestClientRMTokens {
   }
   
   @Test
-  public void testDelegationToken() throws Exception {
+  public void testDelegationToken() throws IOException, InterruptedException {
     
     final YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_PRINCIPAL, "testuser/localhost@apache.org");
@@ -126,13 +125,9 @@ public class TestClientRMTokens {
     long initialInterval = 10000l;
     long maxLifetime= 20000l;
     long renewInterval = 10000l;
-    long delegationTokenRemoverScanInterval =
-        conf.getTimeDuration(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
-        YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
-        TimeUnit.MILLISECONDS);
 
     RMDelegationTokenSecretManager rmDtSecretManager = createRMDelegationTokenSecretManager(
-        initialInterval, maxLifetime, renewInterval, delegationTokenRemoverScanInterval);
+        initialInterval, maxLifetime, renewInterval);
     rmDtSecretManager.startThreads();
     LOG.info("Creating DelegationTokenSecretManager with initialInterval: "
         + initialInterval + ", maxLifetime: " + maxLifetime
@@ -204,11 +199,14 @@ public class TestClientRMTokens {
       }
       Thread.sleep(50l);
       LOG.info("At time: " + System.currentTimeMillis() + ", token should be invalid");
-      // Token should have expired.
-      final ApplicationClientProtocol finalClientRMWithDT = clientRMWithDT;
-      final GetNewApplicationRequest finalRequest = request;
-      LambdaTestUtils.intercept(InvalidToken.class, "Token  has expired",
-          () -> finalClientRMWithDT.getNewApplication(finalRequest));
+      // Token should have expired.      
+      try {
+        clientRMWithDT.getNewApplication(request);
+        fail("Should not have succeeded with an expired token");
+      } catch (Exception e) {
+        assertEquals(InvalidToken.class.getName(), e.getClass().getName());
+        assertTrue(e.getMessage().contains("is expired"));
+      } 
 
       // Test cancellation
       // Stop the existing proxy, start another.
@@ -546,9 +544,8 @@ public class TestClientRMTokens {
         ResourceScheduler scheduler,
         RMDelegationTokenSecretManager rmDTSecretManager) {
       super(mock(RMContext.class), scheduler, mock(RMAppManager.class),
-          new ApplicationACLsManager(conf),
-          QueueACLsManager.getQueueACLsManager(scheduler, conf),
-          rmDTSecretManager);
+          new ApplicationACLsManager(conf), new QueueACLsManager(scheduler,
+              conf), rmDTSecretManager);
     }
 
     // Use a random port unless explicitly specified.
@@ -571,17 +568,16 @@ public class TestClientRMTokens {
 
   private static ResourceScheduler createMockScheduler(Configuration conf) {
     ResourceScheduler mockSched = mock(ResourceScheduler.class);
-    doReturn(Resources.createResource(512)).when(mockSched)
+    doReturn(BuilderUtils.newResource(512, 0)).when(mockSched)
         .getMinimumResourceCapability();
-    doReturn(Resources.createResource(5120)).when(mockSched)
+    doReturn(BuilderUtils.newResource(5120, 0)).when(mockSched)
         .getMaximumResourceCapability();
     return mockSched;
   }
 
   private static RMDelegationTokenSecretManager
       createRMDelegationTokenSecretManager(long secretKeyInterval,
-          long tokenMaxLifetime, long tokenRenewInterval,
-          long delegationTokenRemoverScanInterval) {
+          long tokenMaxLifetime, long tokenRenewInterval) {
     ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
@@ -590,7 +586,7 @@ public class TestClientRMTokens {
 
     RMDelegationTokenSecretManager rmDtSecretManager =
         new RMDelegationTokenSecretManager(secretKeyInterval, tokenMaxLifetime,
-          tokenRenewInterval, delegationTokenRemoverScanInterval, rmContext);
+          tokenRenewInterval, 3600000, rmContext);
     return rmDtSecretManager;
   }
 }

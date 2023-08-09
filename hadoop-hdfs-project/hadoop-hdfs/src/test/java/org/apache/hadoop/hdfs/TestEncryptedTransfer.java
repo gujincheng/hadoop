@@ -53,6 +53,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -63,15 +65,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
-import org.slf4j.event.Level;
 
 @RunWith(Parameterized.class)
 public class TestEncryptedTransfer {
   {
-    GenericTestUtils.setLogLevel(
-        LoggerFactory.getLogger(SaslDataTransferServer.class), Level.DEBUG);
-    GenericTestUtils.setLogLevel(
-        LoggerFactory.getLogger(DataTransferSaslUtil.class), Level.DEBUG);
+    LogManager.getLogger(SaslDataTransferServer.class).setLevel(Level.DEBUG);
+    LogManager.getLogger(DataTransferSaslUtil.class).setLevel(Level.DEBUG);
   }
 
   @Rule

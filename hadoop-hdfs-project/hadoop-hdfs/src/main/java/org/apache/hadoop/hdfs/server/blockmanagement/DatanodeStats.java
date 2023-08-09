@@ -44,7 +44,6 @@ class DatanodeStats {
 
   private int nodesInService = 0;
   private int nodesInServiceXceiverCount = 0;
-  private int nodesInServiceAvailableVolumeCount = 0;
   private int expiredHeartbeats = 0;
 
   synchronized void add(final DatanodeDescriptor node) {
@@ -59,7 +58,6 @@ class DatanodeStats {
       capacityRemaining += node.getRemaining();
       cacheCapacity += node.getCacheCapacity();
       cacheUsed += node.getCacheUsed();
-      nodesInServiceAvailableVolumeCount += node.getNumVolumesAvailable();
     } else if (node.isDecommissionInProgress() ||
         node.isEnteringMaintenance()) {
       cacheCapacity += node.getCacheCapacity();
@@ -89,7 +87,6 @@ class DatanodeStats {
       capacityRemaining -= node.getRemaining();
       cacheCapacity -= node.getCacheCapacity();
       cacheUsed -= node.getCacheUsed();
-      nodesInServiceAvailableVolumeCount -= node.getNumVolumesAvailable();
     } else if (node.isDecommissionInProgress() ||
         node.isEnteringMaintenance()) {
       cacheCapacity -= node.getCacheCapacity();
@@ -150,10 +147,6 @@ class DatanodeStats {
 
   synchronized int getNodesInServiceXceiverCount() {
     return nodesInServiceXceiverCount;
-  }
-
-  synchronized int getNodesInServiceAvailableVolumeCount() {
-    return nodesInServiceAvailableVolumeCount;
   }
 
   synchronized int getExpiredHeartbeats() {

@@ -787,23 +787,4 @@ public class ApplicationReportPBImpl extends ApplicationReport {
     this.builder.addAllAppTimeouts(values);
   }
 
-  @Override
-  public String getRMClusterId() {
-    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasRmClusterId()) {
-      return null;
-    }
-    return p.getRmClusterId();
-  }
-
-  @Override
-  public void setRMClusterId(String rmClusterId) {
-    maybeInitBuilder();
-    if (rmClusterId == null) {
-      builder.clearRmClusterId();
-      return;
-    }
-    builder.setRmClusterId((rmClusterId));
-  }
-
 }

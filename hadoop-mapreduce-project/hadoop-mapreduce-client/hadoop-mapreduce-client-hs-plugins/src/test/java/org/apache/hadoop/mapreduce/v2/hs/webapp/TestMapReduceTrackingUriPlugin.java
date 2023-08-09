@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -27,11 +27,11 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 public class TestMapReduceTrackingUriPlugin {
   @Test
-  void testProducesHistoryServerUriForAppId()
+  public void testProducesHistoryServerUriForAppId()
       throws URISyntaxException {
     final String historyAddress = "example.net:424242";
     YarnConfiguration conf = new YarnConfiguration();
@@ -49,7 +49,7 @@ public class TestMapReduceTrackingUriPlugin {
   }
 
   @Test
-  void testProducesHistoryServerUriWithHTTPS()
+  public void testProducesHistoryServerUriWithHTTPS()
       throws URISyntaxException {
     final String historyAddress = "example.net:404040";
     YarnConfiguration conf = new YarnConfiguration();

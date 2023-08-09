@@ -21,13 +21,12 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.conve
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons.OUTPUT_DIR;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons.YARN_SITE_XML;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons.setupFSConfigConversionFiles;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.function.Consumer;
+import java.security.Permission;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.junit.After;
@@ -41,67 +40,43 @@ import org.junit.Test;
  */
 public class TestFSConfigToCSConfigConverterMain {
   private FSConfigConverterTestCommons converterTestCommons;
-  private ExitFunc exitFunc;
+  private SecurityManager originalSecurityManager;
+  private ExitHandlerSecurityManager exitHandlerSecurityManager;
 
   @Before
   public void setUp() throws Exception {
-    exitFunc = new ExitFunc();
+    originalSecurityManager = System.getSecurityManager();
+    exitHandlerSecurityManager = new ExitHandlerSecurityManager();
+    System.setSecurityManager(exitHandlerSecurityManager);
     converterTestCommons = new FSConfigConverterTestCommons();
     converterTestCommons.setUp();
-    FSConfigToCSConfigConverterMain.setExit(exitFunc);
   }
 
   @After
   public void tearDown() throws Exception {
     QueueMetrics.clearQueueMetrics();
-    FSConfigToCSConfigConverterMain.setExit(System::exit);
+    System.setSecurityManager(originalSecurityManager);
     converterTestCommons.tearDown();
   }
 
   /*
    * Example command:
-   *   /opt/hadoop/bin/yarn fs2cs
+   *   opt/hadoop/bin/yarn fs2cs
    *   -o /tmp/output
    *   -y /opt/hadoop/etc/hadoop/yarn-site.xml
    *   -f /opt/hadoop/etc/hadoop/fair-scheduler.xml
    *   -r /home/systest/sample-rules-config.properties
    */
   @Test
-  public void testConvertFSConfigurationDefaultsWeightMode()
+  public void testConvertFSConfigurationDefaults()
       throws Exception {
-    testConvertFSConfigurationDefaults(false);
-  }
-
-  /*
-   * Example command:
-   *   /opt/hadoop/bin/yarn fs2cs
-   *   -pc
-   *   -o /tmp/output
-   *   -y /opt/hadoop/etc/hadoop/yarn-site.xml
-   *   -f /opt/hadoop/etc/hadoop/fair-scheduler.xml
-   *   -r /home/systest/sample-rules-config.properties
-   */
-  @Test
-  public void testConvertFSConfigurationDefaultsPercentageMode()
-      throws IOException {
-    testConvertFSConfigurationDefaults(true);
-  }
-
-  private void testConvertFSConfigurationDefaults(boolean percentage)
-      throws IOException {
     setupFSConfigConversionFiles();
 
-    String[] args = new String[] {
+    FSConfigToCSConfigConverterMain.main(new String[] {
         "-o", OUTPUT_DIR,
         "-y", YARN_SITE_XML,
         "-f", FS_ALLOC_FILE,
-        "-r", CONVERSION_RULES_FILE};
-    if (percentage) {
-      args = Arrays.copyOf(args, args.length + 1);
-      args[args.length - 1] = "-pc";
-    }
-
-    FSConfigToCSConfigConverterMain.main(args);
+        "-r", CONVERSION_RULES_FILE});
 
     boolean csConfigExists =
         new File(OUTPUT_DIR, "capacity-scheduler.xml").exists();
@@ -110,7 +85,7 @@ public class TestFSConfigToCSConfigConverterMain {
 
     assertTrue("capacity-scheduler.xml was not generated", csConfigExists);
     assertTrue("yarn-site.xml was not generated", yarnSiteConfigExists);
-    assertEquals("Exit code", 0, exitFunc.exitCode);
+    assertEquals("Exit code", 0, exitHandlerSecurityManager.exitCode);
   }
 
   @Test
@@ -120,7 +95,6 @@ public class TestFSConfigToCSConfigConverterMain {
 
     FSConfigToCSConfigConverterMain.main(new String[] {
         "-p",
-        "-e",
         "-y", YARN_SITE_XML,
         "-f", FS_ALLOC_FILE,
         "-r", CONVERSION_RULES_FILE});
@@ -130,9 +104,6 @@ public class TestFSConfigToCSConfigConverterMain {
         stdout.contains("======= yarn-site.xml ======="));
     assertTrue("Stdout doesn't contain capacity-scheduler.xml",
         stdout.contains("======= capacity-scheduler.xml ======="));
-    assertTrue("Stdout doesn't contain mapping-rules.json",
-        stdout.contains("======= mapping-rules.json ======="));
-    assertEquals("Exit code", 0, exitFunc.exitCode);
   }
 
   @Test
@@ -140,7 +111,6 @@ public class TestFSConfigToCSConfigConverterMain {
     FSConfigToCSConfigConverterMain.main(new String[] {"-h"});
 
     verifyHelpText();
-    assertEquals("Exit code", 0, exitFunc.exitCode);
   }
 
   @Test
@@ -148,15 +118,6 @@ public class TestFSConfigToCSConfigConverterMain {
     FSConfigToCSConfigConverterMain.main(new String[] {"--help"});
 
     verifyHelpText();
-    assertEquals("Exit code", 0, exitFunc.exitCode);
-  }
-
-  @Test
-  public void testHelpDisplayedWithoutArgs() {
-    FSConfigToCSConfigConverterMain.main(new String[] {});
-
-    verifyHelpText();
-    assertEquals("Exit code", 0, exitFunc.exitCode);
   }
 
   @Test
@@ -166,8 +127,6 @@ public class TestFSConfigToCSConfigConverterMain {
 
     FSConfigToCSConfigConverterMain.main(new String[] {
         "--print",
-        "--rules-to-file",
-        "--percentage",
         "--yarnsiteconfig", YARN_SITE_XML,
         "--fsconfig", FS_ALLOC_FILE,
         "--rulesconfig", CONVERSION_RULES_FILE});
@@ -177,18 +136,6 @@ public class TestFSConfigToCSConfigConverterMain {
         stdout.contains("======= yarn-site.xml ======="));
     assertTrue("Stdout doesn't contain capacity-scheduler.xml",
         stdout.contains("======= capacity-scheduler.xml ======="));
-    assertTrue("Stdout doesn't contain mapping-rules.json",
-        stdout.contains("======= mapping-rules.json ======="));
-    assertEquals("Exit code", 0, exitFunc.exitCode);
-  }
-
-  @Test
-  public void testNegativeReturnValueOnError() {
-    FSConfigToCSConfigConverterMain.main(new String[] {
-        "--print",
-        "--yarnsiteconfig"});
-
-    assertEquals("Exit code", -1, exitFunc.exitCode);
   }
 
   private void verifyHelpText() {
@@ -197,13 +144,21 @@ public class TestFSConfigToCSConfigConverterMain {
         stdout.contains("General options are:"));
   }
 
-  @SuppressWarnings("checkstyle:visibilitymodifier")
-  class ExitFunc implements Consumer<Integer> {
-    int exitCode;
+  class ExitHandlerSecurityManager extends SecurityManager {
+    int exitCode = Integer.MIN_VALUE;
 
     @Override
-    public void accept(Integer t) {
-      this.exitCode = t.intValue();
+    public void checkExit(int status) {
+      if (status != 0) {
+        throw new IllegalStateException(
+            "Exit code is not 0, it was " + status);
+      }
+      exitCode = status;
+    }
+
+    @Override
+    public void checkPermission(Permission perm) {
+      // allow all permissions
     }
   }
 }

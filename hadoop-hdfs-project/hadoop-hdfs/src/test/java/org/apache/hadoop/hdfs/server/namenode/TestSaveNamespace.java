@@ -47,7 +47,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -56,7 +55,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -213,7 +212,7 @@ public class TestSaveNamespace {
       doAnEdit(fsn, 1);
 
       // Save namespace - this may fail, depending on fault injected
-      fsn.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       try {
         fsn.saveNamespace(0, 0);
         if (shouldFail) {
@@ -227,7 +226,7 @@ public class TestSaveNamespace {
         }
       }
       
-      fsn.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       // Should still be able to perform edits
       doAnEdit(fsn, 2);
 
@@ -282,7 +281,7 @@ public class TestSaveNamespace {
 
     try {
       doAnEdit(fsn, 1);
-      fsn.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
 
       // Save namespace - should mark the first storage dir as faulty
       // since it's not traversable.
@@ -421,7 +420,7 @@ public class TestSaveNamespace {
       doAnEdit(fsn, 1);
 
       // Save namespace
-      fsn.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       try {
         fsn.saveNamespace(0, 0);
         fail("saveNamespace did not fail even when all directories failed!");
@@ -470,7 +469,7 @@ public class TestSaveNamespace {
       doAnEdit(fsn, 2);
 
       // Save namespace
-      fsn.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       fsn.saveNamespace(0, 0);
 
       // Now shut down and restart the NN
@@ -504,7 +503,7 @@ public class TestSaveNamespace {
       doAnEdit(fsn, 1);
       assertEquals(2, fsn.getEditLog().getLastWrittenTxId());
       
-      fsn.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       fsn.saveNamespace(0, 0);
 
       // 2 more txns: END the first segment, BEGIN a new one
@@ -561,7 +560,7 @@ public class TestSaveNamespace {
       final Canceler canceler = new Canceler();
       
       // Save namespace
-      fsn.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       try {
         Future<Void> saverFuture = pool.submit(new Callable<Void>() {
           @Override
@@ -629,9 +628,9 @@ public class TestSaveNamespace {
       out = fs.create(new Path("/test-source/foo")); // don't close
       fs.rename(new Path("/test-source/"), new Path("/test-target/"));
 
-      fs.setSafeMode(SafeModeAction.ENTER);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       cluster.getNameNodeRpc().saveNamespace(0, 0);
-      fs.setSafeMode(SafeModeAction.LEAVE);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, fs);
       cluster.shutdown();
@@ -647,9 +646,9 @@ public class TestSaveNamespace {
     try {
       cluster.getNamesystem().leaseManager.addLease("me",
               INodeId.ROOT_INODE_ID + 1);
-      fs.setSafeMode(SafeModeAction.ENTER);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       cluster.getNameNodeRpc().saveNamespace(0, 0);
-      fs.setSafeMode(SafeModeAction.LEAVE);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     } finally {
       cluster.shutdown();
     }
@@ -679,9 +678,9 @@ public class TestSaveNamespace {
           file.getFileWithSnapshotFeature().getDiffs() != null);
 
       // saveNamespace
-      fs.setSafeMode(SafeModeAction.ENTER);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       cluster.getNameNodeRpc().saveNamespace(0, 0);
-      fs.setSafeMode(SafeModeAction.LEAVE);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
 
       // restart namenode
       cluster.restartNameNode(true);
@@ -709,7 +708,7 @@ public class TestSaveNamespace {
       final FSImage fsimage = cluster.getNameNode().getFSImage();
       final long before = fsimage.getStorage().getMostRecentCheckpointTxId();
 
-      fs.setSafeMode(SafeModeAction.ENTER);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       // set the timewindow to 1 hour and tx gap to 1000, which means that if
       // there is a checkpoint during the past 1 hour or the tx number happening
       // after the latest checkpoint is <= 1000, this saveNamespace request
@@ -724,14 +723,14 @@ public class TestSaveNamespace {
       // do another checkpoint. this time set the timewindow to 1s
       // we should see a new checkpoint
       cluster.getNameNodeRpc().saveNamespace(1, 1000);
-      fs.setSafeMode(SafeModeAction.LEAVE);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
 
       after = fsimage.getStorage().getMostRecentCheckpointTxId();
       Assert.assertTrue(after > before);
 
       fs.mkdirs(new Path("/foo/bar/baz")); // 3 new tx
 
-      fs.setSafeMode(SafeModeAction.ENTER);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       cluster.getNameNodeRpc().saveNamespace(3600, 5); // 3 + end/start segment
       long after2 = fsimage.getStorage().getMostRecentCheckpointTxId();
       // no checkpoint should be made

@@ -61,7 +61,7 @@ public class ITestS3AMkdirCost extends AbstractS3ACostTest {
 
   public ITestS3AMkdirCost(final String name,
       final boolean keepMarkers) {
-    super(keepMarkers);
+    super(false, true, false);
   }
 
   /**

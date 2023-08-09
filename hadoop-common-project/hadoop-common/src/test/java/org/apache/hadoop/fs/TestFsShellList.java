@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.fs;
 
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
+
 import org.apache.hadoop.conf.Configuration;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test FsShell -ls command.
@@ -44,7 +45,7 @@ public class TestFsShellList {
 
     String root = System.getProperty("test.build.data", "test/build/data");
     testRootDir = lfs.makeQualified(new Path(root, "testFsShellList"));
-    assertThat(lfs.mkdirs(testRootDir)).isTrue();
+    assertThat(lfs.mkdirs(testRootDir), is(true));
   }
 
   @AfterClass
@@ -56,23 +57,23 @@ public class TestFsShellList {
     FSDataOutputStream out = lfs.create(filePath);
     out.writeChars("I am " + filePath);
     out.close();
-    assertThat(lfs.exists(lfs.getChecksumFile(filePath))).isTrue();
+    assertThat(lfs.exists(lfs.getChecksumFile(filePath)), is(true));
   }
 
   @Test
   public void testList() throws Exception {
     createFile(new Path(testRootDir, "abc"));
     String[] lsArgv = new String[]{"-ls", testRootDir.toString()};
-    assertThat(shell.run(lsArgv)).isEqualTo(0);
+    assertThat(shell.run(lsArgv), is(0));
 
     createFile(new Path(testRootDir, "abc\bd\tef"));
     createFile(new Path(testRootDir, "ghi"));
     createFile(new Path(testRootDir, "qq\r123"));
     lsArgv = new String[]{"-ls", testRootDir.toString()};
-    assertThat(shell.run(lsArgv)).isEqualTo(0);
+    assertThat(shell.run(lsArgv), is(0));
 
     lsArgv = new String[]{"-ls", "-q", testRootDir.toString()};
-    assertThat(shell.run(lsArgv)).isEqualTo(0);
+    assertThat(shell.run(lsArgv), is(0));
   }
 
   /*

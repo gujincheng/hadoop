@@ -61,8 +61,6 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong bytesRead;
   @Metric("Milliseconds spent reading")
   MutableCounterLong totalReadTime;
-  @Metric private MutableRate readTransferRate;
-  final private MutableQuantiles[] readTransferRateQuantiles;
   @Metric MutableCounterLong blocksWritten;
   @Metric MutableCounterLong blocksRead;
   @Metric MutableCounterLong blocksReplicated;
@@ -179,32 +177,6 @@ public class DataNodeMetrics {
   @Metric("Rate of processed commands of all BPServiceActors")
   private MutableRate processedCommandsOp;
 
-  // FsDatasetImpl local file process metrics.
-  @Metric private MutableRate createRbwOp;
-  @Metric private MutableRate recoverRbwOp;
-  @Metric private MutableRate convertTemporaryToRbwOp;
-  @Metric private MutableRate createTemporaryOp;
-  @Metric private MutableRate finalizeBlockOp;
-  @Metric private MutableRate unfinalizeBlockOp;
-  @Metric private MutableRate checkAndUpdateOp;
-  @Metric private MutableRate updateReplicaUnderRecoveryOp;
-
-  @Metric MutableCounterLong packetsReceived;
-  @Metric MutableCounterLong packetsSlowWriteToMirror;
-  @Metric MutableCounterLong packetsSlowWriteToDisk;
-  @Metric MutableCounterLong packetsSlowWriteToOsCache;
-  @Metric private MutableCounterLong slowFlushOrSyncCount;
-  @Metric private MutableCounterLong slowAckToUpstreamCount;
-
-  @Metric("Number of replaceBlock ops between" +
-      " storage types on same host with local copy")
-  private MutableCounterLong replaceBlockOpOnSameHost;
-  @Metric("Number of replaceBlock ops between" +
-      " storage types on same disk mount with same disk tiering feature")
-  private MutableCounterLong replaceBlockOpOnSameMount;
-  @Metric("Number of replaceBlock ops to another node")
-  private MutableCounterLong replaceBlockOpToOtherHost;
-
   final MetricsRegistry registry = new MetricsRegistry("datanode");
   @Metric("Milliseconds spent on calling NN rpc")
   private MutableRatesWithAggregation
@@ -229,7 +201,6 @@ public class DataNodeMetrics {
     sendDataPacketTransferNanosQuantiles = new MutableQuantiles[len];
     ramDiskBlocksEvictionWindowMsQuantiles = new MutableQuantiles[len];
     ramDiskBlocksLazyPersistWindowMsQuantiles = new MutableQuantiles[len];
-    readTransferRateQuantiles = new MutableQuantiles[len];
 
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
@@ -258,10 +229,6 @@ public class DataNodeMetrics {
           "ramDiskBlocksLazyPersistWindows" + interval + "s",
           "Time between the RamDisk block write and disk persist in ms",
           "ops", "latency", interval);
-      readTransferRateQuantiles[i] = registry.newInverseQuantiles(
-          "readTransferRate" + interval + "s",
-          "Rate at which bytes are read from datanode calculated in bytes per second",
-          "ops", "rate", interval);
     }
   }
 
@@ -323,13 +290,6 @@ public class DataNodeMetrics {
     }
   }
 
-  public void addReadTransferRate(long readTransferRate) {
-    this.readTransferRate.add(readTransferRate);
-    for (MutableQuantiles q : readTransferRateQuantiles) {
-      q.add(readTransferRate);
-    }
-  }
-
   public void addCacheReport(long latency) {
     cacheReports.add(latency);
   }
@@ -344,10 +304,6 @@ public class DataNodeMetrics {
 
   public void incrBlocksRemoved(int delta) {
     blocksRemoved.incr(delta);
-  }
-
-  public long getBlocksRemoved() {
-    return blocksRemoved.value();
   }
 
   public void incrBytesWritten(int delta) {
@@ -458,14 +414,6 @@ public class DataNodeMetrics {
 
   public void incrVolumeFailures(int size) {
     volumeFailures.incr(size);
-  }
-
-  public void incrSlowFlushOrSyncCount() {
-    slowFlushOrSyncCount.incr();
-  }
-
-  public void incrSlowAckToUpstreamCount() {
-    slowAckToUpstreamCount.incr();
   }
 
   public void incrDatanodeNetworkErrors() {
@@ -684,97 +632,4 @@ public class DataNodeMetrics {
   public void addNumProcessedCommands(long latency) {
     processedCommandsOp.add(latency);
   }
-
-  /**
-   * Add addCreateRbwOp metrics.
-   * @param latency milliseconds of create RBW file
-   */
-  public void addCreateRbwOp(long latency) {
-    createRbwOp.add(latency);
-  }
-
-  /**
-   * Add addRecoverRbwOp metrics.
-   * @param latency milliseconds of recovery RBW file
-   */
-  public void addRecoverRbwOp(long latency) {
-    recoverRbwOp.add(latency);
-  }
-
-  /**
-   * Add addConvertTemporaryToRbwOp metrics.
-   * @param latency milliseconds of convert temporary to RBW file
-   */
-  public void addConvertTemporaryToRbwOp(long latency) {
-    convertTemporaryToRbwOp.add(latency);
-  }
-
-  /**
-   * Add addCreateTemporaryOp metrics.
-   * @param latency milliseconds of create temporary block file
-   */
-  public void addCreateTemporaryOp(long latency) {
-    createTemporaryOp.add(latency);
-  }
-
-  /**
-   * Add addFinalizeBlockOp metrics.
-   * @param latency milliseconds of finalize block
-   */
-  public void addFinalizeBlockOp(long latency) {
-    finalizeBlockOp.add(latency);
-  }
-
-  /**
-   * Add addUnfinalizeBlockOp metrics.
-   * @param latency milliseconds of un-finalize block file
-   */
-  public void addUnfinalizeBlockOp(long latency) {
-    unfinalizeBlockOp.add(latency);
-  }
-
-  /**
-   * Add addCheckAndUpdateOp metrics.
-   * @param latency milliseconds of check and update block file
-   */
-  public void addCheckAndUpdateOp(long latency) {
-    checkAndUpdateOp.add(latency);
-  }
-
-  /**
-   * Add addUpdateReplicaUnderRecoveryOp metrics.
-   * @param latency milliseconds of update and replica under recovery block file
-   */
-  public void addUpdateReplicaUnderRecoveryOp(long latency) {
-    updateReplicaUnderRecoveryOp.add(latency);
-  }
-
-  public void incrPacketsReceived() {
-    packetsReceived.incr();
-  }
-
-  public void incrPacketsSlowWriteToMirror() {
-    packetsSlowWriteToMirror.incr();
-  }
-
-  public void incrPacketsSlowWriteToDisk() {
-    packetsSlowWriteToDisk.incr();
-  }
-
-  public void incrPacketsSlowWriteToOsCache() {
-    packetsSlowWriteToOsCache.incr();
-  }
-
-  public void incrReplaceBlockOpOnSameMount() {
-    replaceBlockOpOnSameMount.incr();
-  }
-
-  public void incrReplaceBlockOpOnSameHost() {
-    replaceBlockOpOnSameHost.incr();
-  }
-
-  public void incrReplaceBlockOpToOtherHost() {
-    replaceBlockOpToOtherHost.incr();
-  }
-
 }

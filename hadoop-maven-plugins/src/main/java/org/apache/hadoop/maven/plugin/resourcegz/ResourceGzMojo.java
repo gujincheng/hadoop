@@ -13,6 +13,7 @@
  */
 package org.apache.hadoop.maven.plugin.resourcegz;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -24,10 +25,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -66,7 +66,7 @@ public class ResourceGzMojo extends AbstractMojo {
     try {
       Path inputDir = new File(inputDirectory).toPath();
       File outputDir = new File(outputDirectory);
-      List<String> exts = Arrays.asList(extensions.split(","));
+      List<String> exts = Lists.newArrayList(extensions.split(","));
       exts.replaceAll(String::trim);
       GZConsumer cons = new GZConsumer(inputDir.toFile(), outputDir);
       Files.walk(inputDir).filter(path -> {
@@ -114,7 +114,7 @@ public class ResourceGzMojo extends AbstractMojo {
               BufferedReader is = Files.newBufferedReader(path)
           ) {
             getLog().info("Compressing " + path + " to " + outFile);
-            IOUtils.copy(is, os, StandardCharsets.UTF_8);
+            IOUtils.copy(is, os, Charset.defaultCharset());
           }
         } else {
           throw new IOException("Directory " + outFile.getParent()

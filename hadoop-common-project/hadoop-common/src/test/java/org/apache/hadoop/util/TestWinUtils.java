@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.*;
+import static org.junit.matchers.JUnitMatchers.containsString;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,12 +31,13 @@ import java.io.IOException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.hamcrest.CoreMatchers.*;
 
 /**
  * Test cases for helper Windows winutils.exe utility.
@@ -494,12 +496,12 @@ public class TestWinUtils {
     String readLinkOutput = Shell.execCommand(winutils,
         "readlink",
         dirLink.toString());
-    Assertions.assertThat(readLinkOutput).isEqualTo(dir1.toString());
+    assertThat(readLinkOutput, equalTo(dir1.toString()));
 
     readLinkOutput = Shell.execCommand(winutils,
         "readlink",
         fileLink.toString());
-    Assertions.assertThat(readLinkOutput).isEqualTo(file1.toString());
+    assertThat(readLinkOutput, equalTo(file1.toString()));
 
     // Try a few invalid inputs and verify we get an ExitCodeException for each.
     //
@@ -509,7 +511,7 @@ public class TestWinUtils {
       Shell.execCommand(winutils, "readlink", "");
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode(), is(1));
     }
 
     try {
@@ -518,7 +520,7 @@ public class TestWinUtils {
       Shell.execCommand(winutils, "readlink", "ThereIsNoSuchLink");
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode(), is(1));
     }
 
     try {
@@ -527,7 +529,7 @@ public class TestWinUtils {
       Shell.execCommand(winutils, "readlink", dir1.toString());
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode(), is(1));
     }
 
     try {
@@ -536,7 +538,7 @@ public class TestWinUtils {
       Shell.execCommand(winutils, "readlink", file1.toString());
       fail("Failed to get Shell.ExitCodeException when reading bad symlink");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode(), is(1));
     }
 
     try {
@@ -545,10 +547,11 @@ public class TestWinUtils {
       Shell.execCommand(winutils, "readlink", "a", "b");
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode(), is(1));
     }
   }
   
+  @SuppressWarnings("deprecation")
   @Test(timeout=10000)
   public void testTaskCreate() throws IOException {
     requireWinutils();
@@ -567,8 +570,8 @@ public class TestWinUtils {
     assertTrue(proof.exists());
     
     String outNumber = FileUtils.readFileToString(proof);
-
-    Assertions.assertThat(outNumber).contains(testNumber);
+    
+    assertThat(outNumber, containsString(testNumber));
   }
 
   @Test (timeout = 30000)
@@ -601,7 +604,7 @@ public class TestWinUtils {
           + jobId, "java -Xmx256m -version");
       fail("Failed to get Shell.ExitCodeException with insufficient memory");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1);
+      assertThat(ece.getExitCode(), is(1));
     }
 
     // Run tasks with wrong parameters
@@ -612,7 +615,7 @@ public class TestWinUtils {
           "-1", "foo", "job" + jobId, "cmd /c echo job" + jobId);
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1639);
+      assertThat(ece.getExitCode(), is(1639));
     }
 
     try {
@@ -621,7 +624,7 @@ public class TestWinUtils {
           "job" + jobId, "cmd /c echo job" + jobId);
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1639);
+      assertThat(ece.getExitCode(), is(1639));
     }
 
     try {
@@ -630,7 +633,7 @@ public class TestWinUtils {
           "job" + jobId, "cmd /c echo job" + jobId);
       fail("Failed to get Shell.ExitCodeException with bad parameters");
     } catch (Shell.ExitCodeException ece) {
-      Assertions.assertThat(ece.getExitCode()).isEqualTo(1639);
+      assertThat(ece.getExitCode(), is(1639));
     }
   }
 }

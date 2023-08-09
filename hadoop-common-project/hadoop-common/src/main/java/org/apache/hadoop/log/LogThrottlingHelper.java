@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.log;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
@@ -65,7 +65,7 @@ import org.apache.hadoop.util.Timer;
  * <p>This class can also be used to coordinate multiple logging points; see
  * {@link #record(String, long, double...)} for more details.
  *
- * <p>This class is thread-safe.
+ * <p>This class is not thread-safe.
  */
 public class LogThrottlingHelper {
 
@@ -88,22 +88,21 @@ public class LogThrottlingHelper {
   public interface LogAction {
 
     /**
-     * @return Return the number of records encapsulated in this action; that is, the
+     * Return the number of records encapsulated in this action; that is, the
      * number of times {@code record} was called to produce this action,
      * including the current one.
      */
     int getCount();
 
     /**
-     * @return Return summary information for the value that was recorded at index
+     * Return summary information for the value that was recorded at index
      * {@code idx}. Corresponds to the ordering of values passed to
      * {@link #record(double...)}.
-     * @param idx input idx.
      */
     SummaryStatistics getStats(int idx);
 
     /**
-     * @return If this is true, the caller should write to its log. Otherwise, the
+     * If this is true, the caller should write to its log. Otherwise, the
      * caller should take no action, and it is an error to call other methods
      * on this object.
      */
@@ -140,7 +139,6 @@ public class LogThrottlingHelper {
    * Create a log helper without any primary recorder.
    *
    * @see #LogThrottlingHelper(long, String)
-   * @param minLogPeriodMs input minLogPeriodMs.
    */
   public LogThrottlingHelper(long minLogPeriodMs) {
     this(minLogPeriodMs, null);
@@ -192,7 +190,7 @@ public class LogThrottlingHelper {
    * @return A LogAction indicating whether or not the caller should write to
    *         its log.
    */
-  public synchronized LogAction record(double... values) {
+  public LogAction record(double... values) {
     return record(DEFAULT_RECORDER_NAME, timer.monotonicNow(), values);
   }
 
@@ -244,7 +242,7 @@ public class LogThrottlingHelper {
    *
    * @see #record(double...)
    */
-  public synchronized LogAction record(String recorderName, long currentTimeMs,
+  public LogAction record(String recorderName, long currentTimeMs,
       double... values) {
     if (primaryRecorderName == null) {
       primaryRecorderName = recorderName;
@@ -262,15 +260,9 @@ public class LogThrottlingHelper {
     if (primaryRecorderName.equals(recorderName) &&
         currentTimeMs - minLogPeriodMs >= lastLogTimestampMs) {
       lastLogTimestampMs = currentTimeMs;
-      currentLogs.replaceAll((key, log) -> {
-        LoggingAction newLog = log;
-        if (log.hasLogged()) {
-          // create a fresh log since the old one has already been logged
-          newLog = new LoggingAction(log.getValueCount());
-        }
-        newLog.setShouldLog();
-        return newLog;
-      });
+      for (LoggingAction log : currentLogs.values()) {
+        log.setShouldLog();
+      }
     }
     if (currentLog.shouldLog()) {
       currentLog.setHasLogged();
@@ -287,7 +279,7 @@ public class LogThrottlingHelper {
    * @param idx The index value.
    * @return The summary information.
    */
-  public synchronized SummaryStatistics getCurrentStats(String recorderName, int idx) {
+  public SummaryStatistics getCurrentStats(String recorderName, int idx) {
     LoggingAction currentLog = currentLogs.get(recorderName);
     if (currentLog != null) {
       return currentLog.getStats(idx);
@@ -312,13 +304,6 @@ public class LogThrottlingHelper {
     } else {
       return "";
     }
-  }
-
-  @VisibleForTesting
-  public synchronized void reset() {
-    primaryRecorderName = null;
-    currentLogs.clear();
-    lastLogTimestampMs = Long.MIN_VALUE;
   }
 
   /**
@@ -368,10 +353,6 @@ public class LogThrottlingHelper {
 
     private void setHasLogged() {
       hasLogged = true;
-    }
-
-    private int getValueCount() {
-      return stats.length;
     }
 
     private void recordValues(double... values) {

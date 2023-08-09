@@ -20,9 +20,7 @@ Hadoop in Secure Mode
 Introduction
 ------------
 
-In its default configuration, we expect you to make sure attackers don't have access to your Hadoop cluster by restricting all network access. If you want any restrictions on who can remotely access data or submit work, you MUST secure authentication and access for your Hadoop cluster as described in this document.
-
-When Hadoop is configured to run in secure mode, each Hadoop service and each user must be authenticated by Kerberos.
+This document describes how to configure authentication for Hadoop in secure mode. When Hadoop is configured to run in secure mode, each Hadoop service and each user must be authenticated by Kerberos.
 
 Forward and reverse host lookup for all service hosts must be configured correctly to allow services to authenticate with each other. Host lookups may be configured using either DNS or `/etc/hosts` files. Working knowledge of Kerberos and DNS is recommended before attempting to configure Hadoop services in Secure Mode.
 
@@ -204,8 +202,6 @@ Optionally, you may set `dfs.encrypt.data.transfer.algorithm` to either `3des` o
 Setting `dfs.encrypt.data.transfer.cipher.suites` to `AES/CTR/NoPadding` activates AES encryption. By default, this is unspecified, so AES is not used. When AES is used, the algorithm specified in `dfs.encrypt.data.transfer.algorithm` is still used during an initial key exchange. The AES key bit length can be configured by setting `dfs.encrypt.data.transfer.cipher.key.bitlength` to 128, 192 or 256. The default is 128.
 
 AES offers the greatest cryptographic strength and the best performance. At this time, 3DES and RC4 have been used more often in Hadoop clusters.
-
-You can also set `dfs.encrypt.data.transfer.cipher.suites` to `SM4/CTR/NoPadding` to activates SM4 encryption. By default, this is unspecified. The SM4 key bit length can be configured by setting `dfs.encrypt.data.transfer.cipher.key.bitlength` to 128, 192 or 256. The default is 128.
 
 ### Data Encryption on HTTP
 
@@ -597,7 +593,7 @@ hadoop kdiag \
   --keytab zk.service.keytab --principal zookeeper/devix.example.org@REALM
 ```
 
-This attempts to perform all diagnostics without failing early, load in
+This attempts to to perform all diagnostics without failing early, load in
 the HDFS and YARN XML resources, require a minimum key length of 1024 bytes,
 and log in as the principal `zookeeper/devix.example.org@REALM`, whose key must be in
 the keytab `zk.service.keytab`

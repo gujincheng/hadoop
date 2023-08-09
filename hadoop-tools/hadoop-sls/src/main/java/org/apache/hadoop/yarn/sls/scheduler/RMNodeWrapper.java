@@ -100,11 +100,6 @@ public class RMNodeWrapper implements RMNode {
   }
 
   @Override
-  public Resource getAllocatedContainerResource() {
-    return node.getAllocatedContainerResource();
-  }
-
-  @Override
   public String getRackName() {
     return node.getRackName();
   }
@@ -176,6 +171,7 @@ public class RMNodeWrapper implements RMNode {
 
   @Override
   public List<Container> pullNewlyIncreasedContainers() {
+    // TODO Auto-generated method stub
     return Collections.emptyList();
   }
 

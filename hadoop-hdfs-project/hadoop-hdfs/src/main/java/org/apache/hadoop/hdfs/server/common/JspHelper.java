@@ -198,9 +198,6 @@ public class JspHelper {
     return remoteAddr;
   }
 
-  public static int getRemotePort(HttpServletRequest request) {
-    return request.getRemotePort();
-  }
 
   /**
    * Expected user name should be a short name.

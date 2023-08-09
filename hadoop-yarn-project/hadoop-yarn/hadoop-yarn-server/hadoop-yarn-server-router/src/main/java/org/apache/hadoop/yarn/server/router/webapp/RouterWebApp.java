@@ -24,8 +24,6 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
-import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
-
 /**
  * The Router webapp.
  */
@@ -49,9 +47,8 @@ public class RouterWebApp extends WebApp implements YarnWebParams {
     route("/", RouterController.class);
     route("/cluster", RouterController.class, "about");
     route("/about", RouterController.class, "about");
-    route(pajoin("/apps", APP_SC, APP_STATE), RouterController.class, "apps");
-    route(pajoin("/nodes", NODE_SC), RouterController.class, "nodes");
+    route("/apps", RouterController.class, "apps");
+    route("/nodes", RouterController.class, "nodes");
     route("/federation", RouterController.class, "federation");
-    route(pajoin("/nodelabels", NODE_SC), RouterController.class, "nodeLabels");
   }
 }

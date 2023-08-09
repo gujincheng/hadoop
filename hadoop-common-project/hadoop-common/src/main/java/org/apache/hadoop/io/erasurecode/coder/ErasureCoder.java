@@ -68,7 +68,6 @@ public interface ErasureCoder extends Configurable {
    *
    * @param blockGroup the erasure coding block group containing all necessary
    *                   information for codec calculation
-   * @return ErasureCodingStep.
    */
   ErasureCodingStep calculateCoding(ECBlockGroup blockGroup);
 

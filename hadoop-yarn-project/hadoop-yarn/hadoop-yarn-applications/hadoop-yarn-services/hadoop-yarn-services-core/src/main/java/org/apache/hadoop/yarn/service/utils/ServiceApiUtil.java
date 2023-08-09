@@ -19,10 +19,11 @@
 package org.apache.hadoop.yarn.service.utils;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -30,7 +31,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.ComponentState;
@@ -353,6 +353,19 @@ public class ServiceApiUtil {
               RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_SCOPE_NULL,
               constraint.getName() == null ? "" : constraint.getName() + " ",
               comp.getName()));
+          }
+          if (constraint.getTargetTags().isEmpty()) {
+            throw new IllegalArgumentException(String.format(
+              RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_TAGS_NULL,
+              constraint.getName() == null ? "" : constraint.getName() + " ",
+              comp.getName()));
+          }
+          for (String targetTag : constraint.getTargetTags()) {
+            if (!comp.getName().equals(targetTag)) {
+              throw new IllegalArgumentException(String.format(
+                  RestApiErrorMessages.ERROR_PLACEMENT_POLICY_TAG_NAME_NOT_SAME,
+                  targetTag, comp.getName(), comp.getName(), comp.getName()));
+            }
           }
         }
       }

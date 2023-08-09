@@ -18,13 +18,6 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller;
 
-import java.io.FileNotFoundException;
-import java.net.URI;
-
-import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatcher;
-import org.mockito.Mockito;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,9 +25,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
+
+import java.io.FileNotFoundException;
+import java.net.URI;
 
 import static org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController.TLDIR_PERMISSIONS;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -50,19 +49,19 @@ import static org.mockito.Mockito.verify;
 public class TestLogAggregationFileController {
 
   @Test
-  void testRemoteDirCreationDefault() throws Exception {
+  public void testRemoteDirCreationDefault() throws Exception {
     FileSystem fs = mock(FileSystem.class);
     doReturn(new URI("")).when(fs).getUri();
     doThrow(FileNotFoundException.class).when(fs)
-        .getFileStatus(any(Path.class));
+            .getFileStatus(any(Path.class));
 
     Configuration conf = new Configuration();
     LogAggregationFileController controller = mock(
-        LogAggregationFileController.class, Mockito.CALLS_REAL_METHODS);
+            LogAggregationFileController.class, Mockito.CALLS_REAL_METHODS);
     doReturn(fs).when(controller).getFileSystem(any(Configuration.class));
 
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
-        "yarn_user", new String[]{"yarn_group", "other_group"});
+        "yarn_user", new String[] {"yarn_group", "other_group"});
     UserGroupInformation.setLoginUser(ugi);
 
     controller.initialize(conf, "TFile");
@@ -72,7 +71,7 @@ public class TestLogAggregationFileController {
   }
 
   @Test
-  void testRemoteDirCreationWithCustomGroup() throws Exception {
+  public void testRemoteDirCreationWithCustomGroup() throws Exception {
     String testGroupName = "testGroup";
 
     FileSystem fs = mock(FileSystem.class);
@@ -87,7 +86,7 @@ public class TestLogAggregationFileController {
     doReturn(fs).when(controller).getFileSystem(any(Configuration.class));
 
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
-        "yarn_user", new String[]{"yarn_group", "other_group"});
+        "yarn_user", new String[] {"yarn_group", "other_group"});
     UserGroupInformation.setLoginUser(ugi);
 
     controller.initialize(conf, "TFile");
@@ -115,7 +114,7 @@ public class TestLogAggregationFileController {
   }
 
   @Test
-  void testRemoteDirCreationWithCustomUser() throws Exception {
+  public void testRemoteDirCreationWithCustomUser() throws Exception {
     FileSystem fs = mock(FileSystem.class);
     doReturn(new URI("")).when(fs).getUri();
     doReturn(new FileStatus(128, false, 0, 64, System.currentTimeMillis(),
@@ -140,6 +139,6 @@ public class TestLogAggregationFileController {
     verify(fs).setPermission(argThat(new PathContainsString(".permission_check")),
         eq(new FsPermission(TLDIR_PERMISSIONS)));
     verify(fs).delete(argThat(new PathContainsString(".permission_check")), eq(false));
-    assertTrue(controller.fsSupportsChmod);
+    Assert.assertTrue(controller.fsSupportsChmod);
   }
 }

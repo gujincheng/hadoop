@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager.store;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.junit.Test;
 
 /**
  * All test classes that test an SCMStore implementation must extend this class.
@@ -34,7 +33,7 @@ public abstract class SCMStoreBaseTest {
   abstract Class<? extends SCMStore> getStoreClass();
 
   @Test
-  void TestZeroArgConstructor() throws Exception {
+  public void TestZeroArgConstructor() throws Exception {
     // Test that the SCMStore implementation class is compatible with
     // ReflectionUtils#newInstance
     ReflectionUtils.newInstance(getStoreClass(), new Configuration());

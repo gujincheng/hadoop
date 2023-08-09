@@ -17,17 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-
-import org.eclipse.jetty.util.log.Log;
-import org.fusesource.leveldbjni.JniDBFactory;
-import org.iq80.leveldb.Options;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -46,10 +41,14 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelineP
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.fusesource.leveldbjni.JniDBFactory;
+import org.iq80.leveldb.Options;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.eclipse.jetty.util.log.Log;
+import org.mockito.Mockito;
 
 /** Test class to verify RollingLevelDBTimelineStore. */
 @InterfaceAudience.Private
@@ -59,7 +58,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
   private File fsPath;
   private Configuration config = new YarnConfiguration();
 
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     fsContext = FileContext.getLocalFSFileContext();
     fsPath = new File("target", this.getClass().getSimpleName() +
@@ -76,14 +75,14 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     loadTestDomainData();
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     store.stop();
     fsContext.delete(new Path(fsPath.getAbsolutePath()), true);
   }
 
   @Test
-  void testRootDirPermission() throws IOException {
+  public void testRootDirPermission() throws IOException {
     FileSystem fs = FileSystem.getLocal(new YarnConfiguration());
     FileStatus file = fs.getFileStatus(new Path(fsPath.getAbsolutePath(),
         RollingLevelDBTimelineStore.FILENAME));
@@ -131,7 +130,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
   }
 
   @Test
-  void testCacheSizes() {
+  public void testCacheSizes() {
     Configuration conf = new Configuration();
     assertEquals(10000,
         RollingLevelDBTimelineStore.getStartTimeReadCacheSize(conf));
@@ -151,48 +150,48 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
   }
 
   @Test
-  void testCheckVersion() throws IOException {
+  public void testCheckVersion() throws IOException {
     RollingLevelDBTimelineStore dbStore = (RollingLevelDBTimelineStore) store;
     // default version
     Version defaultVersion = dbStore.getCurrentVersion();
-    assertEquals(defaultVersion, dbStore.loadVersion());
+    Assert.assertEquals(defaultVersion, dbStore.loadVersion());
 
     // compatible version
     Version compatibleVersion =
         Version.newInstance(defaultVersion.getMajorVersion(),
-            defaultVersion.getMinorVersion() + 2);
+          defaultVersion.getMinorVersion() + 2);
     dbStore.storeVersion(compatibleVersion);
-    assertEquals(compatibleVersion, dbStore.loadVersion());
+    Assert.assertEquals(compatibleVersion, dbStore.loadVersion());
     restartTimelineStore();
     dbStore = (RollingLevelDBTimelineStore) store;
     // overwrite the compatible version
-    assertEquals(defaultVersion, dbStore.loadVersion());
+    Assert.assertEquals(defaultVersion, dbStore.loadVersion());
 
     // incompatible version
     Version incompatibleVersion =
         Version.newInstance(defaultVersion.getMajorVersion() + 1,
-            defaultVersion.getMinorVersion());
+          defaultVersion.getMinorVersion());
     dbStore.storeVersion(incompatibleVersion);
     try {
       restartTimelineStore();
-      fail("Incompatible version, should expect fail here.");
+      Assert.fail("Incompatible version, should expect fail here.");
     } catch (ServiceStateException e) {
-      assertTrue(e.getMessage().contains("Incompatible version for timeline store"),
-          "Exception message mismatch");
+      Assert.assertTrue("Exception message mismatch",
+          e.getMessage().contains("Incompatible version for timeline store"));
     }
   }
 
   @Test
-  void testValidateConfig() throws IOException {
+  public void testValidateConfig() throws IOException {
     Configuration copyConfig = new YarnConfiguration(config);
     try {
       Configuration newConfig = new YarnConfiguration(copyConfig);
       newConfig.setLong(YarnConfiguration.TIMELINE_SERVICE_TTL_MS, 0);
       config = newConfig;
       restartTimelineStore();
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException e) {
-      assertTrue(e.getMessage().contains(
+      Assert.assertTrue(e.getMessage().contains(
           YarnConfiguration.TIMELINE_SERVICE_TTL_MS));
     }
     try {
@@ -201,9 +200,9 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
           YarnConfiguration.TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS, 0);
       config = newConfig;
       restartTimelineStore();
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException e) {
-      assertTrue(e.getMessage().contains(
+      Assert.assertTrue(e.getMessage().contains(
           YarnConfiguration.TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS));
     }
     try {
@@ -212,9 +211,9 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
           YarnConfiguration.TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE, -1);
       config = newConfig;
       restartTimelineStore();
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException e) {
-      assertTrue(e.getMessage().contains(
+      Assert.assertTrue(e.getMessage().contains(
           YarnConfiguration.TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE));
     }
     try {
@@ -224,25 +223,25 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
           0);
       config = newConfig;
       restartTimelineStore();
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException e) {
-      assertTrue(e.getMessage().contains(
+      Assert.assertTrue(e.getMessage().contains(
           YarnConfiguration
-              .TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE));
+          .TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE));
     }
     try {
       Configuration newConfig = new YarnConfiguration(copyConfig);
       newConfig.setLong(
           YarnConfiguration
-              .TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE,
+          .TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE,
           0);
       config = newConfig;
       restartTimelineStore();
-      fail();
+      Assert.fail();
     } catch (IllegalArgumentException e) {
-      assertTrue(e.getMessage().contains(
+      Assert.assertTrue(e.getMessage().contains(
           YarnConfiguration
-              .TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE));
+          .TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE));
     }
     config = copyConfig;
     restartTimelineStore();
@@ -269,7 +268,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
   }
 
   @Test
-  void testRelatingToNonExistingEntity() throws IOException {
+  public void testRelatingToNonExistingEntity() throws IOException {
     TimelineEntity entityToStore = new TimelineEntity();
     entityToStore.setEntityType("TEST_ENTITY_TYPE_1");
     entityToStore.setEntityId("TEST_ENTITY_ID_1");
@@ -280,17 +279,17 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     store.put(entities);
     TimelineEntity entityToGet =
         store.getEntity("TEST_ENTITY_ID_2", "TEST_ENTITY_TYPE_2", null);
-    assertNotNull(entityToGet);
-    assertEquals("DEFAULT", entityToGet.getDomainId());
-    assertEquals("TEST_ENTITY_TYPE_1",
+    Assert.assertNotNull(entityToGet);
+    Assert.assertEquals("DEFAULT", entityToGet.getDomainId());
+    Assert.assertEquals("TEST_ENTITY_TYPE_1",
         entityToGet.getRelatedEntities().keySet().iterator().next());
-    assertEquals("TEST_ENTITY_ID_1",
+    Assert.assertEquals("TEST_ENTITY_ID_1",
         entityToGet.getRelatedEntities().values().iterator().next()
             .iterator().next());
   }
 
   @Test
-  void testRelatingToEntityInSamePut() throws IOException {
+  public void testRelatingToEntityInSamePut() throws IOException {
     TimelineEntity entityToRelate = new TimelineEntity();
     entityToRelate.setEntityType("TEST_ENTITY_TYPE_2");
     entityToRelate.setEntityId("TEST_ENTITY_ID_2");
@@ -306,17 +305,17 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     store.put(entities);
     TimelineEntity entityToGet =
         store.getEntity("TEST_ENTITY_ID_2", "TEST_ENTITY_TYPE_2", null);
-    assertNotNull(entityToGet);
-    assertEquals("TEST_DOMAIN", entityToGet.getDomainId());
-    assertEquals("TEST_ENTITY_TYPE_1",
+    Assert.assertNotNull(entityToGet);
+    Assert.assertEquals("TEST_DOMAIN", entityToGet.getDomainId());
+    Assert.assertEquals("TEST_ENTITY_TYPE_1",
         entityToGet.getRelatedEntities().keySet().iterator().next());
-    assertEquals("TEST_ENTITY_ID_1",
+    Assert.assertEquals("TEST_ENTITY_ID_1",
         entityToGet.getRelatedEntities().values().iterator().next()
             .iterator().next());
   }
 
   @Test
-  void testRelatingToOldEntityWithoutDomainId() throws IOException {
+  public void testRelatingToOldEntityWithoutDomainId() throws IOException {
     // New entity is put in the default domain
     TimelineEntity entityToStore = new TimelineEntity();
     entityToStore.setEntityType("NEW_ENTITY_TYPE_1");
@@ -329,11 +328,11 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
 
     TimelineEntity entityToGet =
         store.getEntity("OLD_ENTITY_ID_1", "OLD_ENTITY_TYPE_1", null);
-    assertNotNull(entityToGet);
-    assertEquals("DEFAULT", entityToGet.getDomainId());
-    assertEquals("NEW_ENTITY_TYPE_1",
+    Assert.assertNotNull(entityToGet);
+    Assert.assertEquals("DEFAULT", entityToGet.getDomainId());
+    Assert.assertEquals("NEW_ENTITY_TYPE_1",
         entityToGet.getRelatedEntities().keySet().iterator().next());
-    assertEquals("NEW_ENTITY_ID_1",
+    Assert.assertEquals("NEW_ENTITY_ID_1",
         entityToGet.getRelatedEntities().values().iterator().next()
             .iterator().next());
 
@@ -346,16 +345,16 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     entities = new TimelineEntities();
     entities.addEntity(entityToStore);
     TimelinePutResponse response = store.put(entities);
-    assertEquals(1, response.getErrors().size());
-    assertEquals(TimelinePutError.FORBIDDEN_RELATION,
+    Assert.assertEquals(1, response.getErrors().size());
+    Assert.assertEquals(TimelinePutError.FORBIDDEN_RELATION,
         response.getErrors().get(0).getErrorCode());
     entityToGet =
         store.getEntity("OLD_ENTITY_ID_1", "OLD_ENTITY_TYPE_1", null);
-    assertNotNull(entityToGet);
-    assertEquals("DEFAULT", entityToGet.getDomainId());
+    Assert.assertNotNull(entityToGet);
+    Assert.assertEquals("DEFAULT", entityToGet.getDomainId());
     // Still have one related entity
-    assertEquals(1, entityToGet.getRelatedEntities().keySet().size());
-    assertEquals(1, entityToGet.getRelatedEntities().values()
+    Assert.assertEquals(1, entityToGet.getRelatedEntities().keySet().size());
+    Assert.assertEquals(1, entityToGet.getRelatedEntities().values()
         .iterator().next().size());
   }
 
@@ -424,12 +423,12 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     Log.getLog().info("Duration for " + num + ": " + duration);
   }
 
+  @Test
   /**
    * Test that RollingLevelDb repair is attempted at least once during
    * serviceInit for RollingLeveldbTimelineStore in case open fails the
    * first time.
-   */ @Test
-  void testLevelDbRepair() throws IOException {
+   */ public void testLevelDbRepair() throws IOException {
     RollingLevelDBTimelineStore store = new RollingLevelDBTimelineStore();
     JniDBFactory factory = Mockito.mock(JniDBFactory.class);
     Mockito.when(factory.open(Mockito.any(File.class), Mockito.any(Options.class)))
@@ -446,7 +445,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
           .repair(Mockito.any(File.class), Mockito.any(Options.class));
       FilenameFilter fileFilter =
           new WildcardFileFilter("*" + RollingLevelDBTimelineStore.BACKUP_EXT + "*");
-      assertTrue(new File(path.getAbsolutePath(), RollingLevelDBTimelineStore.FILENAME)
+      Assert.assertTrue(new File(path.getAbsolutePath(), RollingLevelDBTimelineStore.FILENAME)
           .list(fileFilter).length > 0);
     } finally {
       store.close();

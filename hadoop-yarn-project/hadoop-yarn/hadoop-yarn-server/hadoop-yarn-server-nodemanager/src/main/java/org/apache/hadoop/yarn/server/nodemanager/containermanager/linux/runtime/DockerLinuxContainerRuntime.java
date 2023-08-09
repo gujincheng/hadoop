@@ -20,7 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -40,10 +40,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePlugin;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.volume.csi.ContainerVolumePublisher;
 import org.apache.hadoop.yarn.util.DockerClientConfigHandler;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -208,8 +206,6 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
   private static final Pattern dockerImagePattern =
       Pattern.compile(DOCKER_IMAGE_PATTERN);
 
-  private static final Pattern DOCKER_DIGEST_PATTERN = Pattern.compile("^sha256:[a-z0-9]{12,64}$");
-
   private static final String DEFAULT_PROCFS = "/proc";
 
   @InterfaceAudience.Private
@@ -218,9 +214,6 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
       "YARN_CONTAINER_RUNTIME_DOCKER_IMAGE";
-  @InterfaceAudience.Private
-  public static final String ENV_DOCKER_CONTAINER_CLIENT_CONFIG =
-      "YARN_CONTAINER_RUNTIME_DOCKER_CLIENT_CONFIG";
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_NETWORK =
       "YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK";
@@ -602,7 +595,6 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
     boolean serviceMode = Boolean.parseBoolean(environment.get(
         ENV_DOCKER_CONTAINER_DOCKER_SERVICE_MODE));
     boolean useEntryPoint = serviceMode || checkUseEntryPoint(environment);
-    String clientConfig = environment.get(ENV_DOCKER_CONTAINER_CLIENT_CONFIG);
 
     if (imageName == null || imageName.isEmpty()) {
       imageName = defaultImageName;
@@ -804,8 +796,7 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
       runCommand.setPrivileged();
     }
 
-    addDockerClientConfigToRunCommand(ctx, runCommand,
-        getAdditionalDockerClientCredentials(clientConfig, containerIdStr));
+    addDockerClientConfigToRunCommand(ctx, runCommand);
 
     String resourcesOpts = ctx.getExecutionAttribute(RESOURCES_OPTIONS);
 
@@ -898,22 +889,6 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
       throw new ContainerExecutionException("Launch container failed", e
           .getExitCode(), e.getOutput(), e.getErrorOutput());
     }
-  }
-
-  private Credentials getAdditionalDockerClientCredentials(String clientConfig,
-      String containerIdStr) {
-    Credentials additionalDockerCredentials = null;
-    if (clientConfig != null && !clientConfig.isEmpty()) {
-      try {
-        additionalDockerCredentials =
-            DockerClientConfigHandler.readCredentialsFromConfigFile(new Path(clientConfig), conf,
-                containerIdStr);
-      } catch (IOException e) {
-        throw new RuntimeException(
-            "Fail to read additional docker client config file from " + clientConfig);
-      }
-    }
-    return additionalDockerCredentials;
   }
 
   @Override
@@ -1203,17 +1178,9 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
       throw new ContainerExecutionException(
           ENV_DOCKER_CONTAINER_IMAGE + " not set!");
     }
-    // check if digest is part of imageName, extract and validate it.
-    String digest = null;
-    if (imageName.contains("@sha256")) {
-      String[] digestParts = imageName.split("@");
-      digest = digestParts[1];
-      imageName = digestParts[0];
-    }
-    if (!dockerImagePattern.matcher(imageName).matches() || (digest != null
-        && !DOCKER_DIGEST_PATTERN.matcher(digest).matches())) {
-      throw new ContainerExecutionException(
-          "Image name '" + imageName + "' doesn't match docker image name pattern");
+    if (!dockerImagePattern.matcher(imageName).matches()) {
+      throw new ContainerExecutionException("Image name '" + imageName
+          + "' doesn't match docker image name pattern");
     }
   }
 
@@ -1399,40 +1366,35 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
   }
 
   private void addDockerClientConfigToRunCommand(ContainerRuntimeContext ctx,
-      DockerRunCommand dockerRunCommand, Credentials additionDockerCredentials)
-      throws ContainerExecutionException {
+      DockerRunCommand dockerRunCommand) throws ContainerExecutionException {
     ByteBuffer tokens = ctx.getContainer().getLaunchContext().getTokens();
-    Credentials credentials = new Credentials();
+    Credentials credentials;
     if (tokens != null) {
       tokens.rewind();
       if (tokens.hasRemaining()) {
         try {
-          credentials.addAll(DockerClientConfigHandler
-              .getCredentialsFromTokensByteBuffer(tokens));
+          credentials = DockerClientConfigHandler
+              .getCredentialsFromTokensByteBuffer(tokens);
         } catch (IOException e) {
           throw new ContainerExecutionException("Unable to read tokens.");
         }
+        if (credentials.numberOfTokens() > 0) {
+          Path nmPrivateDir =
+              ctx.getExecutionAttribute(NM_PRIVATE_CONTAINER_SCRIPT_PATH)
+                  .getParent();
+          File dockerConfigPath = new File(nmPrivateDir + "/config.json");
+          try {
+            if (DockerClientConfigHandler
+                .writeDockerCredentialsToPath(dockerConfigPath, credentials)) {
+              dockerRunCommand.setClientConfigDir(dockerConfigPath.getParent());
+            }
+          } catch (IOException e) {
+            throw new ContainerExecutionException(
+                "Unable to write Docker client credentials to "
+                    + dockerConfigPath);
+          }
+        }
       }
-    }
-
-    if (additionDockerCredentials != null) {
-      credentials.addAll(additionDockerCredentials);
-    }
-
-    if (credentials.numberOfTokens() > 0) {
-      Path nmPrivateDir =
-          ctx.getExecutionAttribute(NM_PRIVATE_CONTAINER_SCRIPT_PATH)
-              .getParent();
-      File dockerConfigPath = new File(nmPrivateDir + "/config.json");
-      try {
-        DockerClientConfigHandler
-            .writeDockerCredentialsToPath(dockerConfigPath, credentials);
-      } catch (IOException e) {
-        throw new ContainerExecutionException(
-            "Unable to write Docker client credentials to "
-                + dockerConfigPath);
-      }
-      dockerRunCommand.setClientConfigDir(dockerConfigPath.getParent());
     }
   }
 

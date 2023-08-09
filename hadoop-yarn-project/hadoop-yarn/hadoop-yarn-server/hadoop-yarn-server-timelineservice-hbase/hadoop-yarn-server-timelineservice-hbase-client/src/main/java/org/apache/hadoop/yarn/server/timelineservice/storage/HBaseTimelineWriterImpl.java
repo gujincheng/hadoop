@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import  org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.SubApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
@@ -603,19 +602,6 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       TimelineAggregationTrack track) throws IOException {
     storageMonitor.checkStorageIsUp();
     return null;
-  }
-
-  @Override
-  public TimelineHealth getHealthStatus() {
-    try {
-      storageMonitor.checkStorageIsUp();
-      return new TimelineHealth(TimelineHealth.TimelineHealthStatus.RUNNING,
-          "");
-    } catch (IOException e){
-      return new TimelineHealth(
-          TimelineHealth.TimelineHealthStatus.CONNECTION_FAILURE,
-          "HBase connection is down");
-    }
   }
 
   /*

@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
@@ -33,13 +32,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 /**
  * Simple test class for the {@link WeightedRandomRouterPolicy}. Generate large
- * number of randomized tests to check we are weighting correctly even if
+ * number of randomized tests to check we are weighiting correctly even if
  * clusters go inactive.
  */
 public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
@@ -51,7 +51,8 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
 
     configureWeights(20);
 
-    setupContext();
+    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
+        getPolicyInfo(), getActiveSubclusters());
   }
 
   public void configureWeights(float numSubClusters) {
@@ -67,11 +68,10 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
       // with 5% omit a subcluster
       if (getRand().nextFloat() < 0.95f) {
-        long now = Time.now();
-        SubClusterInfo federationSubClusterInfo = SubClusterInfo.newInstance(
-            sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83",
-            now - 1000, SubClusterState.SC_RUNNING, now - 2000, generateClusterMetricsInfo(i));
-        getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
+        SubClusterInfo sci = mock(SubClusterInfo.class);
+        when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
+        when(sci.getSubClusterId()).thenReturn(sc.toId());
+        getActiveSubclusters().put(sc.toId(), sci);
       }
 
       // 80% of the weight is evenly spread, 20% is randomly generated

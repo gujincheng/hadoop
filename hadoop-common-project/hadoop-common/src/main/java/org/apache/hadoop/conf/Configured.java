@@ -33,9 +33,7 @@ public class Configured implements Configurable {
     this(null);
   }
   
-  /** Construct a Configured.
-   * @param conf the Configuration object.
-   */
+  /** Construct a Configured. */
   public Configured(Configuration conf) {
     setConf(conf);
   }

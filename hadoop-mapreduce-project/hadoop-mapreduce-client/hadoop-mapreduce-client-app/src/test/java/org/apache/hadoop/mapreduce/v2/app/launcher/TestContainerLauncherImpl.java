@@ -209,11 +209,14 @@ public class TestContainerLauncherImpl {
       ut.waitForPoolToIdle();
       
       verify(mockCM).startContainers(any(StartContainersRequest.class));
-
+      
       LOG.info("inserting cleanup event");
-      ContainerLauncherEvent mockCleanupEvent = mock(ContainerLauncherEvent.class);
-      when(mockCleanupEvent.getType()).thenReturn(EventType.CONTAINER_REMOTE_CLEANUP);
-      when(mockCleanupEvent.getContainerID()).thenReturn(contId);
+      ContainerLauncherEvent mockCleanupEvent = 
+        mock(ContainerLauncherEvent.class);
+      when(mockCleanupEvent.getType())
+        .thenReturn(EventType.CONTAINER_REMOTE_CLEANUP);
+      when(mockCleanupEvent.getContainerID())
+        .thenReturn(contId);
       when(mockCleanupEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockCleanupEvent.getContainerMgrAddress()).thenReturn(cmAddress);
       ut.handle(mockCleanupEvent);
@@ -280,21 +283,8 @@ public class TestContainerLauncherImpl {
       ut.handle(mockLaunchEvent);
       
       ut.waitForPoolToIdle();
-
-      verify(mockCM).startContainers(any(StartContainersRequest.class));
-
-      LOG.info("inserting cleanup event");
-      ContainerLauncherEvent mockCleanupEvent2 = mock(ContainerLauncherEvent.class);
-      when(mockCleanupEvent2.getType()).thenReturn(EventType.CONTAINER_REMOTE_CLEANUP);
-      when(mockCleanupEvent2.getContainerID()).thenReturn(contId);
-      when(mockCleanupEvent2.getTaskAttemptID()).thenReturn(taskAttemptId);
-      when(mockCleanupEvent2.getContainerMgrAddress()).thenReturn(cmAddress);
-      ut.handle(mockCleanupEvent2);
-
-      ut.waitForPoolToIdle();
-
-      // Verifies stopContainers is called on existing container
-      verify(mockCM).stopContainers(any(StopContainersRequest.class));
+      
+      verify(mockCM, never()).startContainers(any(StartContainersRequest.class));
     } finally {
       ut.stop();
     }

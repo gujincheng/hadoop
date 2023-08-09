@@ -18,7 +18,7 @@
 
 /**
  * These .proto interfaces are private and stable.
- * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
+ * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
 syntax="proto2";
@@ -303,14 +303,6 @@ message GetSnapshottableDirListingResponseProto {
   optional SnapshottableDirectoryListingProto snapshottableDirList = 1;
 }
 
-message GetSnapshotListingRequestProto {
-  required string snapshotRoot = 1;
-}
-
-message GetSnapshotListingResponseProto {
-  optional SnapshotListingProto snapshotList = 1;
-}
-
 message GetSnapshotDiffReportRequestProto {
   required string snapshotRoot = 1;
   required string fromSnapshot = 2;
@@ -332,7 +324,6 @@ message GetSnapshotDiffReportListingResponseProto {
 }
 message RenewLeaseRequestProto {
   required string clientName = 1;
-  repeated string namespaces = 2;
 }
 
 message RenewLeaseResponseProto { //void response
@@ -423,13 +414,6 @@ message GetPreferredBlockSizeRequestProto {
 
 message GetPreferredBlockSizeResponseProto {
   required uint64 bsize = 1;
-}
-
-message GetSlowDatanodeReportRequestProto {
-}
-
-message GetSlowDatanodeReportResponseProto {
-  repeated DatanodeInfoProto datanodeInfoProto = 1;
 }
 
 enum SafeModeActionProto {
@@ -1002,8 +986,6 @@ service ClientNamenodeProtocol {
       returns(DisallowSnapshotResponseProto);   
   rpc getSnapshottableDirListing(GetSnapshottableDirListingRequestProto)
       returns(GetSnapshottableDirListingResponseProto);
-  rpc getSnapshotListing(GetSnapshotListingRequestProto)
-      returns(GetSnapshotListingResponseProto);
   rpc deleteSnapshot(DeleteSnapshotRequestProto)
       returns(DeleteSnapshotResponseProto);
   rpc getSnapshotDiffReport(GetSnapshotDiffReportRequestProto)
@@ -1078,6 +1060,4 @@ service ClientNamenodeProtocol {
       returns(SatisfyStoragePolicyResponseProto);
   rpc getHAServiceState(HAServiceStateRequestProto)
       returns(HAServiceStateResponseProto);
-  rpc getSlowDatanodeReport(GetSlowDatanodeReportRequestProto)
-      returns(GetSlowDatanodeReportResponseProto);
 }

@@ -124,9 +124,8 @@ public class RemoteException extends IOException {
   }
 
   /**
-   * Create RemoteException from attributes.
-   * @param attrs may not be null.
-   * @return RemoteException.
+   * Create RemoteException from attributes
+   * @param attrs may not be null
    */
   public static RemoteException valueOf(Attributes attrs) {
     return new RemoteException(attrs.getValue("class"),

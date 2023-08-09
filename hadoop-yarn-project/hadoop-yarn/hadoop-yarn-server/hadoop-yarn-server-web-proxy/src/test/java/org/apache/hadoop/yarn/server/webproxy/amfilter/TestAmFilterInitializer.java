@@ -22,10 +22,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.HttpConfig;
@@ -33,15 +32,12 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
 /**
  * Test class for {@Link AmFilterInitializer}.
  */
 public class TestAmFilterInitializer {
 
-  @BeforeEach
+  @Before
   public void setUp() throws Exception {
     NetUtils.addStaticResolution("host1", "172.0.0.1");
     NetUtils.addStaticResolution("host2", "172.0.0.1");
@@ -52,7 +48,7 @@ public class TestAmFilterInitializer {
   }
 
   @Test
-  void testInitFilter() {
+  public void testInitFilter() {
     // Check PROXY_ADDRESS
     MockFilterContainer con = new MockFilterContainer();
     Configuration conf = new Configuration(false);
@@ -64,7 +60,7 @@ public class TestAmFilterInitializer {
     assertEquals("host1", con.givenParameters.get(AmIpFilter.PROXY_HOSTS));
     assertEquals("http://host1:1000/foo",
         con.givenParameters.get(AmIpFilter.PROXY_URI_BASES));
-    assertNull(con.givenParameters.get(AmFilterInitializer.RM_HA_URLS));
+    assertEquals(null, con.givenParameters.get(AmFilterInitializer.RM_HA_URLS));
 
     // Check a single RM_WEBAPP_ADDRESS
     con = new MockFilterContainer();
@@ -77,7 +73,7 @@ public class TestAmFilterInitializer {
     assertEquals("host2", con.givenParameters.get(AmIpFilter.PROXY_HOSTS));
     assertEquals("http://host2:2000/foo",
         con.givenParameters.get(AmIpFilter.PROXY_URI_BASES));
-    assertNull(con.givenParameters.get(AmFilterInitializer.RM_HA_URLS));
+    assertEquals(null, con.givenParameters.get(AmFilterInitializer.RM_HA_URLS));
 
     // Check multiple RM_WEBAPP_ADDRESSes (RM HA)
     con = new MockFilterContainer();
@@ -138,7 +134,7 @@ public class TestAmFilterInitializer {
   }
 
   @Test
-  void testGetProxyHostsAndPortsForAmFilter() {
+  public void testGetProxyHostsAndPortsForAmFilter() {
 
     // Check no configs given
     Configuration conf = new Configuration(false);

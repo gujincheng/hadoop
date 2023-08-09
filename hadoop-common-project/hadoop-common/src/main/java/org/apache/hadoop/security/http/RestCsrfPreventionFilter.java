@@ -94,7 +94,7 @@ public class RestCsrfPreventionFilter implements Filter {
 
   void parseBrowserUserAgents(String userAgents) {
     String[] agentsArray =  userAgents.split(",");
-    browserUserAgents = new HashSet<>();
+    browserUserAgents = new HashSet<Pattern>();
     for (String patternString : agentsArray) {
       browserUserAgents.add(Pattern.compile(patternString));
     }
@@ -102,7 +102,7 @@ public class RestCsrfPreventionFilter implements Filter {
 
   void parseMethodsToIgnore(String mti) {
     String[] methods = mti.split(",");
-    methodsToIgnore = new HashSet<>();
+    methodsToIgnore = new HashSet<String>();
     for (int i = 0; i < methods.length; i++) {
       methodsToIgnore.add(methods[i]);
     }

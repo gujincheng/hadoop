@@ -24,12 +24,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.hadoop.fs.MultipartUploader;
 import org.apache.hadoop.fs.PartHandle;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UploadHandle;
 
-import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Standard base class for Multipart Uploaders.
@@ -68,7 +70,7 @@ public abstract class AbstractMultipartUploader implements MultipartUploader {
    */
   protected void checkPath(Path path) {
     Objects.requireNonNull(path, "null path");
-    checkArgument(path.toString().startsWith(basePath.toString()),
+    Preconditions.checkArgument(path.toString().startsWith(basePath.toString()),
         "Path %s is not under %s", path, basePath);
   }
 
@@ -127,7 +129,7 @@ public abstract class AbstractMultipartUploader implements MultipartUploader {
    * {@inheritDoc}.
    * @param path path to abort uploads under.
    * @return a future to -1.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public CompletableFuture<Integer> abortUploadsUnderPath(Path path)
       throws IOException {

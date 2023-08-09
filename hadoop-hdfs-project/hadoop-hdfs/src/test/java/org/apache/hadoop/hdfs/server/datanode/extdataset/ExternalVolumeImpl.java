@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 public class ExternalVolumeImpl implements FsVolumeSpi {
-  private final String defaultStroageId = "test";
   @Override
   public FsVolumeReference obtainReference() throws ClosedChannelException {
     return null;
@@ -55,7 +54,7 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
 
   @Override
   public String getStorageID() {
-    return defaultStroageId;
+    return null;
   }
 
   @Override
@@ -65,11 +64,6 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
 
   @Override
   public boolean isTransientStorage() {
-    return false;
-  }
-
-  @Override
-  public boolean isRAMStorage() {
     return false;
   }
 

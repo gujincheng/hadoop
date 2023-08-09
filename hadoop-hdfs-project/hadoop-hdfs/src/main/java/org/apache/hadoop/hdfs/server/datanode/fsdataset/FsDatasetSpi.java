@@ -35,10 +35,7 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
-import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MountVolumeMap;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -243,7 +240,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Gets a list of references to the finalized blocks for the given block pool.
    * <p>
    * Callers of this function should call
-   * {@link FsDatasetSpi#acquireDatasetLockManager} to avoid blocks' status being
+   * {@link FsDatasetSpi#acquireDatasetLock} to avoid blocks' status being
    * changed during list iteration.
    * </p>
    * @return a list of references to the finalized blocks for the given block
@@ -476,14 +473,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   void invalidate(String bpid, Block invalidBlks[]) throws IOException;
 
   /**
-   * Invalidate a block which is not found on disk.
-   * @param bpid the block pool ID.
-   * @param block The block to be invalidated.
-   */
-  void invalidateMissingBlock(String bpid, Block block) throws IOException;
-
-  /**
-   * Caches the specified block
+   * Caches the specified blocks
    * @param bpid Block pool id
    * @param blockIds - block ids to cache
    */
@@ -666,12 +656,21 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   ReplicaInfo moveBlockAcrossVolumes(final ExtendedBlock block,
       FsVolumeSpi destination) throws IOException;
 
+  /**
+   * Acquire the lock of the data set. This prevents other threads from
+   * modifying the volume map structure inside the datanode, but other changes
+   * are still possible. For example modifying the genStamp of a block instance.
+   */
+  AutoCloseableLock acquireDatasetLock();
+
   /***
-   * Acquire lock Manager for the data set. This prevents other threads from
-   * modifying the volume map structure inside the datanode.
+   * Acquire the read lock of the data set. This prevents other threads from
+   * modifying the volume map structure inside the datanode, but other changes
+   * are still possible. For example modifying the genStamp of a block instance.
    * @return The AutoClosable read lock instance.
    */
-  DataNodeLockManager<? extends AutoCloseDataSetLock> acquireDatasetLockManager();
+  AutoCloseableLock acquireDatasetReadLock();
+
 
   /**
    * Deep copy the replica info belonging to given block pool.
@@ -680,22 +679,4 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @throws IOException
    */
   Set<? extends Replica> deepCopyReplica(String bpid) throws IOException;
-
-  /**
-   * Get relationship between disk mount and FsVolume.
-   * @return Disk mount and FsVolume relationship.
-   * @throws IOException
-   */
-  MountVolumeMap getMountVolumeMap() throws IOException;
-
-  /**
-   * Get the volume list.
-   */
-  List<FsVolumeImpl> getVolumeList();
-
-  /**
-   * Set the last time in milliseconds when the directory scanner successfully ran.
-   * @param time the last time in milliseconds when the directory scanner successfully ran.
-   */
-  default void setLastDirScannerFinishTime(long time) {}
 }

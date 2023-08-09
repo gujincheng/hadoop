@@ -53,7 +53,6 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -88,7 +87,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -143,8 +141,6 @@ public class TestLeafQueue {
   CapacityScheduler cs;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
-  CapacitySchedulerQueueContext queueContext;
-  private RMApp rmApp;
   
   CSQueue root;
   private CSQueueStore queues;
@@ -178,17 +174,12 @@ public class TestLeafQueue {
     CapacityScheduler spyCs = new CapacityScheduler();
     queues = new CSQueueStore();
     cs = spy(spyCs);
-
-    //All stub calls on the spy object of the 'cs' field should happen
-    //before cs.start() is invoked. See YARN-10672 for more details.
-    when(cs.getNumClusterNodes()).thenReturn(3);
-
     rmContext = TestUtils.getMockRMContext();
     spyRMContext = spy(rmContext);
 
     ConcurrentMap<ApplicationId, RMApp> spyApps = 
         spy(new ConcurrentHashMap<ApplicationId, RMApp>());
-    rmApp = mock(RMApp.class);
+    RMApp rmApp = mock(RMApp.class);
     when(rmApp.getRMAppAttempt(any())).thenReturn(null);
     amResourceRequest = mock(ResourceRequest.class);
     when(amResourceRequest.getCapability()).thenReturn(
@@ -204,7 +195,6 @@ public class TestLeafQueue {
     csConf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
     csConf.setBoolean(CapacitySchedulerConfiguration.RESERVE_CONT_LOOK_ALL_NODES,
         false);
-    csConf.setResourceComparator(rC.getClass());
     final String newRoot = "root" + System.currentTimeMillis();
     setupQueueConfiguration(csConf, newRoot, withNodeLabels);
     YarnConfiguration conf = new YarnConfiguration();
@@ -230,20 +220,12 @@ public class TestLeafQueue {
     containerTokenSecretManager.rollMasterKey();
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
-    CapacitySchedulerQueueManager queueManager =
-        new CapacitySchedulerQueueManager(csConf, rmContext.getNodeLabelManager(), null);
-    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
-
-    queueManager.reinitConfiguredNodeLabels(csConf);
-
-    queueContext = new CapacitySchedulerQueueContext(csContext);
 
     root = 
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             ROOT,
             queues, queues, 
             TestUtils.spyHook);
-    queueManager.setRootQueue(root);
     root.updateClusterResource(Resources.createResource(100 * 16 * GB, 100 * 32),
         new ResourceLimits(Resources.createResource(100 * 16 * GB, 100 * 32)));
 
@@ -252,12 +234,13 @@ public class TestLeafQueue {
         .thenReturn(queueResUsage);
 
     cs.setRMContext(spyRMContext);
-    cs.setResourceCalculator(rC);
     cs.init(csConf);
+    cs.setResourceCalculator(rC);
 
     when(spyRMContext.getScheduler()).thenReturn(cs);
     when(spyRMContext.getYarnConfiguration())
         .thenReturn(new YarnConfiguration());
+    when(cs.getNumClusterNodes()).thenReturn(3);
     cs.start();
   }
 
@@ -489,12 +472,7 @@ public class TestLeafQueue {
   public void testAppAttemptMetrics() throws Exception {
     CSMaxRunningAppsEnforcer enforcer = mock(CSMaxRunningAppsEnforcer.class);
     cs.setMaxRunningAppsEnforcer(enforcer);
-    ApplicationSubmissionContext applicationSubmissionContext =
-        mock(ApplicationSubmissionContext.class);
-    when(applicationSubmissionContext.getUnmanagedAM()).thenReturn(false);
-    when(rmApp.getApplicationSubmissionContext())
-        .thenReturn(applicationSubmissionContext);
-    when(rmApp.getCurrentAppAttempt()).thenReturn(mock(RMAppAttempt.class));
+
     // Manipulate queue 'a'
     LeafQueue a = stubLeafQueue((LeafQueue) queues.get(B));
 
@@ -523,18 +501,17 @@ public class TestLeafQueue {
     // Attempt the same application again
     final ApplicationAttemptId appAttemptId_1 = TestUtils
         .getMockApplicationAttemptId(0, 2);
-    FiCaSchedulerApp app1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a,
-        null, spyRMContext);
-    app1.getAppSchedulingInfo().setUnmanagedAM(false);
-    app1.setAMResource(Resource.newInstance(100, 1));
-    a.submitApplicationAttempt(app1, user_0); // same user
+    FiCaSchedulerApp app_1 = new FiCaSchedulerApp(appAttemptId_1, user_0, a, null,
+        spyRMContext);
+    app_1.setAMResource(Resource.newInstance(100, 1));
+    a.submitApplicationAttempt(app_1, user_0); // same user
 
     assertEquals(1, a.getMetrics().getAppsSubmitted());
     assertEquals(1, a.getMetrics().getAppsPending());
     assertEquals(1, a.getUser(user_0).getActiveApplications());
-    assertEquals(app1.getAMResource().getMemorySize(), a.getMetrics()
+    assertEquals(app_1.getAMResource().getMemorySize(), a.getMetrics()
         .getUsedAMResourceMB());
-    assertEquals(app1.getAMResource().getVirtualCores(), a.getMetrics()
+    assertEquals(app_1.getAMResource().getVirtualCores(), a.getMetrics()
         .getUsedAMResourceVCores());
     
     event = new AppAttemptRemovedSchedulerEvent(appAttemptId_0,
@@ -551,74 +528,6 @@ public class TestLeafQueue {
 
     QueueMetrics userMetrics = a.getMetrics().getUserMetrics(user_0);
     assertEquals(1, userMetrics.getAppsSubmitted());
-  }
-
-  @Test
-  public void testUnmanagedAppAttemptMetrics() throws Exception {
-    CSMaxRunningAppsEnforcer enforcer = mock(CSMaxRunningAppsEnforcer.class);
-    cs.setMaxRunningAppsEnforcer(enforcer);
-    // Manipulate queue 'a'
-    LeafQueue a = stubLeafQueue((LeafQueue) queues.get(B));
-
-    // Users
-    final String user0 = "user_0";
-
-    // Submit applications
-    final ApplicationAttemptId appAttemptId0 = TestUtils
-        .getMockApplicationAttemptId(0, 1);
-
-    ApplicationSubmissionContext applicationSubmissionContext =
-        ApplicationSubmissionContext.newInstance(
-            appAttemptId0.getApplicationId(), "test", a.getQueuePath(),
-            Priority.newInstance(0), null, true, true,
-            2, null, "test");
-
-    AppAddedSchedulerEvent addAppEvent =
-        new AppAddedSchedulerEvent(user0, applicationSubmissionContext, false,
-            null);
-    cs.handle(addAppEvent);
-    AppAttemptAddedSchedulerEvent addAttemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId0, false);
-    cs.handle(addAttemptEvent);
-
-    AppAttemptRemovedSchedulerEvent event = new AppAttemptRemovedSchedulerEvent(
-        appAttemptId0, RMAppAttemptState.FAILED, false);
-    cs.handle(event);
-
-    assertEquals(0, a.getMetrics().getUnmanagedAppsPending());
-    assertEquals(0, a.getMetrics().getUnmanagedAppsFailed());
-
-    // Attempt the same application again
-    final ApplicationAttemptId appAttemptId1 = TestUtils
-        .getMockApplicationAttemptId(0, 2);
-    FiCaSchedulerApp app1 = new FiCaSchedulerApp(appAttemptId1, user0, a,
-        null, spyRMContext);
-
-    app1.setAMResource(Resource.newInstance(100, 1));
-    a.submitApplicationAttempt(app1, user0); // same user
-
-    assertEquals(1, a.getMetrics().getUnmanagedAppsSubmitted());
-    assertEquals(1, a.getMetrics().getUnmanagedAppsPending());
-    assertEquals(1, a.getUser(user0).getActiveApplications());
-    assertEquals(app1.getAMResource().getMemorySize(), a.getMetrics()
-        .getUsedAMResourceMB());
-    assertEquals(app1.getAMResource().getVirtualCores(), a.getMetrics()
-        .getUsedAMResourceVCores());
-
-    event = new AppAttemptRemovedSchedulerEvent(appAttemptId0,
-        RMAppAttemptState.FINISHED, false);
-    cs.handle(event);
-    AppRemovedSchedulerEvent rEvent = new AppRemovedSchedulerEvent(
-        appAttemptId0.getApplicationId(), RMAppState.FINISHED);
-    cs.handle(rEvent);
-
-    assertEquals(1, a.getMetrics().getUnmanagedAppsSubmitted());
-    assertEquals(0, a.getMetrics().getUnmanagedAppsPending());
-    assertEquals(0, a.getMetrics().getUnmanagedAppsFailed());
-    assertEquals(1, a.getMetrics().getUnmanagedAppsCompleted());
-
-    QueueMetrics userMetrics = a.getMetrics().getUserMetrics(user0);
-    assertEquals(1, userMetrics.getUnmanagedAppsSubmitted());
   }
 
   @Test
@@ -820,62 +729,6 @@ public class TestLeafQueue {
     assertEquals((int)(a.getCapacity() * node_0.getTotalResource().getMemorySize()),
         a.getMetrics().getAvailableMB());
   }
-
-  @Test
-  public void testHeadroomCheckWithDRF() throws Exception {
-    CSAssignment assignment;
-    setUpWithDominantResourceCalculator();
-    // Mock the queue
-    LeafQueue b = stubLeafQueue((LeafQueue) queues.get(B));
-    // Users
-    final String user0 = "user_0";
-
-    // Submit applications
-    final ApplicationAttemptId appAttemptId0 =
-        TestUtils.getMockApplicationAttemptId(0, 0);
-    FiCaSchedulerApp app0 =
-        new FiCaSchedulerApp(appAttemptId0, user0, b,
-            b.getAbstractUsersManager(), spyRMContext);
-    b.submitApplicationAttempt(app0, user0);
-    // Setup some nodes
-    String host0 = "127.0.0.1";
-    FiCaSchedulerNode node0 =
-        TestUtils.getMockNode(host0, DEFAULT_RACK, 0, 100 * GB, 100);
-
-    int numNodes = 1;
-    Resource clusterResource =
-        Resources.createResource(numNodes * (100 * GB), numNodes * 100);
-    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
-    root.updateClusterResource(clusterResource,
-        new ResourceLimits(clusterResource));
-
-    // Increase the user-limit-factor to make user_0 fully use max resources of the queue.
-    // The max resources can be used are 0.99 * [100 * GB, 100]
-    b.setUserLimitFactor(10.0f);
-
-    Map<ApplicationAttemptId, FiCaSchedulerApp> apps =
-        ImmutableMap.of(app0.getApplicationAttemptId(), app0);
-    Map<NodeId, FiCaSchedulerNode> nodes = ImmutableMap.of(node0.getNodeID(), node0);
-
-    Priority priority = TestUtils.createMockPriority(1);
-    app0.updateResourceRequests(Collections.singletonList(TestUtils
-        .createResourceRequest(ResourceRequest.ANY, 90 * GB, 10, 1, true,
-            priority, recordFactory, NO_LABEL)));
-    assignment = b.assignContainers(clusterResource, node0, new ResourceLimits(
-        clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    applyCSAssignment(clusterResource, assignment, b, nodes, apps);
-    verifyContainerAllocated(assignment, NodeType.OFF_SWITCH);
-
-    app0.updateResourceRequests(Collections.singletonList(TestUtils
-        .createResourceRequest(ResourceRequest.ANY, 10 * GB, 10, 1, true,
-            priority, recordFactory, NO_LABEL)));
-    assignment = b.assignContainers(clusterResource, node0, new ResourceLimits(
-        clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    // This assignment should have no containers assigned,
-    // because the used memory (90 + 10)GB will exceed the max 99GB
-    verifyNoContainerAllocated(assignment);
-  }
-
   @Test
   public void testDRFUsageRatioRounding() throws Exception {
     CSAssignment assign;
@@ -936,7 +789,7 @@ public class TestLeafQueue {
       LeafQueue q, final Map<NodeId, FiCaSchedulerNode> nodes,
       final Map<ApplicationAttemptId, FiCaSchedulerApp> apps)
       throws IOException {
-    TestUtils.applyResourceCommitRequest(clusterResource, assign, nodes, apps, csConf);
+    TestUtils.applyResourceCommitRequest(clusterResource, assign, nodes, apps);
   }
 
   @Test
@@ -1097,12 +950,11 @@ public class TestLeafQueue {
     csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + A, 100);
     csConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + "." + A,
         100);
-    queueContext.reinitialize();
 
     // reinitialize queues
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT,
             newQueues, queues,
             TestUtils.spyHook);
@@ -1316,12 +1168,11 @@ public class TestLeafQueue {
     csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + A, 100);
     csConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + "." + A,
         100);
-    queueContext.reinitialize();
 
     // reinitialize queues
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT,
             newQueues, queues,
             TestUtils.spyHook);
@@ -1595,114 +1446,6 @@ public class TestLeafQueue {
   }
 
   @Test
-  public void testDisabledUserLimitFactor() throws Exception {
-    // Mock the queue
-    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
-    //unset maxCapacity
-    a.setMaxCapacity(1.0f);
-
-    when(csContext.getClusterResource())
-        .thenReturn(Resources.createResource(16 * GB, 32));
-
-    // Users
-    final String user0 = "user0";
-    final String user1 = "user1";
-
-    // Submit applications
-    final ApplicationAttemptId appAttemptId0 =
-        TestUtils.getMockApplicationAttemptId(0, 0);
-    FiCaSchedulerApp app0 =
-        new FiCaSchedulerApp(appAttemptId0, user0, a,
-            a.getAbstractUsersManager(), spyRMContext);
-    a.submitApplicationAttempt(app0, user0);
-
-    final ApplicationAttemptId appAttemptId1 =
-        TestUtils.getMockApplicationAttemptId(1, 0);
-    FiCaSchedulerApp app1 =
-        new FiCaSchedulerApp(appAttemptId1, user1, a,
-            a.getAbstractUsersManager(), spyRMContext);
-    a.submitApplicationAttempt(app1, user1); // different user
-
-    // Setup some nodes
-    String host0 = "127.0.0.1";
-    FiCaSchedulerNode node0 =
-        TestUtils.getMockNode(host0, DEFAULT_RACK, 0, 8*GB);
-    String host1 = "127.0.0.2";
-    FiCaSchedulerNode node1 =
-        TestUtils.getMockNode(host1, DEFAULT_RACK, 0, 8*GB);
-
-    final int numNodes = 2;
-    Resource clusterResource =
-        Resources.createResource(numNodes * (8*GB), numNodes * 16);
-    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
-    root.updateClusterResource(clusterResource,
-        new ResourceLimits(clusterResource));
-
-    // Setup resource-requests
-    Priority priority = TestUtils.createMockPriority(1);
-    app0.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 3*GB, 2, true,
-            priority, recordFactory)));
-
-    app1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, true,
-            priority, recordFactory)));
-
-    Map<ApplicationAttemptId, FiCaSchedulerApp> apps = ImmutableMap.of(
-        app0.getApplicationAttemptId(), app0, app1.getApplicationAttemptId(),
-        app1);
-    Map<NodeId, FiCaSchedulerNode> nodes = ImmutableMap.of(node0.getNodeID(),
-        node0, node1.getNodeID(), node1);
-
-    /**
-     * Start testing ...
-     */
-    a.setUserLimitFactor(1);
-    a.setUserLimit(50);
-
-    root.updateClusterResource(clusterResource,
-        new ResourceLimits(clusterResource));
-
-    // There're two active users
-    assertEquals(2, a.getAbstractUsersManager().getNumActiveUsers());
-
-    // 1 container to user0
-    applyCSAssignment(clusterResource,
-        a.assignContainers(clusterResource, node0,
-            new ResourceLimits(clusterResource),
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
-    assertEquals(3*GB, a.getUsedResources().getMemorySize());
-    assertEquals(3*GB, app0.getCurrentConsumption().getMemorySize());
-    assertEquals(0*GB, app1.getCurrentConsumption().getMemorySize());
-
-    // Allocate one container to app1. Even if app0
-    // submit earlier, it cannot get this container assigned since user0
-    // exceeded user-limit already.
-    applyCSAssignment(clusterResource,
-        a.assignContainers(clusterResource, node0,
-            new ResourceLimits(clusterResource),
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
-    assertEquals(4*GB, a.getUsedResources().getMemorySize());
-    assertEquals(3*GB, app0.getCurrentConsumption().getMemorySize());
-    assertEquals(1*GB, app1.getCurrentConsumption().getMemorySize());
-
-    // Set to -1 , disabled user limit factor
-    // There will be not limited
-    a.setUserLimitFactor(-1);
-    root.updateClusterResource(clusterResource,
-        new ResourceLimits(clusterResource));
-
-    applyCSAssignment(clusterResource,
-        a.assignContainers(clusterResource, node1,
-            new ResourceLimits(clusterResource),
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
-    assertEquals(7*GB, a.getUsedResources().getMemorySize());
-    assertEquals(6*GB, app0.getCurrentConsumption().getMemorySize());
-    assertEquals(1*GB, app1.getCurrentConsumption().getMemorySize());
-
-  }
-
-  @Test
   public void testUserLimits() throws Exception {
     // Mock the queue
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
@@ -1763,7 +1506,7 @@ public class TestLeafQueue {
     /**
      * Start testing...
      */
-
+    
     // Set user-limit
     a.setUserLimit(50);
     a.setUserLimitFactor(2);
@@ -1810,137 +1553,22 @@ public class TestLeafQueue {
   }
 
   @Test
-  public void testDecimalUserLimits() throws Exception {
-    // Mock the queue
-    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
-    //unset maxCapacity
-    a.setMaxCapacity(1.0f);
-
-    when(csContext.getClusterResource())
-        .thenReturn(Resources.createResource(16 * GB, 32));
-
-    // Users
-    final String user0 = "user_0";
-    final String user1 = "user_1";
-
-    // Submit applications
-    final ApplicationAttemptId appAttemptId0 =
-        TestUtils.getMockApplicationAttemptId(0, 0);
-    FiCaSchedulerApp app0 =
-        new FiCaSchedulerApp(appAttemptId0, user0, a,
-            a.getAbstractUsersManager(), spyRMContext);
-    a.submitApplicationAttempt(app0, user0);
-
-    final ApplicationAttemptId appAttemptId1 =
-        TestUtils.getMockApplicationAttemptId(1, 0);
-    FiCaSchedulerApp app1 =
-        new FiCaSchedulerApp(appAttemptId1, user1, a,
-            a.getAbstractUsersManager(), spyRMContext);
-    a.submitApplicationAttempt(app1, user1); // different user
-
-    // Setup some nodes
-    String host0 = "127.0.0.1";
-    FiCaSchedulerNode node0 =
-        TestUtils.getMockNode(host0, DEFAULT_RACK, 0, 8*GB);
-    String host1 = "127.0.0.2";
-    FiCaSchedulerNode node1 =
-        TestUtils.getMockNode(host1, DEFAULT_RACK, 0, 8*GB);
-
-    final int numNodes = 2;
-    Resource clusterResource =
-        Resources.createResource(numNodes * (8*GB), numNodes * 16);
-    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
-    root.updateClusterResource(clusterResource,
-        new ResourceLimits(clusterResource));
-
-    // Setup resource-requests
-    Priority priority = TestUtils.createMockPriority(1);
-    app0.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 3*GB, 2, true,
-            priority, recordFactory)));
-
-    app1.updateResourceRequests(Collections.singletonList(
-        TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 2, true,
-            priority, recordFactory)));
-
-    Map<ApplicationAttemptId, FiCaSchedulerApp> apps = ImmutableMap.of(
-        app0.getApplicationAttemptId(), app0, app1.getApplicationAttemptId(),
-        app1);
-    Map<NodeId, FiCaSchedulerNode> nodes = ImmutableMap.of(node0.getNodeID(),
-        node0, node1.getNodeID(), node1);
-
-    /**
-     * Start testing...
-     */
-
-    // Set user-limit
-    a.setUserLimit(50.1f);
-    a.setUserLimitFactor(2);
-    root.updateClusterResource(clusterResource,
-        new ResourceLimits(clusterResource));
-
-    // There're two active users
-    assertEquals(2, a.getAbstractUsersManager().getNumActiveUsers());
-
-    // 1 container to user_0
-    applyCSAssignment(clusterResource,
-        a.assignContainers(clusterResource, node0,
-            new ResourceLimits(clusterResource),
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
-    assertEquals(3*GB, a.getUsedResources().getMemorySize());
-    assertEquals(3*GB, app0.getCurrentConsumption().getMemorySize());
-    assertEquals(0, app1.getCurrentConsumption().getMemorySize());
-
-    // Allocate another container. Since the user limit is 50.1% it isn't
-    // reached, app_0 will get another container.
-    applyCSAssignment(clusterResource,
-        a.assignContainers(clusterResource, node0,
-            new ResourceLimits(clusterResource),
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
-    assertEquals(6*GB, a.getUsedResources().getMemorySize());
-    assertEquals(6*GB, app0.getCurrentConsumption().getMemorySize());
-    assertEquals(0, app1.getCurrentConsumption().getMemorySize());
-
-    applyCSAssignment(clusterResource,
-        a.assignContainers(clusterResource, node1,
-            new ResourceLimits(clusterResource),
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
-    assertEquals(7*GB, a.getUsedResources().getMemorySize());
-    assertEquals(6*GB, app0.getCurrentConsumption().getMemorySize());
-    assertEquals(GB, app1.getCurrentConsumption().getMemorySize());
-
-    // app_0 doesn't have outstanding resources, there's only one active user.
-    assertEquals("There should only be 1 active user!",
-        1, a.getAbstractUsersManager().getNumActiveUsers());
-  }
-
-  @Test
   public void testUserSpecificUserLimits() throws Exception {
     // Mock the queue
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
     // Set minimum-user-limit-percent for queue "a" in the configs.
     csConf.setUserLimit(a.getQueuePath(), 50);
-    // Set weight for "user_0" to be 1.5f for the a queue in the configs.
+    // Set weight for "user_0" to be 1.5 for the a queue in the configs.
     csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
         + ".user-settings.user_0." + CapacitySchedulerConfiguration.USER_WEIGHT,
         1.5f);
-    // Set weight for "firstname.lastname" to be 0.7f for the "a" queue
-    // in the configs. Notice the user contains a dot. This is to test
-    // that weights are accepted for a username that contains dots.
-    csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
-        + ".user-settings.firstname.lastname."
-        + CapacitySchedulerConfiguration.USER_WEIGHT,
-        0.7f);
-    csConf.reinitializeConfigurationProperties();
-    queueContext.reinitialize();
 
     when(csContext.getClusterResource())
         .thenReturn(Resources.createResource(16 * GB, 32));
     // Verify that configs were updated and parsed correctly.
-    Assert.assertEquals(UserWeights.DEFAULT_WEIGHT, a.getUserWeights().getByUser("user_0"), 0.0f);
+    Assert.assertNull(a.getUserWeights().get("user_0"));
     a.reinitialize(a, csContext.getClusterResource());
-    assertEquals(1.5f, a.getUserWeights().getByUser("user_0"), 0.0f);
-    assertEquals(0.7f, a.getUserWeights().getByUser("firstname.lastname"), 0.0f);
+    assertEquals(1.5, a.getUserWeights().get("user_0").floatValue(), 0.0);
 
     // set maxCapacity
     a.setMaxCapacity(1.0f);
@@ -3229,12 +2857,10 @@ public class TestLeafQueue {
     csConf.setInt(CapacitySchedulerConfiguration.NODE_LOCALITY_DELAY, 2);
     csConf.setInt(
         CapacitySchedulerConfiguration.RACK_LOCALITY_ADDITIONAL_DELAY, 1);
-    queueContext.reinitialize();
     CSQueueStore newQueues = new CSQueueStore();
-    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(queueContext,
+    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
         csConf, null, ROOT, newQueues, queues,
         TestUtils.spyHook);
-    csContext.getCapacitySchedulerQueueManager().setRootQueue(newRoot);
     root.reinitialize(newRoot, cs.getClusterResource());
 
     // Manipulate queue 'b'
@@ -3667,19 +3293,14 @@ public class TestLeafQueue {
         CapacitySchedulerConfiguration.MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
         CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT
             * 2);
-    queueContext.reinitialize();
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             ROOT,
             newQueues, queues,
             TestUtils.spyHook);
     queues = newQueues;
-    // This will not update active apps
     root.reinitialize(newRoot, csContext.getClusterResource());
-    // Cause this to update active apps
-    root.updateClusterResource(csContext.getClusterResource(),
-        new ResourceLimits(csContext.getClusterResource()));
 
     // after reinitialization
     assertEquals(3, e.getNumActiveApplications());
@@ -3699,14 +3320,12 @@ public class TestLeafQueue {
     csConf.setInt(CapacitySchedulerConfiguration.NODE_LOCALITY_DELAY, 60);
     csConf.setInt(
         CapacitySchedulerConfiguration.RACK_LOCALITY_ADDITIONAL_DELAY, 600);
-    queueContext.reinitialize();
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             ROOT,
             newQueues, queues,
             TestUtils.spyHook);
-    csContext.getCapacitySchedulerQueueManager().setRootQueue(newRoot);
     root.reinitialize(newRoot, cs.getClusterResource());
 
     // after reinitialization
@@ -4061,33 +3680,24 @@ public class TestLeafQueue {
         CapacitySchedulerConfiguration.MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
         0.1f);
 
-    CapacitySchedulerQueueManager queueManager = new CapacitySchedulerQueueManager(csConf,
-        rmContext.getNodeLabelManager(), null);
-    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
-
-    CapacitySchedulerQueueContext newQueueContext = new CapacitySchedulerQueueContext(csContext);
-
     CSQueue root;
-    root = CapacitySchedulerQueueManager.parseQueue(newQueueContext, csConf, null,
+    root = CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues, TestUtils.spyHook);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
-    // Manipulate queue 'b'
+    // Manipulate queue 'a'
     LeafQueue b = stubLeafQueue((LeafQueue) queues.get(B));
     assertEquals(0.1f, b.getMaxAMResourcePerQueuePercent(), 1e-3f);
-    // Queue b has 100 * 16 = 1600 GB effective usable resource, so the
-    // AM limit is 1600 GB * 0.1 * 0.99 = 162816 MB
-    assertEquals(Resources.createResource(162816, 1),
-        b.calculateAndGetAMResourceLimit());
+    assertEquals(b.calculateAndGetAMResourceLimit(),
+        Resources.createResource(159 * GB, 1));
 
     csConf.setFloat(
         CapacitySchedulerConfiguration.MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
         0.2f);
-    newQueueContext.reinitialize();
     clusterResource = Resources.createResource(100 * 20 * GB, 100 * 32);
     CSQueueStore newQueues = new CSQueueStore();
-    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(newQueueContext,
+    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
         csConf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues,
         TestUtils.spyHook);
     root.reinitialize(newRoot, clusterResource);
@@ -5071,7 +4681,7 @@ public class TestLeafQueue {
 
     // Queue "test" consumes 100% of the cluster, so its capacity and absolute
     // capacity are both 1.0f.
-    Queue queue = createQueue("test", "root.test", null, 1.0f, 1.0f, res);
+    Queue queue = createQueue("test", null, 1.0f, 1.0f, res);
     final String user = "user1";
     FiCaSchedulerApp app =
         new FiCaSchedulerApp(appAttId, user, queue,
@@ -5088,7 +4698,7 @@ public class TestLeafQueue {
 
     // Queue "test2" is a child of root and its capacity is 50% of root. As a
     // child of root, its absolute capaicty is also 50%.
-    queue = createQueue("test2", "root.test2", null, 0.5f, 0.5f,
+    queue = createQueue("test2", null, 0.5f, 0.5f,
         Resources.divideAndCeil(dominantResourceCalculator, res, 2));
     app = new FiCaSchedulerApp(appAttId, user, queue,
         queue.getAbstractUsersManager(), rmContext);
@@ -5101,8 +4711,7 @@ public class TestLeafQueue {
 
     // Queue "test2.1" is 50% of queue "test2", which is 50% of the cluster.
     // Therefore, "test2.1" capacity is 50% and absolute capacity is 25%.
-    AbstractCSQueue qChild =
-        createQueue("test2.1", "root.test2.1", queue, 0.5f, 0.25f,
+    AbstractCSQueue qChild = createQueue("test2.1", queue, 0.5f, 0.25f,
         Resources.divideAndCeil(dominantResourceCalculator, res, 4));
     app = new FiCaSchedulerApp(appAttId, user, qChild,
         qChild.getAbstractUsersManager(), rmContext);
@@ -5114,7 +4723,7 @@ public class TestLeafQueue {
         app.getResourceUsageReport().getClusterUsagePercentage(), 0.01f);
 
     // test that queueUsagePercentage returns neither NaN nor Infinite
-    AbstractCSQueue zeroQueue = createQueue("test2.2", "root.test2.2", null,
+    AbstractCSQueue zeroQueue = createQueue("test2.2", null,
         Float.MIN_VALUE, Float.MIN_VALUE,
         Resources.multiply(res, Float.MIN_VALUE));
     app = new FiCaSchedulerApp(appAttId, user, zeroQueue,
@@ -5137,35 +4746,16 @@ public class TestLeafQueue {
 
       assertEquals(0, conf.size());
       conf.setNodeLocalityDelay(60);
-
-      csConf.setQueues(ROOT, new String[] {leafQueueName, B});
-      csConf.setCapacity(ROOT + DOT + leafQueueName, 10);
-      csConf.setMaximumCapacity(ROOT + DOT + leafQueueName,
-          100);
-      csConf.setUserLimitFactor(ROOT + DOT + leafQueueName, 0.1f);
-
-      csConf.setCapacity(ROOT + DOT + B, 90);
-      csConf.setMaximumCapacity(ROOT + DOT + B,
-          100);
+      conf.setCapacity(ROOT + DOT + leafQueueName, 10);
+      conf.setMaximumCapacity(ROOT + DOT + leafQueueName, 100);
+      conf.setUserLimitFactor(ROOT + DOT +leafQueueName, 0.1f);
 
       csConf.setNodeLocalityDelay(30);
       csConf.setGlobalMaximumApplicationsPerQueue(20);
-      queueContext.reinitialize();
 
-      // reinitialize queues
-      CSQueueStore newQueues = new CSQueueStore();
-      CSQueue newRoot =
-          CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
-              CapacitySchedulerConfiguration.ROOT,
-              newQueues, queues,
-              TestUtils.spyHook);
-      queues = newQueues;
-      root.reinitialize(newRoot, csContext.getClusterResource());
-      root.updateClusterResource(csContext.getClusterResource(),
-          new ResourceLimits(csContext.getClusterResource()));
-
-      // Mock the queue
-      LeafQueue leafQueue = stubLeafQueue((LeafQueue)queues.get(leafQueueName));
+      LeafQueue leafQueue = new LeafQueue(csContext, conf,
+          leafQueueName, cs.getRootQueue(),
+          null);
 
       assertEquals(30, leafQueue.getNodeLocalityDelay());
       assertEquals(20, leafQueue.getMaxApplications());
@@ -5187,14 +4777,6 @@ public class TestLeafQueue {
       assertEquals(1.0, leafQueue.getAbsoluteMaximumCapacity(),
           EPSILON);
 
-      // limit maximum apps by max system apps
-      csConf.setMaximumSystemApplications(15);
-      queueContext.reinitialize();
-      leafQueue.updateClusterResource(csContext.getClusterResource(),
-          new ResourceLimits(csContext.getClusterResource()));
-
-      assertEquals(15, leafQueue.getMaxApplications());
-
      } finally {
         //revert config changes
         csConf.setNodeLocalityDelay(
@@ -5211,13 +4793,11 @@ public class TestLeafQueue {
     return attId;
   }
 
-  private AbstractCSQueue
-      createQueue(String name, String path, Queue parent, float capacity,
+  private AbstractCSQueue createQueue(String name, Queue parent, float capacity,
       float absCap, Resource res) {
     CSQueueMetrics metrics = CSQueueMetrics.forQueue(name, parent, false, cs.getConf());
-    QueueInfo queueInfo = QueueInfo.
-        newInstance(name, path, capacity, 1.0f, 0, null,
-        null, QueueState.RUNNING, null, "", null, false, -1.0f, 10, null, false);
+    QueueInfo queueInfo = QueueInfo.newInstance(name, capacity, 1.0f, 0, null,
+        null, QueueState.RUNNING, null, "", null, false, null, false);
     ActiveUsersManager activeUsersManager = new ActiveUsersManager(metrics);
     AbstractCSQueue queue = mock(AbstractCSQueue.class);
     when(queue.getMetrics()).thenReturn(metrics);
@@ -5234,78 +4814,6 @@ public class TestLeafQueue {
     when(queue.getQueueResourceQuotas()).thenReturn(qQuotas);
     when(queue.getEffectiveCapacity(any())).thenReturn(res);
     return queue;
-  }
-
-  @Test
-  public void testMaxApplicationsWithNodeLabels() throws IOException {
-    CapacitySchedulerConfiguration conf = csConf;
-    String rootChild = root.getChildQueues().get(0).getQueuePath();
-    when(cs.getClusterResource()).thenReturn(
-        Resources.createResource(2 * 16 * GB, 2 * 32));
-
-    conf.setCapacityByLabel(ROOT, "test", 100);
-    conf.setCapacityByLabel(rootChild, "test", 100);
-    conf.setCapacityByLabel(rootChild + "." + A, "test", 20);
-    conf.setCapacityByLabel(rootChild + "." + B, "test", 40);
-    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test", 100);
-    conf.setCapacityByLabel(rootChild + "." + D, "test", 30);
-    conf.setCapacityByLabel(rootChild + "." + E, "test", 0);
-    cs.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(conf);
-    cs.setMaxRunningAppsEnforcer(new CSMaxRunningAppsEnforcer(cs));
-    cs.reinitialize(conf, cs.getRMContext());
-
-    LeafQueue e = (LeafQueue) cs.getQueue("e");
-    // Maximum application should be calculated with the default node label
-    Assert.assertEquals("Maximum application is not calculated properly",
-            (int)(conf.getMaximumSystemApplications()
-                * e.getAbsoluteCapacity()), e.getMaxApplications());
-
-    conf.setCapacityByLabel(rootChild + "." + A, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + B, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + D, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + E, "test", 60);
-    cs.reinitialize(conf, cs.getRMContext());
-
-    e = (LeafQueue) cs.getQueue("e");
-    // Maximum application is now determined by test label, because that would
-    // yield a higher value than with default node label
-    Assert.assertEquals("Maximum application is not calculated properly",
-        (int)(conf.getMaximumSystemApplications() *
-            e.getQueueCapacities().getAbsoluteCapacity("test")),
-        e.getMaxApplications());
-  }
-
-  @Test
-  public void testRootHasAllNodeLabelsOfItsDescendants() throws IOException {
-    CapacitySchedulerConfiguration conf = csConf;
-    String rootChild = root.getChildQueues().get(0).getQueuePath();
-
-    conf.setCapacityByLabel(rootChild, "test", 100);
-    conf.setCapacityByLabel(rootChild + "." + A, "test", 20);
-    conf.setCapacityByLabel(rootChild + "." + B, "test", 40);
-    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
-    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test", 100);
-    conf.setCapacityByLabel(rootChild + "." + D, "test", 30);
-    conf.setCapacityByLabel(rootChild + "." + E, "test", 0);
-
-    conf.setCapacityByLabel(rootChild, "test2", 100);
-    conf.setCapacityByLabel(rootChild + "." + A, "test2", 20);
-    conf.setCapacityByLabel(rootChild + "." + B, "test2", 40);
-    conf.setCapacityByLabel(rootChild + "." + C, "test2", 10);
-    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test2", 100);
-    conf.setCapacityByLabel(rootChild + "." + D, "test2", 30);
-    conf.setCapacityByLabel(rootChild + "." + E, "test2", 0);
-
-    cs.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(conf);
-    cs.setMaxRunningAppsEnforcer(new CSMaxRunningAppsEnforcer(cs));
-    cs.reinitialize(conf, cs.getRMContext());
-
-    ParentQueue rootQueue = (ParentQueue) cs.getRootQueue();
-
-    Assert.assertEquals(Sets.newHashSet("", "test", "test2"),
-        rootQueue.queueNodeLabelsSettings.getConfiguredNodeLabels());
   }
 
   @After

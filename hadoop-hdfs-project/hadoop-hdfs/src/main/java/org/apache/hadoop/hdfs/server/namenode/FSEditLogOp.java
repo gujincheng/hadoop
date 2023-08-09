@@ -132,16 +132,16 @@ import org.apache.hadoop.ipc.ClientId;
 import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Helper classes for reading the ops from an InputStream.
@@ -823,7 +823,7 @@ public abstract class FSEditLogOp {
     }
 
     static AddOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_ADD);
+      return (AddOp) cache.get(OP_ADD);
     }
 
     @Override
@@ -851,7 +851,7 @@ public abstract class FSEditLogOp {
     }
 
     static CloseOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_CLOSE);
+      return (CloseOp)cache.get(OP_CLOSE);
     }
 
     @Override
@@ -969,7 +969,7 @@ public abstract class FSEditLogOp {
     }
     
     static AddBlockOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_ADD_BLOCK);
+      return (AddBlockOp) cache.get(OP_ADD_BLOCK);
     }
 
     @Override
@@ -1081,7 +1081,7 @@ public abstract class FSEditLogOp {
     }
     
     static UpdateBlocksOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_UPDATE_BLOCKS);
+      return (UpdateBlocksOp)cache.get(OP_UPDATE_BLOCKS);
     }
 
     @Override
@@ -1175,7 +1175,7 @@ public abstract class FSEditLogOp {
     }
 
     static SetReplicationOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_REPLICATION);
+      return (SetReplicationOp)cache.get(OP_SET_REPLICATION);
     }
 
     @Override
@@ -1254,7 +1254,7 @@ public abstract class FSEditLogOp {
     }
 
     static ConcatDeleteOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_CONCAT_DELETE);
+      return (ConcatDeleteOp)cache.get(OP_CONCAT_DELETE);
     }
 
     @Override
@@ -1412,7 +1412,7 @@ public abstract class FSEditLogOp {
     }
 
     static RenameOldOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_RENAME_OLD);
+      return (RenameOldOp)cache.get(OP_RENAME_OLD);
     }
 
     @Override
@@ -1524,7 +1524,7 @@ public abstract class FSEditLogOp {
     }
 
     static DeleteOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_DELETE);
+      return (DeleteOp)cache.get(OP_DELETE);
     }
 
     @Override
@@ -1625,7 +1625,7 @@ public abstract class FSEditLogOp {
     }
     
     static MkdirOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_MKDIR);
+      return (MkdirOp)cache.get(OP_MKDIR);
     }
 
     @Override
@@ -1798,7 +1798,7 @@ public abstract class FSEditLogOp {
     }
 
     static SetGenstampV1Op getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_GENSTAMP_V1);
+      return (SetGenstampV1Op)cache.get(OP_SET_GENSTAMP_V1);
     }
 
     @Override
@@ -1864,7 +1864,7 @@ public abstract class FSEditLogOp {
     }
 
     static SetGenstampV2Op getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_GENSTAMP_V2);
+      return (SetGenstampV2Op)cache.get(OP_SET_GENSTAMP_V2);
     }
 
     @Override
@@ -1922,7 +1922,7 @@ public abstract class FSEditLogOp {
     }
 
     static AllocateBlockIdOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_ALLOCATE_BLOCK_ID);
+      return (AllocateBlockIdOp)cache.get(OP_ALLOCATE_BLOCK_ID);
     }
 
     @Override
@@ -1981,7 +1981,7 @@ public abstract class FSEditLogOp {
     }
 
     static SetPermissionsOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_PERMISSIONS);
+      return (SetPermissionsOp)cache.get(OP_SET_PERMISSIONS);
     }
 
     @Override
@@ -2054,7 +2054,7 @@ public abstract class FSEditLogOp {
     }
 
     static SetOwnerOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_OWNER);
+      return (SetOwnerOp)cache.get(OP_SET_OWNER);
     }
 
     @Override
@@ -2141,7 +2141,7 @@ public abstract class FSEditLogOp {
     }
 
     static SetNSQuotaOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_NS_QUOTA);
+      return (SetNSQuotaOp)cache.get(OP_SET_NS_QUOTA);
     }
 
     @Override
@@ -2199,7 +2199,7 @@ public abstract class FSEditLogOp {
     }
 
     static ClearNSQuotaOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_CLEAR_NS_QUOTA);
+      return (ClearNSQuotaOp)cache.get(OP_CLEAR_NS_QUOTA);
     }
 
     @Override
@@ -2253,7 +2253,7 @@ public abstract class FSEditLogOp {
     }
 
     static SetQuotaOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_QUOTA);
+      return (SetQuotaOp)cache.get(OP_SET_QUOTA);
     }
 
     @Override
@@ -2338,7 +2338,7 @@ public abstract class FSEditLogOp {
     }
 
     static SetQuotaByStorageTypeOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_QUOTA_BY_STORAGETYPE);
+      return (SetQuotaByStorageTypeOp)cache.get(OP_SET_QUOTA_BY_STORAGETYPE);
     }
 
     @Override
@@ -2421,7 +2421,7 @@ public abstract class FSEditLogOp {
     }
 
     static TimesOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_TIMES);
+      return (TimesOp)cache.get(OP_TIMES);
     }
 
     @Override
@@ -2530,7 +2530,7 @@ public abstract class FSEditLogOp {
     }
 
     static SymlinkOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SYMLINK);
+      return (SymlinkOp)cache.get(OP_SYMLINK);
     }
 
     @Override
@@ -2689,7 +2689,7 @@ public abstract class FSEditLogOp {
     }
 
     static RenameOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_RENAME);
+      return (RenameOp)cache.get(OP_RENAME);
     }
 
     @Override
@@ -2854,7 +2854,7 @@ public abstract class FSEditLogOp {
     }
 
     static TruncateOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_TRUNCATE);
+      return (TruncateOp)cache.get(OP_TRUNCATE);
     }
 
     @Override
@@ -2988,7 +2988,7 @@ public abstract class FSEditLogOp {
     }
 
     static ReassignLeaseOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_REASSIGN_LEASE);
+      return (ReassignLeaseOp)cache.get(OP_REASSIGN_LEASE);
     }
 
     @Override
@@ -3070,7 +3070,7 @@ public abstract class FSEditLogOp {
     }
 
     static GetDelegationTokenOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_GET_DELEGATION_TOKEN);
+      return (GetDelegationTokenOp)cache.get(OP_GET_DELEGATION_TOKEN);
     }
 
     @Override
@@ -3149,7 +3149,7 @@ public abstract class FSEditLogOp {
     }
 
     static RenewDelegationTokenOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_RENEW_DELEGATION_TOKEN);
+      return (RenewDelegationTokenOp)cache.get(OP_RENEW_DELEGATION_TOKEN);
     }
 
     @Override
@@ -3227,7 +3227,7 @@ public abstract class FSEditLogOp {
     }
 
     static CancelDelegationTokenOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_CANCEL_DELEGATION_TOKEN);
+      return (CancelDelegationTokenOp)cache.get(OP_CANCEL_DELEGATION_TOKEN);
     }
 
     @Override
@@ -3286,7 +3286,7 @@ public abstract class FSEditLogOp {
     }
 
     static UpdateMasterKeyOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_UPDATE_MASTER_KEY);
+      return (UpdateMasterKeyOp)cache.get(OP_UPDATE_MASTER_KEY);
     }
 
     @Override
@@ -3345,7 +3345,7 @@ public abstract class FSEditLogOp {
 
     static LogSegmentOp getInstance(OpInstanceCache cache,
         FSEditLogOpCodes code) {
-      return cache.get(code);
+      return (LogSegmentOp)cache.get(code);
     }
 
     @Override
@@ -3404,7 +3404,7 @@ public abstract class FSEditLogOp {
     }
 
     static InvalidOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_INVALID);
+      return (InvalidOp)cache.get(OP_INVALID);
     }
 
     @Override
@@ -3457,7 +3457,7 @@ public abstract class FSEditLogOp {
     }
     
     static CreateSnapshotOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_CREATE_SNAPSHOT);
+      return (CreateSnapshotOp)cache.get(OP_CREATE_SNAPSHOT);
     }
 
     @Override
@@ -3562,7 +3562,7 @@ public abstract class FSEditLogOp {
     }
     
     static DeleteSnapshotOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_DELETE_SNAPSHOT);
+      return (DeleteSnapshotOp)cache.get(OP_DELETE_SNAPSHOT);
     }
 
     @Override
@@ -3669,7 +3669,7 @@ public abstract class FSEditLogOp {
     }
     
     static RenameSnapshotOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_RENAME_SNAPSHOT);
+      return (RenameSnapshotOp) cache.get(OP_RENAME_SNAPSHOT);
     }
 
     @Override
@@ -3788,7 +3788,7 @@ public abstract class FSEditLogOp {
     }
 
     static AllowSnapshotOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_ALLOW_SNAPSHOT);
+      return (AllowSnapshotOp) cache.get(OP_ALLOW_SNAPSHOT);
     }
 
     @Override
@@ -3847,7 +3847,7 @@ public abstract class FSEditLogOp {
     }
 
     static DisallowSnapshotOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_DISALLOW_SNAPSHOT);
+      return (DisallowSnapshotOp) cache.get(OP_DISALLOW_SNAPSHOT);
     }
 
     void resetSubFields() {
@@ -3901,7 +3901,7 @@ public abstract class FSEditLogOp {
     }
 
     static AddCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_ADD_CACHE_DIRECTIVE);
+      return (AddCacheDirectiveInfoOp) cache.get(OP_ADD_CACHE_DIRECTIVE);
     }
 
     @Override
@@ -3971,7 +3971,7 @@ public abstract class FSEditLogOp {
     }
 
     static ModifyCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_MODIFY_CACHE_DIRECTIVE);
+      return (ModifyCacheDirectiveInfoOp) cache.get(OP_MODIFY_CACHE_DIRECTIVE);
     }
 
     @Override
@@ -4047,7 +4047,7 @@ public abstract class FSEditLogOp {
     }
 
     static RemoveCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_REMOVE_CACHE_DIRECTIVE);
+      return (RemoveCacheDirectiveInfoOp) cache.get(OP_REMOVE_CACHE_DIRECTIVE);
     }
 
     @Override
@@ -4104,7 +4104,7 @@ public abstract class FSEditLogOp {
     }
 
     static AddCachePoolOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_ADD_CACHE_POOL);
+      return (AddCachePoolOp) cache.get(OP_ADD_CACHE_POOL);
     }
 
     @Override
@@ -4170,7 +4170,7 @@ public abstract class FSEditLogOp {
     }
 
     static ModifyCachePoolOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_MODIFY_CACHE_POOL);
+      return (ModifyCachePoolOp) cache.get(OP_MODIFY_CACHE_POOL);
     }
 
     @Override
@@ -4243,7 +4243,7 @@ public abstract class FSEditLogOp {
     }
 
     static RemoveCachePoolOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_REMOVE_CACHE_POOL);
+      return (RemoveCachePoolOp) cache.get(OP_REMOVE_CACHE_POOL);
     }
 
     @Override
@@ -4300,7 +4300,7 @@ public abstract class FSEditLogOp {
     }
     
     static RemoveXAttrOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_REMOVE_XATTR);
+      return (RemoveXAttrOp) cache.get(OP_REMOVE_XATTR);
     }
 
     @Override
@@ -4353,7 +4353,7 @@ public abstract class FSEditLogOp {
     }
     
     static SetXAttrOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_XATTR);
+      return (SetXAttrOp) cache.get(OP_SET_XATTR);
     }
 
     @Override
@@ -4406,7 +4406,7 @@ public abstract class FSEditLogOp {
     }
 
     static SetAclOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_ACL);
+      return (SetAclOp) cache.get(OP_SET_ACL);
     }
 
     @Override
@@ -4507,7 +4507,8 @@ public abstract class FSEditLogOp {
     }
 
     static AddErasureCodingPolicyOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_ADD_ERASURE_CODING_POLICY);
+      return (AddErasureCodingPolicyOp) cache
+          .get(OP_ADD_ERASURE_CODING_POLICY);
     }
 
     @Override
@@ -4619,7 +4620,8 @@ public abstract class FSEditLogOp {
     }
 
     static EnableErasureCodingPolicyOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_ENABLE_ERASURE_CODING_POLICY);
+      return (EnableErasureCodingPolicyOp) cache
+          .get(OP_ENABLE_ERASURE_CODING_POLICY);
     }
 
     @Override
@@ -4687,7 +4689,8 @@ public abstract class FSEditLogOp {
     }
 
     static DisableErasureCodingPolicyOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_DISABLE_ERASURE_CODING_POLICY);
+      return (DisableErasureCodingPolicyOp) cache
+          .get(OP_DISABLE_ERASURE_CODING_POLICY);
     }
 
     @Override
@@ -4753,7 +4756,8 @@ public abstract class FSEditLogOp {
     }
 
     static RemoveErasureCodingPolicyOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_REMOVE_ERASURE_CODING_POLICY);
+      return (RemoveErasureCodingPolicyOp) cache
+          .get(OP_REMOVE_ERASURE_CODING_POLICY);
     }
 
     @Override
@@ -4875,7 +4879,7 @@ public abstract class FSEditLogOp {
     }
 
     static SetStoragePolicyOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_SET_STORAGE_POLICY);
+      return (SetStoragePolicyOp) cache.get(OP_SET_STORAGE_POLICY);
     }
 
     @Override
@@ -4942,7 +4946,7 @@ public abstract class FSEditLogOp {
     }
 
     static RollingUpgradeStartOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_ROLLING_UPGRADE_START);
+      return (RollingUpgradeStartOp) cache.get(OP_ROLLING_UPGRADE_START);
     }
   }
 
@@ -4952,7 +4956,7 @@ public abstract class FSEditLogOp {
     }
 
     static RollingUpgradeFinalizeOp getInstance(OpInstanceCache cache) {
-      return cache.get(OP_ROLLING_UPGRADE_FINALIZE);
+      return (RollingUpgradeFinalizeOp) cache.get(OP_ROLLING_UPGRADE_FINALIZE);
     }
   }
 

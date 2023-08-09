@@ -195,9 +195,10 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     for (FileStatus status : statuses) {
       ContractTestUtils.assertDeleted(fs, status.getPath(), false, true, false);
     }
-    Assertions.assertThat(fs.listStatus(root))
-        .describedAs("ls /")
-        .hasSize(0);
+    FileStatus[] rootListStatus = fs.listStatus(root);
+    assertEquals("listStatus on empty root-directory returned found: "
+        + join("\n", rootListStatus),
+        0, rootListStatus.length);
     assertNoElements("listFiles(/, false)",
         fs.listFiles(root, false));
     assertNoElements("listFiles(/, true)",

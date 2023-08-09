@@ -32,9 +32,9 @@ public class TestSignalLogger {
   @Test(timeout=60000)
   public void testInstall() throws Exception {
     Assume.assumeTrue(SystemUtils.IS_OS_UNIX);
-    SignalLogger.INSTANCE.register(LOG);
+    SignalLogger.INSTANCE.register(LogAdapter.create(LOG));
     try {
-      SignalLogger.INSTANCE.register(LOG);
+      SignalLogger.INSTANCE.register(LogAdapter.create(LOG));
       Assert.fail("expected IllegalStateException from double registration");
     } catch (IllegalStateException e) {
       // fall through

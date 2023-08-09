@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
@@ -56,6 +55,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -65,7 +65,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -96,8 +95,6 @@ public class LogsCLI extends Configured implements Tool {
 
   private static final String CONTAINER_ID_OPTION = "containerId";
   private static final String APPLICATION_ID_OPTION = "applicationId";
-  private static final String APPLICATION_ATTEMPT_ID_OPTION =
-          "applicationAttemptId";
   private static final String CLUSTER_ID_OPTION = "clusterId";
   private static final String NODE_ADDRESS_OPTION = "nodeAddress";
   private static final String APP_OWNER_OPTION = "appOwner";
@@ -163,7 +160,6 @@ public class LogsCLI extends Configured implements Tool {
     }
     CommandLineParser parser = new GnuParser();
     String appIdStr = null;
-    String appAttemptIdStr = null;
     String clusterIdStr = null;
     String containerIdStr = null;
     String nodeAddress = null;
@@ -184,8 +180,6 @@ public class LogsCLI extends Configured implements Tool {
     try {
       CommandLine commandLine = parser.parse(opts, args, false);
       appIdStr = commandLine.getOptionValue(APPLICATION_ID_OPTION);
-      appAttemptIdStr = commandLine.getOptionValue(
-              APPLICATION_ATTEMPT_ID_OPTION);
       containerIdStr = commandLine.getOptionValue(CONTAINER_ID_OPTION);
       nodeAddress = commandLine.getOptionValue(NODE_ADDRESS_OPTION);
       appOwner = commandLine.getOptionValue(APP_OWNER_OPTION);
@@ -246,9 +240,9 @@ public class LogsCLI extends Configured implements Tool {
       return -1;
     }
 
-    if (appIdStr == null && appAttemptIdStr == null && containerIdStr == null) {
-      System.err.println("None of applicationId, appAttemptId and containerId "
-          + "is available,  one of them must be specified.");
+    if (appIdStr == null && containerIdStr == null) {
+      System.err.println("Both applicationId and containerId are missing, "
+          + " one of them must be specified.");
       printHelpMessage(printOpts);
       return -1;
     }
@@ -263,32 +257,9 @@ public class LogsCLI extends Configured implements Tool {
       }
     }
 
-    ApplicationAttemptId appAttemptId = null;
-    if (appAttemptIdStr != null) {
-      try {
-        appAttemptId = ApplicationAttemptId.fromString(appAttemptIdStr);
-        if (appId == null) {
-          appId = appAttemptId.getApplicationId();
-        } else if (!appId.equals(appAttemptId.getApplicationId())) {
-          System.err.println("The Application:" + appId
-                  + " does not have the AppAttempt:" + appAttemptId);
-          return -1;
-        }
-      } catch (Exception e) {
-        System.err.println("Invalid AppAttemptId specified");
-        return -1;
-      }
-    }
-
     if (containerIdStr != null) {
       try {
         ContainerId containerId = ContainerId.fromString(containerIdStr);
-        if (appAttemptId != null && !appAttemptId.equals(
-                containerId.getApplicationAttemptId())) {
-          System.err.println("The AppAttempt:" + appAttemptId
-                  + " does not have the container:" + containerId);
-          return -1;
-        }
         if (appId == null) {
           appId = containerId.getApplicationAttemptId().getApplicationId();
         } else if (!containerId.getApplicationAttemptId().getApplicationId()
@@ -373,7 +344,7 @@ public class LogsCLI extends Configured implements Tool {
     }
 
 
-    ContainerLogsRequest request = new ContainerLogsRequest(appId, appAttemptId,
+    ContainerLogsRequest request = new ContainerLogsRequest(appId, null,
         Apps.isApplicationFinalState(appState), appOwner, nodeAddress,
         null, containerIdStr, localDir, logs, bytes, null);
 
@@ -643,7 +614,7 @@ public class LogsCLI extends Configured implements Tool {
               + " for the container:" + containerIdStr + " in NodeManager:"
               + nodeId);
         } finally {
-          IOUtils.closeStream(is);
+          IOUtils.closeQuietly(is);
         }
       }
 
@@ -942,9 +913,6 @@ public class LogsCLI extends Configured implements Tool {
     Option appIdOpt =
         new Option(APPLICATION_ID_OPTION, true, "ApplicationId (required)");
     opts.addOption(appIdOpt);
-    opts.addOption(APPLICATION_ATTEMPT_ID_OPTION, true, "ApplicationAttemptId. "
-        + "Lists all logs belonging to the specified application attempt Id. "
-        + "If specified, the applicationId can be omitted");
     opts.addOption(CONTAINER_ID_OPTION, true, "ContainerId. "
         + "By default, it will print all available logs."
         + " Work with -log_files to get only specific logs. If specified, the"

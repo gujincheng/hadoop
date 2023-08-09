@@ -122,12 +122,9 @@ public class FileWithSnapshotFeature implements INode.Feature {
   public void cleanFile(INode.ReclaimContext reclaimContext,
       final INodeFile file, final int snapshotId, int priorSnapshotId,
       byte storagePolicyId) {
-    final int snapshotToBeDeleted
-        = reclaimContext.getSnapshotIdToBeDeleted(snapshotId, file);
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       // delete the current file while the file has snapshot feature
-      if (!isCurrentFileDeleted()
-          && snapshotToBeDeleted == Snapshot.CURRENT_STATE_ID) {
+      if (!isCurrentFileDeleted()) {
         file.recordModification(priorSnapshotId);
         deleteCurrentFile();
       }
@@ -246,6 +243,6 @@ public class FileWithSnapshotFeature implements INode.Feature {
 
   @Override
   public String toString() {
-    return "isCurrentFileDeleted? " + isCurrentFileDeleted + ", " + diffs;
+    return "" + diffs;
   }
 }

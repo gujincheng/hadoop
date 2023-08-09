@@ -24,21 +24,20 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 
 import java.io.File;
 
@@ -104,8 +103,7 @@ public class TestNestedEncryptionZones {
     // enable trash for testing
     conf.setLong(DFSConfigKeys.FS_TRASH_INTERVAL_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    GenericTestUtils.setLogLevel(
-        LoggerFactory.getLogger(EncryptionZoneManager.class), Level.TRACE);
+    Logger.getLogger(EncryptionZoneManager.class).setLevel(Level.TRACE);
     fs = cluster.getFileSystem();
     setProvider();
 
@@ -135,9 +133,9 @@ public class TestNestedEncryptionZones {
 
     // Checkpoint and restart NameNode, to test if nested EZs can be loaded
     // from fsimage
-    fs.setSafeMode(SafeModeAction.ENTER);
+    fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
     fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.LEAVE);
+    fs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
     cluster.restartNameNodes();
     cluster.waitActive();
     fs = cluster.getFileSystem();

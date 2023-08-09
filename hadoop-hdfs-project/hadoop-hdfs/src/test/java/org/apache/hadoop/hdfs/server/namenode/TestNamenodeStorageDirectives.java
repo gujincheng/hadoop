@@ -192,7 +192,7 @@ public class TestNamenodeStorageDirectives {
    * Types.
    * @throws IOException
    */
-  @Test(timeout=120000)
+  @Test(timeout=60000)
   public void testTargetStorageTypes() throws ReconfigurationException,
       InterruptedException, TimeoutException, IOException {
     // DISK and not anything else.
@@ -201,8 +201,7 @@ public class TestNamenodeStorageDirectives {
             {StorageType.SSD, StorageType.DISK}},
         "ONE_SSD",
         new StorageType[]{StorageType.SSD, StorageType.DISK},
-        new StorageType[]{StorageType.RAM_DISK, StorageType.ARCHIVE,
-            StorageType.NVDIMM});
+        new StorageType[]{StorageType.RAM_DISK, StorageType.ARCHIVE});
     // only on SSD.
     testStorageTypes(new StorageType[][]{
             {StorageType.SSD, StorageType.DISK},
@@ -210,7 +209,7 @@ public class TestNamenodeStorageDirectives {
         "ALL_SSD",
         new StorageType[]{StorageType.SSD},
         new StorageType[]{StorageType.RAM_DISK, StorageType.DISK,
-            StorageType.ARCHIVE, StorageType.NVDIMM});
+            StorageType.ARCHIVE});
     // only on SSD.
     testStorageTypes(new StorageType[][]{
             {StorageType.SSD, StorageType.DISK, StorageType.DISK},
@@ -219,7 +218,7 @@ public class TestNamenodeStorageDirectives {
         "ALL_SSD",
         new StorageType[]{StorageType.SSD},
         new StorageType[]{StorageType.RAM_DISK, StorageType.DISK,
-            StorageType.ARCHIVE, StorageType.NVDIMM});
+            StorageType.ARCHIVE});
 
     // DISK and not anything else.
     testStorageTypes(new StorageType[][] {
@@ -229,7 +228,7 @@ public class TestNamenodeStorageDirectives {
         "HOT",
         new StorageType[]{StorageType.DISK},
         new StorageType[] {StorageType.RAM_DISK, StorageType.SSD,
-            StorageType.ARCHIVE, StorageType.NVDIMM});
+            StorageType.ARCHIVE});
 
     testStorageTypes(new StorageType[][] {
             {StorageType.RAM_DISK, StorageType.SSD},
@@ -238,8 +237,7 @@ public class TestNamenodeStorageDirectives {
             {StorageType.ARCHIVE, StorageType.ARCHIVE}},
         "WARM",
         new StorageType[]{StorageType.DISK, StorageType.ARCHIVE},
-        new StorageType[]{StorageType.RAM_DISK, StorageType.SSD,
-            StorageType.NVDIMM});
+        new StorageType[]{StorageType.RAM_DISK, StorageType.SSD});
 
     testStorageTypes(new StorageType[][] {
             {StorageType.RAM_DISK, StorageType.SSD},
@@ -249,7 +247,7 @@ public class TestNamenodeStorageDirectives {
         "COLD",
         new StorageType[]{StorageType.ARCHIVE},
         new StorageType[]{StorageType.RAM_DISK, StorageType.SSD,
-            StorageType.DISK, StorageType.NVDIMM});
+            StorageType.DISK});
 
     // We wait for Lasy Persist to write to disk.
     testStorageTypes(new StorageType[][] {
@@ -259,15 +257,7 @@ public class TestNamenodeStorageDirectives {
         "LAZY_PERSIST",
         new StorageType[]{StorageType.DISK},
         new StorageType[]{StorageType.RAM_DISK, StorageType.SSD,
-            StorageType.ARCHIVE, StorageType.NVDIMM});
-
-    testStorageTypes(new StorageType[][] {
-            {StorageType.NVDIMM, StorageType.DISK, StorageType.SSD},
-            {StorageType.NVDIMM, StorageType.DISK, StorageType.SSD}},
-            "ALL_NVDIMM",
-            new StorageType[]{StorageType.NVDIMM},
-            new StorageType[]{StorageType.RAM_DISK, StorageType.SSD,
-                StorageType.DISK, StorageType.ARCHIVE});
+            StorageType.ARCHIVE});
   }
 
   /**

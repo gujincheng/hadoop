@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.counters;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -29,7 +30,6 @@ import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.util.ResourceBundles;
-import org.apache.hadoop.util.Lists;
 
 /**
  * An abstract class to provide common implementation of the

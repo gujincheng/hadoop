@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.protocolPB;
 import org.apache.hadoop.thirdparty.protobuf.UninitializedMessageException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -113,12 +112,12 @@ import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.Lists;
 import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
@@ -530,18 +529,14 @@ public class TestPBHelper {
             AdminStates.NORMAL),
         DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h4",
             AdminStates.NORMAL),
-        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h5",
-            AdminStates.NORMAL),
     };
-    String[] storageIDs = {"s1", "s2", "s3", "s4", "s5"};
+    String[] storageIDs = {"s1", "s2", "s3", "s4"};
     StorageType[] media = {
         StorageType.DISK,
         StorageType.SSD,
         StorageType.DISK,
-        StorageType.RAM_DISK,
-        StorageType.NVDIMM,
+        StorageType.RAM_DISK
     };
-
     LocatedBlock lb = new LocatedBlock(
         new ExtendedBlock("bp12", 12345, 10, 53),
         dnInfos, storageIDs, media, 5, false, new DatanodeInfo[]{});
@@ -749,10 +744,9 @@ public class TestPBHelper {
     DatanodeStorageInfo[] targetDnInfos0 = new DatanodeStorageInfo[] {
         targetDnInfos_0, targetDnInfos_1 };
     byte[] liveBlkIndices0 = new byte[2];
-    byte[] excludeReconstructedIndices0=new byte[2];
     BlockECReconstructionInfo blkECRecoveryInfo0 = new BlockECReconstructionInfo(
         new ExtendedBlock("bp1", 1234), dnInfos0, targetDnInfos0,
-        liveBlkIndices0, excludeReconstructedIndices0, StripedFileTestUtil.getDefaultECPolicy());
+        liveBlkIndices0, StripedFileTestUtil.getDefaultECPolicy());
     DatanodeInfo[] dnInfos1 = new DatanodeInfo[] {
         DFSTestUtil.getLocalDatanodeInfo(), DFSTestUtil.getLocalDatanodeInfo() };
     DatanodeStorageInfo targetDnInfos_2 = BlockManagerTestUtil
@@ -764,10 +758,9 @@ public class TestPBHelper {
     DatanodeStorageInfo[] targetDnInfos1 = new DatanodeStorageInfo[] {
         targetDnInfos_2, targetDnInfos_3 };
     byte[] liveBlkIndices1 = new byte[2];
-    byte[] excludeReconstructedIndices = new byte[2];
     BlockECReconstructionInfo blkECRecoveryInfo1 = new BlockECReconstructionInfo(
         new ExtendedBlock("bp2", 3256), dnInfos1, targetDnInfos1,
-        liveBlkIndices1, excludeReconstructedIndices, StripedFileTestUtil.getDefaultECPolicy());
+        liveBlkIndices1, StripedFileTestUtil.getDefaultECPolicy());
     List<BlockECReconstructionInfo> blkRecoveryInfosList = new ArrayList<BlockECReconstructionInfo>();
     blkRecoveryInfosList.add(blkECRecoveryInfo0);
     blkRecoveryInfosList.add(blkECRecoveryInfo1);
@@ -808,14 +801,8 @@ public class TestPBHelper {
   @Test
   public void testSlowPeerInfoPBHelper() {
     // Test with a map that has a few slow peer entries.
-    OutlierMetrics outlierMetrics1 = new OutlierMetrics(0.0, 0.0, 0.0, 0.0);
-    OutlierMetrics outlierMetrics2 = new OutlierMetrics(0.0, 0.0, 0.0, 1.0);
-    OutlierMetrics outlierMetrics3 = new OutlierMetrics(0.0, 0.0, 0.0, 2.0);
     final SlowPeerReports slowPeers = SlowPeerReports.create(
-        ImmutableMap.of(
-            "peer1", outlierMetrics1,
-            "peer2", outlierMetrics2,
-            "peer3", outlierMetrics3));
+        ImmutableMap.of("peer1", 0.0, "peer2", 1.0, "peer3", 2.0));
     SlowPeerReports slowPeersConverted1 = PBHelper.convertSlowPeerInfo(
         PBHelper.convertSlowPeerInfo(slowPeers));
     assertTrue(

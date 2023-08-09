@@ -126,14 +126,12 @@ public class TestCgroupsLCEResourcesHandler {
     FileUtils.deleteQuietly(cgroupDir);
   }
 
-  @Deprecated
   static class MockLinuxContainerExecutor extends LinuxContainerExecutor {
     @Override
     public void mountCgroups(List<String> x, String y) {
     }
   }
 
-  @Deprecated
   static class CustomCgroupsLCEResourceHandler extends
       CgroupsLCEResourcesHandler {
 

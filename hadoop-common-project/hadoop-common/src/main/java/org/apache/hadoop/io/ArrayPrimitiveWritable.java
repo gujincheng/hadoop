@@ -106,9 +106,7 @@ public class ArrayPrimitiveWritable implements Writable {
   
   /**
    * Construct an instance of known type but no value yet
-   * for use with type-specific wrapper classes.
-   *
-   * @param componentType componentType.
+   * for use with type-specific wrapper classes
    */
   public ArrayPrimitiveWritable(Class<?> componentType) {
     checkPrimitive(componentType);

@@ -23,11 +23,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import javax.security.auth.login.AppConfigurationEntry;
 
 import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.curator.framework.CuratorFramework;
@@ -36,22 +40,21 @@ import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.CuratorCache;
-import org.apache.curator.framework.recipes.cache.CuratorCacheBridge;
-import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.recipes.shared.SharedCount;
 import org.apache.curator.framework.recipes.shared.VersionedValue;
 import org.apache.curator.retry.RetryNTimes;
+import org.apache.curator.utils.EnsurePath;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.authentication.util.JaasConfiguration;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
-import static org.apache.hadoop.util.Time.now;
-import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -59,12 +62,11 @@ import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
-import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * An implementation of {@link AbstractDelegationTokenSecretManager} that
@@ -77,7 +79,7 @@ import org.apache.hadoop.util.Preconditions;
 public abstract class ZKDelegationTokenSecretManager<TokenIdent extends AbstractDelegationTokenIdentifier>
     extends AbstractDelegationTokenSecretManager<TokenIdent> {
 
-  public static final String ZK_CONF_PREFIX = "zk-dt-secret-manager.";
+  private static final String ZK_CONF_PREFIX = "zk-dt-secret-manager.";
   public static final String ZK_DTSM_ZK_NUM_RETRIES = ZK_CONF_PREFIX
       + "zkNumRetries";
   public static final String ZK_DTSM_ZK_SESSION_TIMEOUT = ZK_CONF_PREFIX
@@ -96,13 +98,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       + "kerberos.keytab";
   public static final String ZK_DTSM_ZK_KERBEROS_PRINCIPAL = ZK_CONF_PREFIX
       + "kerberos.principal";
-  public static final String ZK_DTSM_ZK_KERBEROS_SERVER_PRINCIPAL = ZK_CONF_PREFIX
-      + "kerberos.server.principal";
   public static final String ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE = ZK_CONF_PREFIX
       + "token.seqnum.batch.size";
-  public static final String ZK_DTSM_TOKEN_WATCHER_ENABLED = ZK_CONF_PREFIX
-      + "token.watcher.enabled";
-  public static final boolean ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT = true;
 
   public static final int ZK_DTSM_ZK_NUM_RETRIES_DEFAULT = 3;
   public static final int ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT = 10000;
@@ -112,7 +109,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   // by default it is still incrementing seq number by 1 each time
   public static final int ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT = 1;
 
-  private static final Logger LOG = LoggerFactory
+  private static Logger LOG = LoggerFactory
       .getLogger(ZKDelegationTokenSecretManager.class);
 
   private static final String JAAS_LOGIN_ENTRY_NAME =
@@ -121,7 +118,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private static final String ZK_DTSM_NAMESPACE = "ZKDTSMRoot";
   private static final String ZK_DTSM_SEQNUM_ROOT = "/ZKDTSMSeqNumRoot";
   private static final String ZK_DTSM_KEYID_ROOT = "/ZKDTSMKeyIdRoot";
-  protected static final String ZK_DTSM_TOKENS_ROOT = "/ZKDTSMTokensRoot";
+  private static final String ZK_DTSM_TOKENS_ROOT = "/ZKDTSMTokensRoot";
   private static final String ZK_DTSM_MASTER_KEY_ROOT = "/ZKDTSMMasterKeyRoot";
 
   private static final String DELEGATION_KEY_PREFIX = "DK_";
@@ -134,22 +131,17 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     CURATOR_TL.set(curator);
   }
 
-  @VisibleForTesting
-  protected static CuratorFramework getCurator() {
-    return CURATOR_TL.get();
-  }
-
   private final boolean isExternalClient;
-  protected final CuratorFramework zkClient;
+  private final CuratorFramework zkClient;
   private SharedCount delTokSeqCounter;
   private SharedCount keyIdSeqCounter;
-  private CuratorCacheBridge keyCache;
-  private CuratorCacheBridge tokenCache;
+  private PathChildrenCache keyCache;
+  private PathChildrenCache tokenCache;
+  private ExecutorService listenerThreadPool;
+  private final long shutdownTimeout;
   private final int seqNumBatchSize;
   private int currentSeqNum;
   private int currentMaxSeqNum;
-
-  private final boolean isTokenWatcherEnabled;
 
   public ZKDelegationTokenSecretManager(Configuration conf) {
     super(conf.getLong(DelegationTokenManager.UPDATE_INTERVAL,
@@ -160,10 +152,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
             DelegationTokenManager.RENEW_INTERVAL_DEFAULT) * 1000,
         conf.getLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL,
             DelegationTokenManager.REMOVAL_SCAN_INTERVAL_DEFAULT) * 1000);
+    shutdownTimeout = conf.getLong(ZK_DTSM_ZK_SHUTDOWN_TIMEOUT,
+        ZK_DTSM_ZK_SHUTDOWN_TIMEOUT_DEFAULT);
     seqNumBatchSize = conf.getInt(ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE,
         ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT);
-    isTokenWatcherEnabled = conf.getBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED,
-        ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT);
     if (CURATOR_TL.get() != null) {
       zkClient =
           CURATOR_TL.get().usingNamespace(
@@ -207,8 +199,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         builder =
             CuratorFrameworkFactory
                 .builder()
-                .zookeeperFactory(new ZKCuratorManager.HadoopZookeeperFactory(
-                    conf.get(ZK_DTSM_ZK_KERBEROS_SERVER_PRINCIPAL)))
                 .aclProvider(aclProvider)
                 .namespace(
                     conf.get(ZK_DTSM_ZNODE_WORKING_PATH,
@@ -253,6 +243,68 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     return principal.split("[/@]")[0];
   }
 
+  /**
+   * Creates a programmatic version of a jaas.conf file. This can be used
+   * instead of writing a jaas.conf file and setting the system property,
+   * "java.security.auth.login.config", to point to that file. It is meant to be
+   * used for connecting to ZooKeeper.
+   */
+  @InterfaceAudience.Private
+  public static class JaasConfiguration extends
+      javax.security.auth.login.Configuration {
+
+    private final javax.security.auth.login.Configuration baseConfig =
+        javax.security.auth.login.Configuration.getConfiguration();
+    private static AppConfigurationEntry[] entry;
+    private String entryName;
+
+    /**
+     * Add an entry to the jaas configuration with the passed in name,
+     * principal, and keytab. The other necessary options will be set for you.
+     *
+     * @param entryName
+     *          The name of the entry (e.g. "Client")
+     * @param principal
+     *          The principal of the user
+     * @param keytab
+     *          The location of the keytab
+     */
+    public JaasConfiguration(String entryName, String principal, String keytab) {
+      this.entryName = entryName;
+      Map<String, String> options = new HashMap<String, String>();
+      options.put("keyTab", keytab);
+      options.put("principal", principal);
+      options.put("useKeyTab", "true");
+      options.put("storeKey", "true");
+      options.put("useTicketCache", "false");
+      options.put("refreshKrb5Config", "true");
+      String jaasEnvVar = System.getenv("HADOOP_JAAS_DEBUG");
+      if (jaasEnvVar != null && "true".equalsIgnoreCase(jaasEnvVar)) {
+        options.put("debug", "true");
+      }
+      entry = new AppConfigurationEntry[] {
+          new AppConfigurationEntry(getKrb5LoginModuleName(),
+              AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+              options) };
+    }
+
+    @Override
+    public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+      return (entryName.equals(name)) ? entry : ((baseConfig != null)
+        ? baseConfig.getAppConfigurationEntry(name) : null);
+    }
+
+    private String getKrb5LoginModuleName() {
+      String krb5LoginModuleName;
+      if (System.getProperty("java.vendor").contains("IBM")) {
+        krb5LoginModuleName = "com.ibm.security.auth.module.Krb5LoginModule";
+      } else {
+        krb5LoginModuleName = "com.sun.security.auth.module.Krb5LoginModule";
+      }
+      return krb5LoginModuleName;
+    }
+  }
+
   @Override
   public void startThreads() throws IOException {
     if (!isExternalClient) {
@@ -265,16 +317,15 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // If namespace parents are implicitly created, they won't have ACLs.
       // So, let's explicitly create them.
       CuratorFramework nullNsFw = zkClient.usingNamespace(null);
+      EnsurePath ensureNs =
+        nullNsFw.newNamespaceAwareEnsurePath("/" + zkClient.getNamespace());
       try {
-        String nameSpace = "/" + zkClient.getNamespace();
-        Stat stat = nullNsFw.checkExists().forPath(nameSpace);
-        if (stat == null) {
-          nullNsFw.create().creatingParentContainersIfNeeded().forPath(nameSpace);
-        }
+        ensureNs.ensure(nullNsFw.getZookeeperClient());
       } catch (Exception e) {
         throw new IOException("Could not create namespace", e);
       }
     }
+    listenerThreadPool = Executors.newSingleThreadExecutor();
     try {
       delTokSeqCounter = new SharedCount(zkClient, ZK_DTSM_SEQNUM_ROOT, 0);
       if (delTokSeqCounter != null) {
@@ -304,65 +355,68 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       throw new RuntimeException("Could not create ZK paths");
     }
     try {
-      keyCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_MASTER_KEY_ROOT)
-          .build();
-      CuratorCacheListener keyCacheListener = CuratorCacheListener.builder()
-          .forCreatesAndChanges((oldNode, node) -> {
-            try {
-              processKeyAddOrUpdate(node.getData());
-            } catch (IOException e) {
-              LOG.error("Error while processing Curator keyCacheListener "
-                  + "NODE_CREATED / NODE_CHANGED event");
-              throw new UncheckedIOException(e);
+      keyCache = new PathChildrenCache(zkClient, ZK_DTSM_MASTER_KEY_ROOT, true);
+      if (keyCache != null) {
+        keyCache.start(StartMode.BUILD_INITIAL_CACHE);
+        keyCache.getListenable().addListener(new PathChildrenCacheListener() {
+          @Override
+          public void childEvent(CuratorFramework client,
+              PathChildrenCacheEvent event)
+              throws Exception {
+            switch (event.getType()) {
+            case CHILD_ADDED:
+              processKeyAddOrUpdate(event.getData().getData());
+              break;
+            case CHILD_UPDATED:
+              processKeyAddOrUpdate(event.getData().getData());
+              break;
+            case CHILD_REMOVED:
+              processKeyRemoved(event.getData().getPath());
+              break;
+            default:
+              break;
             }
-          })
-          .forDeletes(childData -> processKeyRemoved(childData.getPath()))
-          .build();
-      keyCache.listenable().addListener(keyCacheListener);
-      keyCache.start();
-      loadFromZKCache(false);
-    } catch (Exception e) {
-      throw new IOException("Could not start Curator keyCacheListener for keys",
-          e);
-    }
-    if (isTokenWatcherEnabled) {
-      LOG.info("TokenCache is enabled");
-      try {
-        tokenCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_TOKENS_ROOT)
-            .build();
-        CuratorCacheListener tokenCacheListener = CuratorCacheListener.builder()
-            .forCreatesAndChanges((oldNode, node) -> {
-              try {
-                processTokenAddOrUpdate(node.getData());
-              } catch (IOException e) {
-                LOG.error("Error while processing Curator tokenCacheListener "
-                    + "NODE_CREATED / NODE_CHANGED event");
-                throw new UncheckedIOException(e);
-              }
-            })
-            .forDeletes(childData -> {
-              try {
-                processTokenRemoved(childData);
-              } catch (IOException e) {
-                LOG.error("Error while processing Curator tokenCacheListener "
-                    + "NODE_DELETED event");
-                throw new UncheckedIOException(e);
-              }
-            })
-            .build();
-        tokenCache.listenable().addListener(tokenCacheListener);
-        tokenCache.start();
-        loadFromZKCache(true);
-      } catch (Exception e) {
-        throw new IOException(
-            "Could not start Curator tokenCacheListener for tokens", e);
+          }
+        }, listenerThreadPool);
+        loadFromZKCache(false);
       }
+    } catch (Exception e) {
+      throw new IOException("Could not start PathChildrenCache for keys", e);
+    }
+    try {
+      tokenCache = new PathChildrenCache(zkClient, ZK_DTSM_TOKENS_ROOT, true);
+      if (tokenCache != null) {
+        tokenCache.start(StartMode.BUILD_INITIAL_CACHE);
+        tokenCache.getListenable().addListener(new PathChildrenCacheListener() {
+
+          @Override
+          public void childEvent(CuratorFramework client,
+              PathChildrenCacheEvent event) throws Exception {
+            switch (event.getType()) {
+            case CHILD_ADDED:
+              processTokenAddOrUpdate(event.getData());
+              break;
+            case CHILD_UPDATED:
+              processTokenAddOrUpdate(event.getData());
+              break;
+            case CHILD_REMOVED:
+              processTokenRemoved(event.getData());
+              break;
+            default:
+              break;
+            }
+          }
+        }, listenerThreadPool);
+        loadFromZKCache(true);
+      }
+    } catch (Exception e) {
+      throw new IOException("Could not start PathChildrenCache for tokens", e);
     }
     super.startThreads();
   }
 
   /**
-   * Load the CuratorCache into the in-memory map. Possible caches to be
+   * Load the PathChildrenCache into the in-memory map. Possible caches to be
    * loaded are keyCache and tokenCache.
    *
    * @param isTokenCache true if loading tokenCache, false if loading keyCache.
@@ -370,34 +424,30 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private void loadFromZKCache(final boolean isTokenCache) {
     final String cacheName = isTokenCache ? "token" : "key";
     LOG.info("Starting to load {} cache.", cacheName);
-    final Stream<ChildData> children;
+    final List<ChildData> children;
     if (isTokenCache) {
-      children = tokenCache.stream();
+      children = tokenCache.getCurrentData();
     } else {
-      children = keyCache.stream();
+      children = keyCache.getCurrentData();
     }
 
-    final AtomicInteger count = new AtomicInteger(0);
-    children.forEach(childData -> {
+    int count = 0;
+    for (ChildData child : children) {
       try {
         if (isTokenCache) {
-          processTokenAddOrUpdate(childData.getData());
+          processTokenAddOrUpdate(child);
         } else {
-          processKeyAddOrUpdate(childData.getData());
+          processKeyAddOrUpdate(child.getData());
         }
       } catch (Exception e) {
         LOG.info("Ignoring node {} because it failed to load.",
-            childData.getPath());
+            child.getPath());
         LOG.debug("Failure exception:", e);
-        count.getAndIncrement();
+        ++count;
       }
-    });
-    if (isTokenCache) {
-      syncTokenOwnerStats();
     }
-    if (count.get() > 0) {
-      LOG.warn("Ignored {} nodes while loading {} cache.", count.get(),
-          cacheName);
+    if (count > 0) {
+      LOG.warn("Ignored {} nodes while loading {} cache.", count, cacheName);
     }
     LOG.info("Loaded {} cache.", cacheName);
   }
@@ -407,7 +457,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     DataInputStream din = new DataInputStream(bin);
     DelegationKey key = new DelegationKey();
     key.readFields(din);
-    allKeys.put(key.getKeyId(), key);
+    synchronized (this) {
+      allKeys.put(key.getKeyId(), key);
+    }
   }
 
   private void processKeyRemoved(String path) {
@@ -417,13 +469,15 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       int j = tokSeg.indexOf('_');
       if (j > 0) {
         int keyId = Integer.parseInt(tokSeg.substring(j + 1));
-        allKeys.remove(keyId);
+        synchronized (this) {
+          allKeys.remove(keyId);
+        }
       }
     }
   }
 
-  protected TokenIdent processTokenAddOrUpdate(byte[] data) throws IOException {
-    ByteArrayInputStream bin = new ByteArrayInputStream(data);
+  private void processTokenAddOrUpdate(ChildData data) throws IOException {
+    ByteArrayInputStream bin = new ByteArrayInputStream(data.getData());
     DataInputStream din = new DataInputStream(bin);
     TokenIdent ident = createIdentifier();
     ident.readFields(din);
@@ -434,10 +488,12 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     if (numRead > -1) {
       DelegationTokenInformation tokenInfo =
           new DelegationTokenInformation(renewDate, password);
-      currentTokens.put(ident, tokenInfo);
-      return ident;
+      synchronized (this) {
+        currentTokens.put(ident, tokenInfo);
+        // The cancel task might be waiting
+        notifyAll();
+      }
     }
-    return null;
   }
 
   private void processTokenRemoved(ChildData data) throws IOException {
@@ -445,7 +501,11 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     DataInputStream din = new DataInputStream(bin);
     TokenIdent ident = createIdentifier();
     ident.readFields(din);
-    currentTokens.remove(ident);
+    synchronized (this) {
+      currentTokens.remove(ident);
+      // The cancel task might be waiting
+      notifyAll();
+    }
   }
 
   @Override
@@ -485,6 +545,20 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       }
     } catch (Exception e) {
       LOG.error("Could not stop Curator Framework", e);
+    }
+    if (listenerThreadPool != null) {
+      listenerThreadPool.shutdown();
+      try {
+        // wait for existing tasks to terminate
+        if (!listenerThreadPool.awaitTermination(shutdownTimeout,
+            TimeUnit.MILLISECONDS)) {
+          LOG.error("Forcing Listener threadPool to shutdown !!");
+          listenerThreadPool.shutdownNow();
+        }
+      } catch (InterruptedException ie) {
+        listenerThreadPool.shutdownNow();
+        Thread.currentThread().interrupt();
+      }
     }
   }
 
@@ -632,7 +706,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
    *
    * @param ident Identifier of the token
    */
-  protected void syncLocalCacheWithZk(TokenIdent ident) {
+  private synchronized void syncLocalCacheWithZk(TokenIdent ident) {
     try {
       DelegationTokenInformation tokenInfo = getTokenInfoFromZK(ident);
       if (tokenInfo != null && !currentTokens.containsKey(ident)) {
@@ -646,21 +720,16 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
   }
 
-  protected DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident)
+  private DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident)
       throws IOException {
     return getTokenInfoFromZK(ident, false);
   }
 
-  protected DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident,
+  private DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident,
       boolean quiet) throws IOException {
     String nodePath =
         getNodePath(ZK_DTSM_TOKENS_ROOT,
             DELEGATION_TOKEN_PREFIX + ident.getSequenceNumber());
-    return getTokenInfoFromZK(nodePath, quiet);
-  }
-
-  protected DelegationTokenInformation getTokenInfoFromZK(String nodePath,
-      boolean quiet) throws IOException {
     try {
       byte[] data = zkClient.getData().forPath(nodePath);
       if ((data == null) || (data.length == 0)) {
@@ -795,30 +864,15 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   @Override
   protected void removeStoredToken(TokenIdent ident)
       throws IOException {
-    removeStoredToken(ident, false);
-  }
-
-  protected void removeStoredToken(TokenIdent ident,
-      boolean checkAgainstZkBeforeDeletion) throws IOException {
     String nodeRemovePath =
         getNodePath(ZK_DTSM_TOKENS_ROOT, DELEGATION_TOKEN_PREFIX
             + ident.getSequenceNumber());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removing ZKDTSMDelegationToken_"
+          + ident.getSequenceNumber());
+    }
     try {
-      DelegationTokenInformation dtInfo = getTokenInfoFromZK(ident, true);
-      if (dtInfo != null) {
-        // For the case there is no sync or watch miss, it is possible that the
-        // local storage has expired tokens which have been renewed by peer
-        // so double check again to avoid accidental delete
-        if (checkAgainstZkBeforeDeletion
-            && dtInfo.getRenewDate() > now()) {
-          LOG.info("Node already renewed by peer " + nodeRemovePath +
-              " so this token should not be deleted");
-          return;
-        }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Removing ZKDTSMDelegationToken_"
-              + ident.getSequenceNumber());
-        }
+      if (zkClient.checkExists().forPath(nodeRemovePath) != null) {
         while(zkClient.checkExists().forPath(nodeRemovePath) != null){
           try {
             zkClient.delete().guaranteed().forPath(nodeRemovePath);
@@ -841,7 +895,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  public TokenIdent cancelToken(Token<TokenIdent> token,
+  public synchronized TokenIdent cancelToken(Token<TokenIdent> token,
       String canceller) throws IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
@@ -852,7 +906,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     return super.cancelToken(token, canceller);
   }
 
-  protected void addOrUpdateToken(TokenIdent ident,
+  private void addOrUpdateToken(TokenIdent ident,
       DelegationTokenInformation info, boolean isUpdate) throws Exception {
     String nodeCreatePath =
         getNodePath(ZK_DTSM_TOKENS_ROOT, DELEGATION_TOKEN_PREFIX
@@ -877,10 +931,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
             .forPath(nodeCreatePath, tokenOs.toByteArray());
       }
     }
-  }
-
-  public boolean isTokenWatcherEnabled() {
-    return isTokenWatcherEnabled;
   }
 
   /**
@@ -912,6 +962,11 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   @Unstable
   static String getNodePath(String root, String nodeName) {
     return (root + "/" + nodeName);
+  }
+
+  @VisibleForTesting
+  public ExecutorService getListenerThreadPool() {
+    return listenerThreadPool;
   }
 
   @VisibleForTesting

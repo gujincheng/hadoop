@@ -23,10 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -64,8 +60,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class BindingPathOutputCommitter extends PathOutputCommitter
-    implements IOStatisticsSource, StreamCapabilities {
+public class BindingPathOutputCommitter extends PathOutputCommitter {
 
   /**
    * The classname for use in configurations.
@@ -185,23 +180,5 @@ public class BindingPathOutputCommitter extends PathOutputCommitter
    */
   public PathOutputCommitter getCommitter() {
     return committer;
-  }
-
-  /**
-   * Pass through if the inner committer supports StreamCapabilities.
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean hasCapability(final String capability) {
-    if (committer instanceof StreamCapabilities) {
-      return ((StreamCapabilities) committer).hasCapability(capability);
-    } else {
-      return false;
-    }
-  }
-
-  @Override
-  public IOStatistics getIOStatistics() {
-    return IOStatisticsSupport.retrieveIOStatistics(committer);
   }
 }

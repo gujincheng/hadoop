@@ -75,9 +75,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    final S3AFileSystem fs = getFileSystem();
-    auditor = (AccessCheckingAuditor) fs.getAuditor();
-    setSpanSource(fs);
+    auditor = (AccessCheckingAuditor) getFileSystem().getAuditor();
   }
 
   @Test
@@ -91,7 +89,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
     verifyMetrics(
         () -> access(fs, path),
         with(INVOCATION_ACCESS, 1),
-        always(FILE_STATUS_FILE_PROBE));
+        whenRaw(FILE_STATUS_FILE_PROBE));
   }
 
   @Test
@@ -104,7 +102,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
     verifyMetrics(
         () -> access(fs, path),
         with(INVOCATION_ACCESS, 1),
-        always(FILE_STATUS_ALL_PROBES));
+        whenRaw(FILE_STATUS_ALL_PROBES));
   }
 
   @Test
@@ -117,7 +115,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
     verifyMetrics(
         () -> access(fs, path),
         with(INVOCATION_ACCESS, 1),
-        always(ROOT_FILE_STATUS_PROBE));
+        whenRaw(ROOT_FILE_STATUS_PROBE));
   }
 
   /**
@@ -140,7 +138,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
         with(AUDIT_ACCESS_CHECK_FAILURE, 1),
         // one S3 request: a HEAD.
         with(AUDIT_REQUEST_EXECUTION, 1),
-        always(FILE_STATUS_FILE_PROBE));
+        whenRaw(FILE_STATUS_FILE_PROBE));
   }
 
   /**
@@ -164,7 +162,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
         with(AUDIT_REQUEST_EXECUTION, 2),
         with(STORE_IO_REQUEST, 2),
         with(AUDIT_ACCESS_CHECK_FAILURE, 1),
-        always(FILE_STATUS_ALL_PROBES));
+        whenRaw(FILE_STATUS_ALL_PROBES));
   }
 
   /**
@@ -185,7 +183,7 @@ public class ITestAuditAccessChecks extends AbstractS3ACostTest {
         // two S3 requests: a HEAD and a LIST.
         with(AUDIT_REQUEST_EXECUTION, 2),
         with(AUDIT_ACCESS_CHECK_FAILURE, 0),
-        always(FILE_STATUS_ALL_PROBES));
+        whenRaw(FILE_STATUS_ALL_PROBES));
   }
 
   /**

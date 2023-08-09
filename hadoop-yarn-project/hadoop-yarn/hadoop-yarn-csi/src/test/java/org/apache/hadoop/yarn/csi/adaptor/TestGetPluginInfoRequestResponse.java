@@ -21,10 +21,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetPluginInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetPluginInfoRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetPluginInfoResponsePBImpl;
 import org.apache.hadoop.yarn.proto.CsiAdaptorProtos;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * Verify the integrity of GetPluginInfoRequest and GetPluginInfoResponse.
@@ -32,37 +30,37 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class TestGetPluginInfoRequestResponse {
 
   @Test
-  void testGetPluginInfoRequestPBRecord() {
+  public void testGetPluginInfoRequestPBRecord() {
     CsiAdaptorProtos.GetPluginInfoRequest requestProto =
         CsiAdaptorProtos.GetPluginInfoRequest.newBuilder().build();
     GetPluginInfoRequestPBImpl pbImpl =
         new GetPluginInfoRequestPBImpl(requestProto);
-    assertNotNull(pbImpl);
-    assertEquals(requestProto, pbImpl.getProto());
+    Assert.assertNotNull(pbImpl);
+    Assert.assertEquals(requestProto, pbImpl.getProto());
   }
 
   @Test
-  void testGetPluginInfoResponsePBRecord() {
+  public void testGetPluginInfoResponsePBRecord() {
     CsiAdaptorProtos.GetPluginInfoResponse responseProto =
         CsiAdaptorProtos.GetPluginInfoResponse.newBuilder()
-            .setName("test-driver")
-            .setVendorVersion("1.0.1")
-            .build();
+        .setName("test-driver")
+        .setVendorVersion("1.0.1")
+        .build();
 
     GetPluginInfoResponsePBImpl pbImpl =
         new GetPluginInfoResponsePBImpl(responseProto);
-    assertEquals("test-driver", pbImpl.getDriverName());
-    assertEquals("1.0.1", pbImpl.getVersion());
-    assertEquals(responseProto, pbImpl.getProto());
+    Assert.assertEquals("test-driver", pbImpl.getDriverName());
+    Assert.assertEquals("1.0.1", pbImpl.getVersion());
+    Assert.assertEquals(responseProto, pbImpl.getProto());
 
     GetPluginInfoResponse pbImpl2 = GetPluginInfoResponsePBImpl
         .newInstance("test-driver", "1.0.1");
-    assertEquals("test-driver", pbImpl2.getDriverName());
-    assertEquals("1.0.1", pbImpl2.getVersion());
+    Assert.assertEquals("test-driver", pbImpl2.getDriverName());
+    Assert.assertEquals("1.0.1", pbImpl2.getVersion());
 
     CsiAdaptorProtos.GetPluginInfoResponse proto =
         ((GetPluginInfoResponsePBImpl) pbImpl2).getProto();
-    assertEquals("test-driver", proto.getName());
-    assertEquals("1.0.1", proto.getVendorVersion());
+    Assert.assertEquals("test-driver", proto.getName());
+    Assert.assertEquals("1.0.1", proto.getVendorVersion());
   }
 }

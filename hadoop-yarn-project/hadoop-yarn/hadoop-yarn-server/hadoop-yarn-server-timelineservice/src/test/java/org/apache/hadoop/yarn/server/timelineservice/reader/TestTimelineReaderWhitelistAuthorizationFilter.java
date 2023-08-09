@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import java.io.IOException;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
@@ -25,24 +31,18 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.reader.security.TimelineReaderWhitelistAuthorizationFilter;
-
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Unit tests for {@link TimelineReaderWhitelistAuthorizationFilter}.
@@ -85,7 +85,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
   }
 
   @Test
-  void checkFilterAllowedUser() throws ServletException, IOException {
+  public void checkFilterAllowedUser() throws ServletException, IOException {
     Map<String, String> map = new HashMap<String, String>();
     map.put(YarnConfiguration.TIMELINE_SERVICE_READ_AUTH_ENABLED, "true");
     map.put(YarnConfiguration.TIMELINE_SERVICE_READ_ALLOWED_USERS,
@@ -111,7 +111,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
   }
 
   @Test
-  void checkFilterNotAllowedUser() throws ServletException, IOException {
+  public void checkFilterNotAllowedUser() throws ServletException, IOException {
     Map<String, String> map = new HashMap<String, String>();
     map.put(YarnConfiguration.TIMELINE_SERVICE_READ_AUTH_ENABLED, "true");
     map.put(YarnConfiguration.TIMELINE_SERVICE_READ_ALLOWED_USERS,
@@ -138,7 +138,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
   }
 
   @Test
-  void checkFilterAllowedUserGroup()
+  public void checkFilterAllowedUserGroup()
       throws ServletException, IOException, InterruptedException {
     Map<String, String> map = new HashMap<String, String>();
     map.put(YarnConfiguration.TIMELINE_SERVICE_READ_AUTH_ENABLED, "true");
@@ -172,7 +172,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
   }
 
   @Test
-  void checkFilterNotAlloweGroup()
+  public void checkFilterNotAlloweGroup()
       throws ServletException, IOException, InterruptedException {
     Map<String, String> map = new HashMap<String, String>();
     map.put(YarnConfiguration.TIMELINE_SERVICE_READ_AUTH_ENABLED, "true");
@@ -207,7 +207,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
   }
 
   @Test
-  void checkFilterAllowAdmins()
+  public void checkFilterAllowAdmins()
       throws ServletException, IOException, InterruptedException {
     // check that users in admin acl list are allowed to read
     Map<String, String> map = new HashMap<String, String>();
@@ -243,7 +243,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
   }
 
   @Test
-  void checkFilterAllowAdminsWhenNoUsersSet()
+  public void checkFilterAllowAdminsWhenNoUsersSet()
       throws ServletException, IOException, InterruptedException {
     // check that users in admin acl list are allowed to read
     Map<String, String> map = new HashMap<String, String>();
@@ -277,7 +277,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
   }
 
   @Test
-  void checkFilterAllowNoOneWhenAdminAclsEmptyAndUserAclsEmpty()
+  public void checkFilterAllowNoOneWhenAdminAclsEmptyAndUserAclsEmpty()
       throws ServletException, IOException, InterruptedException {
     // check that users in admin acl list are allowed to read
     Map<String, String> map = new HashMap<String, String>();
@@ -311,7 +311,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
   }
 
   @Test
-  void checkFilterReadAuthDisabledNoAclSettings()
+  public void checkFilterReadAuthDisabledNoAclSettings()
       throws ServletException, IOException, InterruptedException {
     // Default settings for Read Auth Enabled (false)
     // No values in admin acls or allowed read user list
@@ -344,7 +344,7 @@ public class TestTimelineReaderWhitelistAuthorizationFilter {
   }
 
   @Test
-  void checkFilterReadAuthDisabledButAclSettingsPopulated()
+  public void checkFilterReadAuthDisabledButAclSettingsPopulated()
       throws ServletException, IOException, InterruptedException {
     Map<String, String> map = new HashMap<String, String>();
     // Default settings for Read Auth Enabled (false)

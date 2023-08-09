@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -34,7 +33,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES_READ_CLOSE;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_TOTAL_BYTES;
@@ -74,7 +72,6 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     IOStatisticsSnapshot iostats = new IOStatisticsSnapshot();
     // Open file, read half the data, and then call unbuffer
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
-      skipIfCannotUnbuffer(inputStream);
       assertTrue(inputStream.getWrappedStream() instanceof S3AInputStream);
       int bytesToRead = 8;
       readAndAssertBytesRead(inputStream, bytesToRead);
@@ -141,7 +138,6 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     Object streamStatsStr;
     try {
       inputStream = fs.open(dest);
-      skipIfCannotUnbuffer(inputStream);
       streamStatsStr = demandStringifyIOStatisticsSource(inputStream);
 
       LOG.info("initial stream statistics {}", streamStatsStr);
@@ -194,12 +190,6 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
 
   private boolean isObjectStreamOpen(FSDataInputStream inputStream) {
     return ((S3AInputStream) inputStream.getWrappedStream()).isObjectStreamOpen();
-  }
-
-  private void skipIfCannotUnbuffer(FSDataInputStream inputStream) {
-    if (!inputStream.hasCapability(StreamCapabilities.UNBUFFER)) {
-      skip("input stream does not support unbuffer");
-    }
   }
 
   /**

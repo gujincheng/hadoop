@@ -32,18 +32,15 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
-import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.web.JsonUtil;
-import org.apache.hadoop.hdfs.web.JsonUtilClient;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.StringSignerSecretProviderCreator;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
-import org.apache.hadoop.util.JsonSerialization;
 import org.json.simple.JSONArray;
 import org.junit.Assert;
 
@@ -59,20 +56,17 @@ import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
@@ -195,11 +189,6 @@ public class TestHttpFSServer extends HFSTestCase {
       return Arrays.asList(HadoopUsersConfTestHelper.getHadoopUserGroups(user));
     }
 
-    @Override
-    public Set<String> getGroupsSet(String user) throws IOException {
-      return new HashSet<>(getGroups(user));
-    }
-
   }
 
   private Configuration createHttpFSConf(boolean addDelegationTokenAuthHandler,
@@ -234,9 +223,8 @@ public class TestHttpFSServer extends HFSTestCase {
     // HTTPFS configuration
     conf = new Configuration(false);
     if (addDelegationTokenAuthHandler) {
-      conf.set(HttpFSAuthenticationFilter.HADOOP_HTTP_CONF_PREFIX +
-              AuthenticationFilter.AUTH_TYPE,
-          HttpFSKerberosAuthenticationHandlerForTesting.class.getName());
+      conf.set("httpfs.authentication.type",
+               HttpFSKerberosAuthenticationHandlerForTesting.class.getName());
     }
     conf.set("httpfs.services.ext", MockGroups.class.getName());
     conf.set("httpfs.admin.group", HadoopUsersConfTestHelper.
@@ -247,9 +235,8 @@ public class TestHttpFSServer extends HFSTestCase {
     conf.set("httpfs.proxyuser." +
              HadoopUsersConfTestHelper.getHadoopProxyUser() + ".hosts",
              HadoopUsersConfTestHelper.getHadoopProxyUserHosts());
-    conf.set(HttpFSAuthenticationFilter.HADOOP_HTTP_CONF_PREFIX +
-            AuthenticationFilter.SIGNATURE_SECRET_FILE,
-        secretFile.getAbsolutePath());
+    conf.set("httpfs.authentication.signature.secret.file",
+             secretFile.getAbsolutePath());
     conf.set("httpfs.hadoop.config.dir", hadoopConfDir.toString());
     if (sslEnabled) {
       conf.set("httpfs.ssl.enabled", "true");
@@ -1558,23 +1545,6 @@ public class TestHttpFSServer extends HFSTestCase {
     Assert.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
   }
 
-  private void verifyGetSnapshotList(DistributedFileSystem dfs, Path path)
-      throws Exception {
-    // Send a request
-    HttpURLConnection conn = sendRequestToHttpFSServer(path.toString(),
-        "GETSNAPSHOTLIST", "");
-    // Should return HTTP_OK
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
-    // Verify the response
-    BufferedReader reader =
-        new BufferedReader(new InputStreamReader(conn.getInputStream()));
-    // The response should be a one-line JSON string.
-    String dirLst = reader.readLine();
-    // Verify the content of status with DFS API.
-    SnapshotStatus[] dfsDirLst = dfs.getSnapshotListing(path);
-    Assert.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
-  }
-
   @Test
   @TestDir
   @TestJetty
@@ -1608,35 +1578,6 @@ public class TestHttpFSServer extends HFSTestCase {
     verifyGetSnapshottableDirectoryList(dfs);
     dfs.delete(path1, true);
     verifyGetSnapshottableDirectoryList(dfs);
-  }
-
-
-  @Test
-  @TestDir
-  @TestJetty
-  @TestHdfs
-  public void testGetSnapshotList() throws Exception {
-    createHttpFSServer(false, false);
-    // Create test directories
-    String pathStr = "/tmp/tmp-snap-list-test-1";
-    createDirWithHttp(pathStr, "700", null);
-    Path path = new Path(pathStr);
-    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(
-        path.toUri(), TestHdfsHelper.getHdfsConf());
-    // Enable snapshot for path1
-    dfs.allowSnapshot(path);
-    Assert.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
-    // Verify response when there is one snapshottable directory
-    verifyGetSnapshotList(dfs, path);
-    // Create a file and take a snapshot
-    String file1 = pathStr + "/file1";
-    createWithHttp(file1, null);
-    dfs.createSnapshot(path, "snap1");
-    // Create another file and take a snapshot
-    String file2 = pathStr + "/file2";
-    createWithHttp(file2, null);
-    dfs.createSnapshot(path, "snap2");
-    verifyGetSnapshotList(dfs, path);
   }
 
   @Test
@@ -1714,7 +1655,8 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.connect();
     // Verify that we read what we wrote
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    String content = IOUtils.toString(conn.getInputStream(), StandardCharsets.UTF_8);
+    String content = IOUtils.toString(
+        conn.getInputStream(), Charset.defaultCharset());
     Assert.assertEquals(testContent, content);
 
 
@@ -2005,39 +1947,5 @@ public class TestHttpFSServer extends HFSTestCase {
             + "is incompatible with \"application/json\"",
         () -> HttpFSUtils.jsonParse(conn));
     conn.disconnect();
-  }
-
-  @Test
-  @TestDir
-  @TestJetty
-  @TestHdfs
-  public void testGetFileBlockLocations() throws Exception {
-    createHttpFSServer(false, false);
-    // Create a test directory
-    String pathStr = "/tmp/tmp-get-block-location-test";
-    createDirWithHttp(pathStr, "700", null);
-
-    Path path = new Path(pathStr);
-    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
-        .get(path.toUri(), TestHdfsHelper.getHdfsConf());
-
-    String file1 = pathStr + "/file1";
-    createWithHttp(file1, null);
-    HttpURLConnection conn = sendRequestToHttpFSServer(file1,
-        "GETFILEBLOCKLOCATIONS", "length=10&offset10");
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    BlockLocation[] locations1 = dfs.getFileBlockLocations(new Path(file1), 0, 1);
-    Assert.assertNotNull(locations1);
-
-    Map<?, ?> jsonMap = JsonSerialization.mapReader().readValue(conn.getInputStream());
-
-    BlockLocation[] httpfsBlockLocations = JsonUtilClient.toBlockLocationArray(jsonMap);
-
-    assertEquals(locations1.length, httpfsBlockLocations.length);
-    for (int i = 0; i < locations1.length; i++) {
-      assertEquals(locations1[i].toString(), httpfsBlockLocations[i].toString());
-    }
-
-    conn.getInputStream().close();
   }
 }

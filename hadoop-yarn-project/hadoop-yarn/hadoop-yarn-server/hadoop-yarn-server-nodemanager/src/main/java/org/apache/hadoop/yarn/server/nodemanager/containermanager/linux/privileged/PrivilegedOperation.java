@@ -135,7 +135,7 @@ public class PrivilegedOperation {
 
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof PrivilegedOperation)) {
+    if (other == null || !(other instanceof PrivilegedOperation)) {
       return false;
     }
 

@@ -24,6 +24,7 @@ import com.ctc.wstx.io.SystemId;
 import com.ctc.wstx.stax.WstxInputFactory;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.BufferedInputStream;
 import java.io.DataInput;
@@ -86,7 +87,6 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.commons.collections.map.UnmodifiableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -98,18 +98,17 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProvider.CredentialEntry;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
-import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.XMLUtils;
-
 import org.codehaus.stax2.XMLStreamReader2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -318,7 +317,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private boolean loadDefaults = true;
 
   /**
-   * Configuration objects.
+   * Configuration objects
    */
   private static final WeakHashMap<Configuration,Object> REGISTRY = 
     new WeakHashMap<Configuration,Object>();
@@ -775,7 +774,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private void handleDeprecation() {
     LOG.debug("Handling deprecation for all properties in config...");
     DeprecationContext deprecations = deprecationContext.get();
-    Set<Object> keys = new HashSet<>();
+    Set<Object> keys = new HashSet<Object>();
     keys.addAll(getProps().keySet());
     for (Object item: keys) {
       LOG.debug("Handling deprecation for " + (String)item);
@@ -1101,20 +1100,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
-   * Provides a public wrapper over substituteVars in order to avoid compatibility issues.
-   * See HADOOP-18021 for further details.
-   *
-   * @param expr the literal value of a config key
-   * @return null if expr is null, otherwise the value resulting from expanding
-   * expr using the algorithm above.
-   * @throws IllegalArgumentException when more than
-   * {@link Configuration#MAX_SUBST} replacements are required
-   */
-  public String substituteCommonVariables(String expr) {
-    return substituteVars(expr);
-  }
-
-  /**
    * Attempts to repeatedly expand the value {@code expr} by replacing the
    * left-most substring of the form "${var}" in the following precedence order
    * <ol>
@@ -1134,10 +1119,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * </pre>
    * If a cycle is detected then the original expr is returned. Loops
    * involving multiple substitutions are not detected.
-   *
-   * In order not to introduce breaking changes (as Oozie for example contains a method with the
-   * same name and same signature) do not make this method public, use substituteCommonVariables
-   * in this case.
    *
    * @param expr the literal value of a config key
    * @return null if expr is null, otherwise the value resulting from expanding
@@ -1732,11 +1713,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return true;
     else if (StringUtils.equalsIgnoreCase("false", valueString))
       return false;
-    else {
-      LOG.warn("Invalid value for boolean: " + valueString +
-               ", choose default value: " + defaultValue + " for " + name);
-      return defaultValue;
-    }
+    else return defaultValue;
   }
 
   /** 
@@ -1909,7 +1886,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param name Property name
    * @param vStr The string value with time unit suffix to be converted.
    * @param unit Unit to convert the stored property, if it exists.
-   * @return time duration in given time unit.
    */
   public long getTimeDurationHelper(String name, String vStr, TimeUnit unit) {
     return getTimeDurationHelper(name, vStr, unit, unit);
@@ -1924,7 +1900,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param vStr The string value with time unit suffix to be converted.
    * @param defaultUnit Unit to convert the stored property, if it exists.
    * @param returnUnit Unit for the returned value.
-   * @return time duration in given time unit.
    */
   private long getTimeDurationHelper(String name, String vStr,
       TimeUnit defaultUnit, TimeUnit returnUnit) {
@@ -2209,7 +2184,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
 
     /**
-     * Is the given value in the set of ranges.
+     * Is the given value in the set of ranges
      * @param value the value to check
      * @return is the value in the ranges?
      */
@@ -2266,7 +2241,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
-   * Parse the given attribute as a set of integer ranges.
+   * Parse the given attribute as a set of integer ranges
    * @param name the attribute name
    * @param defaultValue the default value if it is not set
    * @return a new set of ranges from the configured value
@@ -2485,7 +2460,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Fallback to clear text passwords in configuration.
-   * @param name the property name.
+   * @param name
    * @return clear text password or null
    */
   protected char[] getPasswordFromConfig(String name) {
@@ -2550,8 +2525,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Set the socket address for the <code>name</code> property as
    * a <code>host:port</code>.
-   * @param name property name.
-   * @param addr inetSocketAddress addr.
    */
   public void setSocketAddr(String name, InetSocketAddress addr) {
     set(name, NetUtils.getHostPortString(addr));
@@ -2729,7 +2702,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param name the conf key name.
    * @param defaultValue default value.
    * @param xface the interface implemented by the named class.
-   * @param <U> Interface class type.
    * @return property value as a <code>Class</code>, 
    *         or <code>defaultValue</code>.
    */
@@ -2759,7 +2731,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param name the property name.
    * @param xface the interface implemented by the classes named by
    *        <code>name</code>.
-   * @param <U> Interface class type.
    * @return a <code>List</code> of objects implementing <code>xface</code>.
    */
   @SuppressWarnings("unchecked")
@@ -2792,16 +2763,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     set(name, theClass.getName());
   }
 
-  /**
+  /** 
    * Get a local file under a directory named by <i>dirsProp</i> with
    * the given <i>path</i>.  If <i>dirsProp</i> contains multiple directories,
    * then one is chosen based on <i>path</i>'s hash code.  If the selected
    * directory does not exist, an attempt is made to create it.
-   *
+   * 
    * @param dirsProp directory in which to locate the file.
    * @param path file-path.
    * @return local file under the directory with the given path.
-   * @throws IOException raised on errors performing I/O.
    */
   public Path getLocalPath(String dirsProp, String path)
     throws IOException {
@@ -2825,16 +2795,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     throw new IOException("No valid local directories in property: "+dirsProp);
   }
 
-  /**
+  /** 
    * Get a local file name under a directory named in <i>dirsProp</i> with
    * the given <i>path</i>.  If <i>dirsProp</i> contains multiple directories,
    * then one is chosen based on <i>path</i>'s hash code.  If the selected
    * directory does not exist, an attempt is made to create it.
-   *
+   * 
    * @param dirsProp directory in which to locate the file.
    * @param path file-path.
    * @return local file under the directory with the given path.
-   * @throws IOException raised on errors performing I/O.
    */
   public File getFile(String dirsProp, String path)
     throws IOException {
@@ -3446,7 +3415,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Add tags defined in HADOOP_TAGS_SYSTEM, HADOOP_TAGS_CUSTOM.
-   * @param prop properties.
+   * @param prop
    */
   public void addTags(Properties prop) {
     // Get all system tags
@@ -3547,7 +3516,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Print a warning if a property with a given name already exists with a
-   * different value.
+   * different value
    */
   private void checkForOverride(Properties properties, String name, String attr, String value) {
     String propertyValue = properties.getProperty(attr);
@@ -3557,12 +3526,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
-  /**
+  /** 
    * Write out the non-default properties in this configuration to the given
    * {@link OutputStream} using UTF-8 encoding.
-   *
+   * 
    * @param out the output stream to write to.
-   * @throws IOException raised on errors performing I/O.
    */
   public void writeXml(OutputStream out) throws IOException {
     writeXml(new OutputStreamWriter(out, "UTF-8"));
@@ -3592,20 +3560,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * the configuration, this method throws an {@link IllegalArgumentException}.
    * </li>
    * </ul>
-   * @param propertyName xml property name.
    * @param out the writer to write to.
-   * @param config configuration.
-   * @throws IOException raised on errors performing I/O.
    */
-  public void writeXml(@Nullable String propertyName, Writer out, Configuration config)
+  public void writeXml(@Nullable String propertyName, Writer out)
       throws IOException, IllegalArgumentException {
-    ConfigRedactor redactor = config != null ? new ConfigRedactor(this) : null;
-    Document doc = asXmlDocument(propertyName, redactor);
+    Document doc = asXmlDocument(propertyName);
 
     try {
       DOMSource source = new DOMSource(doc);
       StreamResult result = new StreamResult(out);
-      TransformerFactory transFactory = XMLUtils.newSecureTransformerFactory();
+      TransformerFactory transFactory = TransformerFactory.newInstance();
       Transformer transformer = transFactory.newTransformer();
 
       // Important to not hold Configuration log while writing result, since
@@ -3617,16 +3581,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
-  public void writeXml(@Nullable String propertyName, Writer out)
-      throws IOException, IllegalArgumentException {
-    writeXml(propertyName, out, null);
-  }
-
   /**
    * Return the XML DOM corresponding to this Configuration.
    */
-  private synchronized Document asXmlDocument(@Nullable String propertyName,
-      ConfigRedactor redactor) throws IOException, IllegalArgumentException {
+  private synchronized Document asXmlDocument(@Nullable String propertyName)
+      throws IOException, IllegalArgumentException {
     Document doc;
     try {
       doc = DocumentBuilderFactory
@@ -3649,13 +3608,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             propertyName + " not found");
       } else {
         // given property is found, write single property
-        appendXMLProperty(doc, conf, propertyName, redactor);
+        appendXMLProperty(doc, conf, propertyName);
         conf.appendChild(doc.createTextNode("\n"));
       }
     } else {
       // append all elements
       for (Enumeration<Object> e = properties.keys(); e.hasMoreElements();) {
-        appendXMLProperty(doc, conf, (String)e.nextElement(), redactor);
+        appendXMLProperty(doc, conf, (String)e.nextElement());
         conf.appendChild(doc.createTextNode("\n"));
       }
     }
@@ -3671,7 +3630,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param propertyName
    */
   private synchronized void appendXMLProperty(Document doc, Element conf,
-      String propertyName, ConfigRedactor redactor) {
+      String propertyName) {
     // skip writing if given property name is empty or null
     if (!Strings.isNullOrEmpty(propertyName)) {
       String value = properties.getProperty(propertyName);
@@ -3684,11 +3643,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         propNode.appendChild(nameNode);
 
         Element valueNode = doc.createElement("value");
-        String propertyValue = properties.getProperty(propertyName);
-        if (redactor != null) {
-          propertyValue = redactor.redactXml(propertyName, propertyValue);
-        }
-        valueNode.appendChild(doc.createTextNode(propertyValue));
+        valueNode.appendChild(doc.createTextNode(
+            properties.getProperty(propertyName)));
         propNode.appendChild(valueNode);
 
         Element finalNode = doc.createElement("final");
@@ -3758,7 +3714,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param config the configuration
    * @param propertyName property name
    * @param out the Writer to write to
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    * @throws IllegalArgumentException when property name is not
    *   empty and the property is not found in configuration
    **/
@@ -3805,7 +3761,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *
    * @param config the configuration
    * @param out the Writer to write to
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public static void dumpConfiguration(Configuration config,
       Writer out) throws IOException {
@@ -3834,7 +3790,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param jsonGen json writer
    * @param config configuration
    * @param name property name
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   private static void appendJSONProperty(JsonGenerator jsonGen,
       Configuration config, String name, ConfigRedactor redactor)
@@ -3916,10 +3872,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return this.quietmode;
   }
   
-  /** For debugging.  List non-default properties to the terminal and exit.
-   * @param args the argument to be parsed.
-   * @throws Exception exception.
-   */
+  /** For debugging.  List non-default properties to the terminal and exit. */
   public static void main(String[] args) throws Exception {
     new Configuration().writeXml(System.out);
   }
@@ -3953,8 +3906,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
   
   /**
-   * get keys matching the the regex.
-   * @param regex the regex to match against.
+   * get keys matching the the regex 
+   * @param regex
    * @return {@literal Map<String,String>} with matching keys
    */
   public Map<String,String> getValByRegex(String regex) {
@@ -3999,8 +3952,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Returns whether or not a deprecated name has been warned. If the name is not
    * deprecated then always return false
-   * @param name proprties.
-   * @return true if name is a warned deprecation.
    */
   public static boolean hasWarnedDeprecation(String name) {
     DeprecationContext deprecations = deprecationContext.get();

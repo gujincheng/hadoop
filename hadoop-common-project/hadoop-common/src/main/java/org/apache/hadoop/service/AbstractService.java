@@ -20,7 +20,6 @@ package org.apache.hadoop.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -241,7 +240,7 @@ public abstract class AbstractService implements Service {
 
   /**
    * Relay to {@link #stop()}
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   @Override
   public final void close() throws IOException {
@@ -427,7 +426,7 @@ public abstract class AbstractService implements Service {
 
   @Override
   public synchronized List<LifecycleEvent> getLifecycleHistory() {
-    return Collections.unmodifiableList(new ArrayList<>(lifecycleHistory));
+    return new ArrayList<LifecycleEvent>(lifecycleHistory);
   }
 
   /**
@@ -484,7 +483,8 @@ public abstract class AbstractService implements Service {
   @Override
   public Map<String, String> getBlockers() {
     synchronized (blockerMap) {
-      return Collections.unmodifiableMap(new HashMap<>(blockerMap));
+      Map<String, String> map = new HashMap<String, String>(blockerMap);
+      return map;
     }
   }
 }

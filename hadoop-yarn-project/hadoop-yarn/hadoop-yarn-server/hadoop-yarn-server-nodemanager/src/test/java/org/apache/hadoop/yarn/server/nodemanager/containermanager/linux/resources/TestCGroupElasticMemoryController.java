@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -97,7 +97,8 @@ public class TestCGroupElasticMemoryController {
         script.getAbsolutePath());
     try {
       FileUtils.writeStringToFile(script,
-          "#!/bin/bash\nprintf oomevent;printf oomevent;\n", StandardCharsets.UTF_8, false);
+          "#!/bin/bash\nprintf oomevent;printf oomevent;\n",
+          Charset.defaultCharset(), false);
       assertTrue("Could not set executable",
           script.setExecutable(true));
 
@@ -137,8 +138,9 @@ public class TestCGroupElasticMemoryController {
     conf.set(YarnConfiguration.NM_ELASTIC_MEMORY_CONTROL_OOM_LISTENER_PATH,
         script.getAbsolutePath());
     try {
-      FileUtils.writeStringToFile(script, "#!/bin/bash\nprintf oomevent;printf oomevent;\n",
-          StandardCharsets.UTF_8, false);
+      FileUtils.writeStringToFile(script,
+          "#!/bin/bash\nprintf oomevent;printf oomevent;\n",
+          Charset.defaultCharset(), false);
       assertTrue("Could not set executable",
           script.setExecutable(true));
 
@@ -179,8 +181,9 @@ public class TestCGroupElasticMemoryController {
         script.getAbsolutePath());
     Runnable handler = mock(Runnable.class);
     try {
-      FileUtils.writeStringToFile(script, "#!/bin/bash\nprintf oomevent;sleep 1000;\n",
-          StandardCharsets.UTF_8, false);
+      FileUtils.writeStringToFile(script,
+          "#!/bin/bash\nprintf oomevent;sleep 1000;\n",
+          Charset.defaultCharset(), false);
       assertTrue("Could not set executable",
           script.setExecutable(true));
 
@@ -220,8 +223,9 @@ public class TestCGroupElasticMemoryController {
         script.getAbsolutePath());
     Runnable handler = mock(Runnable.class);
     try {
-      FileUtils.writeStringToFile(script, "#!/bin/bash\nprintf oomevent;sleep 1000;\n",
-          StandardCharsets.UTF_8, false);
+      FileUtils.writeStringToFile(script,
+          "#!/bin/bash\nprintf oomevent;sleep 1000;\n",
+          Charset.defaultCharset(), false);
       assertTrue("Could not set executable",
           script.setExecutable(true));
 

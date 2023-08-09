@@ -19,6 +19,5 @@
 import DS from 'ember-data';
 
 export default DS.Model.extend({
-  logFileName: DS.attr(),
-  logFileUrl: DS.attr()
+  logfileName: DS.attr()
 });

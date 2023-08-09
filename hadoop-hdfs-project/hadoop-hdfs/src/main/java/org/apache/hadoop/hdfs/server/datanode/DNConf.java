@@ -74,7 +74,6 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.security.SaslPropertiesResolver;
-import org.apache.hadoop.util.Preconditions;
 
 import java.util.concurrent.TimeUnit;
 
@@ -106,14 +105,14 @@ public class DNConf {
   final long readaheadLength;
   final long heartBeatInterval;
   private final long lifelineIntervalMs;
-  volatile long blockReportInterval;
-  volatile long blockReportSplitThreshold;
-  volatile boolean peerStatsEnabled;
-  volatile boolean diskStatsEnabled;
-  volatile long outliersReportIntervalMs;
+  final long blockReportInterval;
+  final long blockReportSplitThreshold;
+  final boolean peerStatsEnabled;
+  final boolean diskStatsEnabled;
+  final long outliersReportIntervalMs;
   final long ibrInterval;
-  volatile long initialBlockReportDelayMs;
-  volatile long cacheReportInterval;
+  final long initialBlockReportDelayMs;
+  final long cacheReportInterval;
   final long datanodeSlowIoWarningThresholdMs;
 
   final String minimumNameNodeVersion;
@@ -215,7 +214,19 @@ public class DNConf {
     this.datanodeSlowIoWarningThresholdMs = getConf().getLong(
         DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY,
         DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT);
-    initBlockReportDelay();
+
+    long initBRDelay = getConf().getTimeDuration(
+        DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
+        DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+    if (initBRDelay >= blockReportInterval) {
+      initBRDelay = 0;
+      DataNode.LOG.info(DFS_BLOCKREPORT_INITIAL_DELAY_KEY + " is "
+          + "greater than or equal to" + DFS_BLOCKREPORT_INTERVAL_MSEC_KEY
+          + ".  Setting initial delay to 0 msec:");
+    }
+    initialBlockReportDelayMs = initBRDelay;
+    
     heartBeatInterval = getConf().getTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY,
         DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS,
         TimeUnit.MILLISECONDS);
@@ -297,19 +308,6 @@ public class DNConf {
         DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_DEFAULT,
         TimeUnit.MILLISECONDS
     );
-  }
-
-  private void initBlockReportDelay() {
-    long initBRDelay = getConf().getTimeDuration(
-        DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
-        DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
-    if (initBRDelay >= blockReportInterval || initBRDelay < 0) {
-      initBRDelay = 0;
-      DataNode.LOG.info(DFS_BLOCKREPORT_INITIAL_DELAY_KEY +
-          " is greater than or equal to " + DFS_BLOCKREPORT_INTERVAL_MSEC_KEY +
-          ". Setting initial delay to 0 msec.");
-    }
-    initialBlockReportDelayMs = initBRDelay;
   }
 
   // We get minimumNameNodeVersion via a method so it can be mocked out in tests.
@@ -475,51 +473,5 @@ public class DNConf {
 
   public long getProcessCommandsThresholdMs() {
     return processCommandsThresholdMs;
-  }
-
-  void setBlockReportInterval(long intervalMs) {
-    Preconditions.checkArgument(intervalMs > 0,
-        DFS_BLOCKREPORT_INTERVAL_MSEC_KEY + " should be larger than 0");
-    blockReportInterval = intervalMs;
-  }
-
-  public long getBlockReportInterval() {
-    return blockReportInterval;
-  }
-
-  void setCacheReportInterval(long intervalMs) {
-    Preconditions.checkArgument(intervalMs > 0,
-        DFS_CACHEREPORT_INTERVAL_MSEC_KEY + " should be larger than 0");
-    cacheReportInterval = intervalMs;
-  }
-
-  public long getCacheReportInterval() {
-    return cacheReportInterval;
-  }
-
-  void setBlockReportSplitThreshold(long threshold) {
-    Preconditions.checkArgument(threshold >= 0,
-        DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY + " should be larger than or equal to 0");
-    blockReportSplitThreshold = threshold;
-  }
-
-  void setInitBRDelayMs(String delayMs) {
-    dn.getConf().set(DFS_BLOCKREPORT_INITIAL_DELAY_KEY, delayMs);
-    initBlockReportDelay();
-  }
-
-  void setPeerStatsEnabled(boolean enablePeerStats) {
-    peerStatsEnabled = enablePeerStats;
-  }
-
-  public void setFileIoProfilingSamplingPercentage(int samplingPercentage) {
-    diskStatsEnabled = Util.isDiskStatsEnabled(samplingPercentage);
-  }
-
-  public void setOutliersReportIntervalMs(String reportIntervalMs) {
-    dn.getConf().set(DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY, reportIntervalMs);
-    outliersReportIntervalMs = getConf().getTimeDuration(
-        DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
-        DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
   }
 }

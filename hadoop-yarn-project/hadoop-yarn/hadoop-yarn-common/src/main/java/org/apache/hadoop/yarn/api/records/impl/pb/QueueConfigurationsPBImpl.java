@@ -72,11 +72,11 @@ public class QueueConfigurationsPBImpl extends QueueConfigurations {
           .setEffectiveMaxCapacity(convertToProtoFormat(this.effMaxResource));
     }
     if (this.configuredMinResource != null) {
-      builder.setConfiguredMinCapacity(
+      builder.setEffectiveMinCapacity(
           convertToProtoFormat(this.configuredMinResource));
     }
     if (this.configuredMaxResource != null) {
-      builder.setConfiguredMaxCapacity(
+      builder.setEffectiveMaxCapacity(
           convertToProtoFormat(this.configuredMaxResource));
     }
   }

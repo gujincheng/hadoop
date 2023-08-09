@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import javax.annotation.Nullable;
+
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 
 /**
@@ -38,12 +41,19 @@ public class ActiveOperationContext {
    */
   private final S3AStatisticsContext statisticsContext;
 
+  /**
+   * S3Guard bulk operation state, if (currently) set.
+   */
+  @Nullable private BulkOperationState bulkOperationState;
+
   public ActiveOperationContext(
       final long operationId,
-      final S3AStatisticsContext statisticsContext) {
+      final S3AStatisticsContext statisticsContext,
+      @Nullable final BulkOperationState bulkOperationState) {
     this.operationId = operationId;
     this.statisticsContext = Objects.requireNonNull(statisticsContext,
         "null statistics context");
+    this.bulkOperationState = bulkOperationState;
   }
 
   @Override
@@ -51,8 +61,14 @@ public class ActiveOperationContext {
     final StringBuilder sb = new StringBuilder(
         "ActiveOperation{");
     sb.append("operationId=").append(operationId);
+    sb.append(", bulkOperationState=").append(bulkOperationState);
     sb.append('}');
     return sb.toString();
+  }
+
+  @Nullable
+  public BulkOperationState getBulkOperationState() {
+    return bulkOperationState;
   }
 
   public long getOperationId() {

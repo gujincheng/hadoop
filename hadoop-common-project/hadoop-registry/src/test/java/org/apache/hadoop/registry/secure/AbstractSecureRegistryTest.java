@@ -49,7 +49,7 @@ import javax.security.auth.login.LoginException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.Properties;
@@ -220,7 +220,7 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
         BOB_LOCALHOST, keytab_bob));
 
     jaasFile = new File(kdcWorkDir, "jaas.txt");
-    FileUtils.write(jaasFile, jaas.toString(), StandardCharsets.UTF_8);
+    FileUtils.write(jaasFile, jaas.toString(), Charset.defaultCharset());
     LOG.info("\n"+ jaas);
     RegistrySecurity.bindJVMtoJAASFile(jaasFile);
   }

@@ -43,7 +43,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -139,13 +139,12 @@ public class TestDistCpUtils {
   @Test
   public void testUnpackAttributes() {
     EnumSet<FileAttribute> attributes = EnumSet.allOf(FileAttribute.class);
-    Assert.assertEquals(attributes, DistCpUtils.unpackAttributes("RCBUGPAXTE"));
+    Assert.assertEquals(attributes, DistCpUtils.unpackAttributes("RCBUGPAXT"));
 
     attributes.remove(FileAttribute.REPLICATION);
     attributes.remove(FileAttribute.CHECKSUMTYPE);
     attributes.remove(FileAttribute.ACL);
     attributes.remove(FileAttribute.XATTR);
-    attributes.remove(FileAttribute.ERASURECODINGPOLICY);
     Assert.assertEquals(attributes, DistCpUtils.unpackAttributes("BUGPT"));
 
     attributes.remove(FileAttribute.TIMES);

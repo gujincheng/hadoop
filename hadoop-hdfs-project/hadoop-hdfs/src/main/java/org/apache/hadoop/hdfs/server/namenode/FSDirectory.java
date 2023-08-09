@@ -20,9 +20,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -87,8 +87,6 @@ import java.util.concurrent.RecursiveAction;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE;
@@ -183,8 +181,6 @@ public class FSDirectory implements Closeable {
    * ACL-related operations.
    */
   private final boolean aclsEnabled;
-  /** Threshold to print a warning. */
-  private final long accessControlEnforcerReportingThresholdMs;
   /**
    * Support for POSIX ACL inheritance. Not final for testing purpose.
    */
@@ -392,10 +388,6 @@ public class FSDirectory implements Closeable {
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE,
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT);
 
-    this.accessControlEnforcerReportingThresholdMs = conf.getLong(
-        DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_KEY,
-        DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_DEFAULT);
-
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY);
@@ -517,14 +509,6 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Indicates whether the image loading is complete or not.
-   * @return true if image loading is complete, false otherwise
-   */
-  public boolean isImageLoaded() {
-    return namesystem.isImageLoaded();
-  }
-
-  /**
    * Parse configuration setting dfs.namenode.protected.directories to
    * retrieve the set of protected directories.
    *
@@ -626,7 +610,6 @@ public class FSDirectory implements Closeable {
     return xattrsEnabled;
   }
   int getXattrMaxSize() { return xattrMaxSize; }
-
   boolean isAccessTimeSupported() {
     return accessTimePrecision > 0;
   }
@@ -725,18 +708,18 @@ public class FSDirectory implements Closeable {
 
     byte[][] components = INode.getPathComponents(src);
     boolean isRaw = isReservedRawName(components);
-    components = resolveComponents(components, this);
-    INodesInPath iip = INodesInPath.resolve(rootDir, components, isRaw);
     if (isPermissionEnabled && pc != null && isRaw) {
       switch(dirOp) {
-      case READ_LINK:
-      case READ:
-        break;
-      default:
-        pc.checkSuperuserPrivilege(iip.getPath());
-        break;
+        case READ_LINK:
+        case READ:
+          break;
+        default:
+          pc.checkSuperuserPrivilege();
+          break;
       }
     }
+    components = resolveComponents(components, this);
+    INodesInPath iip = INodesInPath.resolve(rootDir, components, isRaw);
     // verify all ancestors are dirs and traversable.  note that only
     // methods that create new namespace items have the signature to throw
     // PNDE
@@ -1877,8 +1860,7 @@ public class FSDirectory implements Closeable {
       UserGroupInformation ugi) throws AccessControlException {
     return new FSPermissionChecker(
         fsOwner, superGroup, ugi, getUserFilteredAttributeProvider(ugi),
-        useAuthorizationWithContextAPI,
-        accessControlEnforcerReportingThresholdMs);
+        useAuthorizationWithContextAPI);
   }
 
   void checkOwner(FSPermissionChecker pc, INodesInPath iip)
@@ -1955,10 +1937,7 @@ public class FSDirectory implements Closeable {
       boolean doCheckOwner, FsAction ancestorAccess, FsAction parentAccess,
       FsAction access, FsAction subAccess, boolean ignoreEmptyDir)
       throws AccessControlException {
-    if (pc.isSuperUser()) {
-      // call the external enforcer for audit
-      pc.checkSuperuserPrivilege(iip.getPath());
-    } else {
+    if (!pc.isSuperUser()) {
       readLock();
       try {
         pc.checkPermission(iip, doCheckOwner, ancestorAccess,
@@ -1974,12 +1953,9 @@ public class FSDirectory implements Closeable {
     if (pc.isSuperUser()) {
       if (FSDirXAttrOp.getXAttrByPrefixedName(this, iip,
           SECURITY_XATTR_UNREADABLE_BY_SUPERUSER) != null) {
-        String errorMessage = "Access is denied for " + pc.getUser()
-            + " since the superuser is not allowed to perform this operation.";
-        pc.denyUserAccess(iip.getPath(), errorMessage);
-      } else {
-        // call the external enforcer for audit.
-        pc.checkSuperuserPrivilege(iip.getPath());
+        throw new AccessControlException(
+            "Access is denied for " + pc.getUser() + " since the superuser "
+            + "is not allowed to perform this operation.");
       }
     }
   }

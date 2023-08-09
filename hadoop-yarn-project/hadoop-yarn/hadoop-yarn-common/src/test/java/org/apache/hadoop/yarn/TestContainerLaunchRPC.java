@@ -24,10 +24,8 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -37,12 +35,12 @@ import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
@@ -72,9 +70,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.Assert;
+import org.junit.Test;
 
 /*
  * Test that the container launcher rpc times out properly. This is used
@@ -89,7 +86,7 @@ public class TestContainerLaunchRPC {
       .getRecordFactory(null);
 
   @Test
-  void testHadoopProtoRPCTimeout() throws Exception {
+  public void testHadoopProtoRPCTimeout() throws Exception {
     testRPCTimeout(HadoopYarnProtoRPC.class.getName());
   }
 
@@ -139,15 +136,16 @@ public class TestContainerLaunchRPC {
         proxy.startContainers(allRequests);
       } catch (Exception e) {
         LOG.info(StringUtils.stringifyException(e));
-        assertEquals(SocketTimeoutException.class.getName(), e.getClass().getName(),
-            "Error, exception is not: " + SocketTimeoutException.class.getName());
+        Assert.assertEquals("Error, exception is not: "
+            + SocketTimeoutException.class.getName(),
+            SocketTimeoutException.class.getName(), e.getClass().getName());
         return;
       }
     } finally {
       server.stop();
     }
 
-    fail("timeout exception should have occurred!");
+    Assert.fail("timeout exception should have occurred!");
   }
 
   public static Token newContainerToken(NodeId nodeId, byte[] password,

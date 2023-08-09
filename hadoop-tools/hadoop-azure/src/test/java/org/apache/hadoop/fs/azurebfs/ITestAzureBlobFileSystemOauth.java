@@ -45,8 +45,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 
 /**
  * Test Azure Oauth with Blob Data contributor role and Blob Data Reader role.
@@ -56,8 +54,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
 
   private static final Path FILE_PATH = new Path("/testFile");
-  private static final String EXISTED_FILE_PATH = "/existedFile";
-  private static final String EXISTED_FOLDER_PATH = "/existedFolder";
+  private static final Path EXISTED_FILE_PATH = new Path("/existedFile");
+  private static final Path EXISTED_FOLDER_PATH = new Path("/existedFolder");
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestAbfsStreamStatistics.class);
 
@@ -74,9 +72,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     String secret = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET);
     Assume.assumeTrue("Contributor client secret not provided", secret != null);
 
-    Path existedFilePath = path(EXISTED_FILE_PATH);
-    Path existedFolderPath = path(EXISTED_FOLDER_PATH);
-    prepareFiles(existedFilePath, existedFolderPath);
+    prepareFiles();
 
     final AzureBlobFileSystem fs = getBlobConributor();
 
@@ -84,39 +80,39 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     try(FSDataOutputStream stream = fs.create(FILE_PATH)) {
       stream.write(0);
     }
-    assertPathExists(fs, "This path should exist", FILE_PATH);
+    assertTrue(fs.exists(FILE_PATH));
     FileStatus fileStatus = fs.getFileStatus(FILE_PATH);
     assertEquals(1, fileStatus.getLen());
     // delete file
     assertTrue(fs.delete(FILE_PATH, true));
-    assertPathDoesNotExist(fs, "This path should not exist", FILE_PATH);
+    assertFalse(fs.exists(FILE_PATH));
 
     // Verify Blob Data Contributor has full access to existed folder, file
 
     // READ FOLDER
-    assertPathExists(fs, "This path should exist", existedFolderPath);
+    assertTrue(fs.exists(EXISTED_FOLDER_PATH));
 
     //DELETE FOLDER
-    fs.delete(existedFolderPath, true);
-    assertPathDoesNotExist(fs, "This path should not exist", existedFolderPath);
+    fs.delete(EXISTED_FOLDER_PATH, true);
+    assertFalse(fs.exists(EXISTED_FOLDER_PATH));
 
     // READ FILE
-    try (FSDataInputStream stream = fs.open(existedFilePath)) {
+    try (FSDataInputStream stream = fs.open(EXISTED_FILE_PATH)) {
       assertTrue(stream.read() != 0);
     }
 
-    assertEquals(0, fs.getFileStatus(existedFilePath).getLen());
+    assertEquals(0, fs.getFileStatus(EXISTED_FILE_PATH).getLen());
 
     // WRITE FILE
-    try (FSDataOutputStream stream = fs.append(existedFilePath)) {
+    try (FSDataOutputStream stream = fs.append(EXISTED_FILE_PATH)) {
       stream.write(0);
     }
 
-    assertEquals(1, fs.getFileStatus(existedFilePath).getLen());
+    assertEquals(1, fs.getFileStatus(EXISTED_FILE_PATH).getLen());
 
     // REMOVE FILE
-    fs.delete(existedFilePath, true);
-    assertPathDoesNotExist(fs, "This path should not exist", existedFilePath);
+    fs.delete(EXISTED_FILE_PATH, true);
+    assertFalse(fs.exists(EXISTED_FILE_PATH));
   }
 
   /*
@@ -129,9 +125,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     String secret = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET);
     Assume.assumeTrue("Reader client secret not provided", secret != null);
 
-    Path existedFilePath = path(EXISTED_FILE_PATH);
-    Path existedFolderPath = path(EXISTED_FOLDER_PATH);
-    prepareFiles(existedFilePath, existedFolderPath);
+    prepareFiles();
     final AzureBlobFileSystem fs = getBlobReader();
 
     // Use abfsStore in this test to verify the  ERROR code in AbfsRestOperationException
@@ -140,25 +134,25 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     // TEST READ FS
     Map<String, String> properties = abfsStore.getFilesystemProperties(tracingContext);
     // TEST READ FOLDER
-    assertPathExists(fs, "This path should exist", existedFolderPath);
+    assertTrue(fs.exists(EXISTED_FOLDER_PATH));
 
     // TEST DELETE FOLDER
     try {
-      abfsStore.delete(existedFolderPath, true, tracingContext);
+      abfsStore.delete(EXISTED_FOLDER_PATH, true, tracingContext);
     } catch (AbfsRestOperationException e) {
       assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH, e.getErrorCode());
     }
 
     // TEST READ  FILE
-    try (InputStream inputStream = abfsStore
-        .openFileForRead(existedFilePath, null, tracingContext)) {
+    try (InputStream inputStream = abfsStore.openFileForRead(EXISTED_FILE_PATH, null,
+            tracingContext)) {
       assertTrue(inputStream.read() != 0);
     }
 
     // TEST WRITE FILE
     try {
-      abfsStore.openFileForWrite(existedFilePath, fs.getFsStatistics(), true,
-          tracingContext);
+      abfsStore.openFileForWrite(EXISTED_FILE_PATH, fs.getFsStatistics(), true,
+              tracingContext);
     } catch (AbfsRestOperationException e) {
       assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH, e.getErrorCode());
     } finally {
@@ -167,14 +161,14 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
 
   }
 
-  private void prepareFiles(Path existedFilePath, Path existedFolderPath) throws IOException {
+  private void prepareFiles() throws IOException {
     // create test files/folders to verify access control diff between
     // Blob data contributor and Blob data reader
     final AzureBlobFileSystem fs = this.getFileSystem();
-    fs.create(existedFilePath).close();
-    assertPathExists(fs, "This path should exist", existedFilePath);
-    fs.mkdirs(existedFolderPath);
-    assertPathExists(fs, "This path should exist", existedFolderPath);
+    fs.create(EXISTED_FILE_PATH);
+    assertTrue(fs.exists(EXISTED_FILE_PATH));
+    fs.mkdirs(EXISTED_FOLDER_PATH);
+    assertTrue(fs.exists(EXISTED_FOLDER_PATH));
   }
 
   private AzureBlobFileSystem getBlobConributor() throws Exception {

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
@@ -73,8 +73,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
 
 /**
  * This class supports writing files in striped layout and erasure coded format.
@@ -293,7 +291,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
                          DataChecksum checksum, String[] favoredNodes)
                          throws IOException {
     super(dfsClient, src, stat, flag, progress, checksum, favoredNodes, false);
-    LOG.debug("Creating DFSStripedOutputStream for {}", src);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Creating DFSStripedOutputStream for " + src);
+    }
 
     ecPolicy = stat.getErasureCodingPolicy();
     final int numParityBlocks = ecPolicy.getNumParityUnits();
@@ -400,10 +400,10 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
     final int failCount = failedStreamers.size() + newFailed.size();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("checkStreamers: {}", streamers);
-      LOG.debug("healthy streamer count={}", (numAllBlocks - failCount));
-      LOG.debug("original failed streamers: {}", failedStreamers);
-      LOG.debug("newly failed streamers: {}", newFailed);
+      LOG.debug("checkStreamers: " + streamers);
+      LOG.debug("healthy streamer count=" + (numAllBlocks - failCount));
+      LOG.debug("original failed streamers: " + failedStreamers);
+      LOG.debug("newly failed streamers: " + newFailed);
     }
     if (failCount > (numAllBlocks - numDataBlocks)) {
       closeAllStreamers();
@@ -1053,7 +1053,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       }
     }
 
-    dfsClient.endFileLease(getUniqKey());
+    dfsClient.endFileLease(fileId);
     final IOException ioe = b.build();
     if (ioe != null) {
       throw ioe;
@@ -1200,9 +1200,6 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
   @Override
   protected synchronized void closeImpl() throws IOException {
-    boolean recoverLeaseOnCloseException = dfsClient.getConfiguration()
-        .getBoolean(RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY,
-            RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT);
     try {
       if (isClosed()) {
         exceptionLastSeen.check(true);
@@ -1275,9 +1272,6 @@ public class DFSStripedOutputStream extends DFSOutputStream
       }
       logCorruptBlocks();
     } catch (ClosedChannelException ignored) {
-    } catch (IOException ioe) {
-      recoverLease(recoverLeaseOnCloseException);
-      throw ioe;
     } finally {
       setClosed();
       // shutdown executor of flushAll tasks

@@ -42,9 +42,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 /**
  * Data schema for {@link
  * org.apache.hadoop.hdfs.server.federation.store.MountTableStore
- * MountTableStore} data stored in the {@link
+ * FederationMountTableStore} data stored in the {@link
  * org.apache.hadoop.hdfs.server.federation.store.StateStoreService
- * StateStoreService}. Supports string serialization.
+ * FederationStateStoreService}. Supports string serialization.
  */
 public abstract class MountTable extends BaseRecord {
 
@@ -54,9 +54,9 @@ public abstract class MountTable extends BaseRecord {
       "Invalid entry, all mount points must start with / ";
   public static final String ERROR_MSG_NO_DEST_PATH_SPECIFIED =
       "Invalid entry, no destination paths specified ";
-  public static final String ERROR_MSG_INVALID_DEST_NS =
+  public static final String ERROR_MSG_INVAILD_DEST_NS =
       "Invalid entry, invalid destination nameservice ";
-  public static final String ERROR_MSG_INVALID_DEST_PATH =
+  public static final String ERROR_MSG_INVAILD_DEST_PATH =
       "Invalid entry, invalid destination path ";
   public static final String ERROR_MSG_ALL_DEST_MUST_START_WITH_BACK_SLASH =
       "Invalid entry, all destination must start with / ";
@@ -125,7 +125,6 @@ public abstract class MountTable extends BaseRecord {
    *
    * @param src Source path in the mount entry.
    * @param destinations Name service destinations of the mount point.
-   * @return The MountTable object.
    * @throws IOException If it cannot be created.
    */
   public static MountTable newInstance(final String src,
@@ -150,7 +149,7 @@ public abstract class MountTable extends BaseRecord {
     // Set permission fields
     UserGroupInformation ugi = NameNode.getRemoteUser();
     record.setOwnerName(ugi.getShortUserName());
-    String group = ugi.getGroupsSet().isEmpty() ? ugi.getShortUserName()
+    String group = ugi.getGroups().isEmpty() ? ugi.getShortUserName()
         : ugi.getPrimaryGroupName();
     record.setGroupName(group);
     record.setMode(new FsPermission(
@@ -395,11 +394,11 @@ public abstract class MountTable extends BaseRecord {
       String nsId = loc.getNameserviceId();
       if (nsId == null || nsId.length() == 0) {
         throw new IllegalArgumentException(
-            ERROR_MSG_INVALID_DEST_NS + this);
+            ERROR_MSG_INVAILD_DEST_NS + this);
       }
       if (loc.getDest() == null || loc.getDest().length() == 0) {
         throw new IllegalArgumentException(
-            ERROR_MSG_INVALID_DEST_PATH + this);
+            ERROR_MSG_INVAILD_DEST_PATH + this);
       }
       if (!loc.getDest().startsWith("/")) {
         throw new IllegalArgumentException(

@@ -31,6 +31,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLI
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBytes;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 import static org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles.DEFAULT_HUGE_PARTITION_SIZE;
 
 /**
@@ -64,6 +65,17 @@ public class ITestS3AContractMultipartUploader extends
     return (S3AFileSystem) super.getFileSystem();
   }
 
+  /**
+   * Create a configuration, possibly patching in S3Guard options.
+   * @return a configuration
+   */
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    maybeEnableS3Guard(conf);
+    return conf;
+  }
+
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
@@ -82,6 +94,15 @@ public class ITestS3AContractMultipartUploader extends
   @Override
   protected boolean supportsConcurrentUploadsToSamePath() {
     return true;
+  }
+
+  /**
+   * Provide a pessimistic time to become consistent.
+   * @return a time in milliseconds
+   */
+  @Override
+  protected int timeToBecomeConsistentMillis() {
+    return 30 * 1000;
   }
 
   @Override
@@ -109,7 +130,7 @@ public class ITestS3AContractMultipartUploader extends
    * S3 has no concept of directories, so this test does not apply.
    */
   public void testDirectoryInTheWay() throws Exception {
-    skip("Unsupported");
+    skip("unsupported");
   }
 
   @Override

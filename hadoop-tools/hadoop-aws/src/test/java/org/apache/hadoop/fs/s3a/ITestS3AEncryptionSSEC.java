@@ -41,21 +41,19 @@ import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 import static org.apache.hadoop.fs.s3a.Constants.ETAG_CHECKSUM_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.createTestPath;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Concrete class that extends {@link AbstractTestS3AEncryption}
  * and tests SSE-C encryption.
  * HEAD requests against SSE-C-encrypted data will fail if the wrong key
- * is presented -this used to cause problems with S3Guard.
+ * is presented, so the tests are very brittle to S3Guard being on vs. off.
  * Equally "vexing" has been the optimizations of getFileStatus(), wherein
  * LIST comes before HEAD path + /
  */
@@ -80,10 +78,17 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {"keep-markers", true},
-        {"delete-markers", false}
+        {"raw-keep-markers", false, true},
+        {"raw-delete-markers", false, false},
+        {"guarded-keep-markers", true, true},
+        {"guarded-delete-markers", true, false}
     });
   }
+
+  /**
+   * Parameter: should the stores be guarded?
+   */
+  private final boolean s3guard;
 
   /**
    * Parameter: should directory markers be retained?
@@ -96,7 +101,9 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   private S3AFileSystem fsKeyB;
 
   public ITestS3AEncryptionSSEC(final String name,
+      final boolean s3guard,
       final boolean keepMarkers) {
+    this.s3guard = s3guard;
     this.keepMarkers = keepMarkers;
   }
 
@@ -106,6 +113,13 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     Configuration conf = super.createConfiguration();
     disableFilesystemCaching(conf);
     String bucketName = getTestBucketName(conf);
+    removeBucketOverrides(bucketName, conf,
+        S3_METADATA_STORE_IMPL);
+    if (!s3guard) {
+      // in a raw run remove all s3guard settings
+      removeBaseAndBucketOverrides(bucketName, conf,
+          S3_METADATA_STORE_IMPL);
+    }
     // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,
         DIRECTORY_MARKER_POLICY,
@@ -321,7 +335,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
    * @return true if check for a path being a file will issue a HEAD request.
    */
   private boolean statusProbesCheckS3(S3AFileSystem fs, Path path) {
-    return true;
+    return !fs.hasMetadataStore() || !fs.allowAuthoritative(path);
   }
 
   /**
@@ -356,7 +370,9 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   }
 
   /**
-   * getFileChecksum always goes to S3.
+   * getFileChecksum always goes to S3, so when
+   * the caller lacks permissions, it fails irrespective
+   * of guard.
    */
   @Test
   public void testChecksumRequiresReadAccess() throws Throwable {

@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL;
-import static org.apache.hadoop.fs.viewfs.Constants.DEFAULT_MOUNT_TABLE_CONFIG_LOADER_IMPL;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -34,87 +30,76 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
-import org.apache.hadoop.util.ReflectionUtils;
 
-/**
- * <p> This class is extended from the ViewFileSystem for the overloaded
- * scheme file system. Mount link configurations and in-memory mount table
- * building behaviors are inherited from ViewFileSystem. Unlike
- * ViewFileSystem scheme (viewfs://), the users would be able to use
- * any scheme. </p>
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
+
+/******************************************************************************
+ * This class is extended from the ViewFileSystem for the overloaded scheme
+ * file system. Mount link configurations and in-memory mount table
+ * building behaviors are inherited from ViewFileSystem. Unlike ViewFileSystem
+ * scheme (viewfs://), the users would be able to use any scheme.
  *
- * <p> To use this class, the following configurations need to be added in
- * core-site.xml file. <br>
- * 1) fs.{@literal <scheme>}.impl
- *    = org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme <br>
- * 2) fs.viewfs.overload.scheme.target.{@literal <scheme>}.impl
- *    = {@literal <hadoop compatible file system implementation class name
- *    for the <scheme>>} </p>
+ * To use this class, the following configurations need to be added in
+ * core-site.xml file.
+ * 1) fs.<scheme>.impl
+ *    = org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme
+ * 2) fs.viewfs.overload.scheme.target.<scheme>.impl
+ *    = <hadoop compatible file system implementation class name for the
+ *    <scheme>"
  *
- * <p> Here {@literal <scheme>} can be any scheme, but with that scheme there
- * should be a hadoop compatible file system available. Second configuration
- * value should be the respective scheme's file system implementation class.
+ * Here <scheme> can be any scheme, but with that scheme there should be a
+ * hadoop compatible file system available. Second configuration value should
+ * be the respective scheme's file system implementation class.
  * Example: if scheme is configured with "hdfs", then the 2nd configuration
  * class name will be org.apache.hadoop.hdfs.DistributedFileSystem.
  * if scheme is configured with "s3a", then the 2nd configuration class name
- * will be org.apache.hadoop.fs.s3a.S3AFileSystem. </p>
+ * will be org.apache.hadoop.fs.s3a.S3AFileSystem.
  *
- * <p> Use Case 1: <br>
- * =========== <br>
+ * Use Case 1:
+ * ===========
  * If users want some of their existing cluster (hdfs://Cluster)
  * data to mount with other hdfs and object store clusters(hdfs://NN1,
- * o3fs://bucket1.volume1/, s3a://bucket1/) </p>
+ * o3fs://bucket1.volume1/, s3a://bucket1/)
  *
- * <p>
- * fs.viewfs.mounttable.Cluster.link./user = hdfs://NN1/user <br>
- * fs.viewfs.mounttable.Cluster.link./data = o3fs://bucket1.volume1/data <br>
+ * fs.viewfs.mounttable.Cluster.link./user = hdfs://NN1/user
+ * fs.viewfs.mounttable.Cluster.link./data = o3fs://bucket1.volume1/data
  * fs.viewfs.mounttable.Cluster.link./backup = s3a://bucket1/backup/
- * </p>
  *
- * <p>
  * Op1: Create file hdfs://Cluster/user/fileA will go to hdfs://NN1/user/fileA
- * <br>
  * Op2: Create file hdfs://Cluster/data/datafile will go to
- *      o3fs://bucket1.volume1/data/datafile<br>
+ *      o3fs://bucket1.volume1/data/datafile
  * Op3: Create file hdfs://Cluster/backup/data.zip will go to
  *      s3a://bucket1/backup/data.zip
- * </p>
  *
- * <p> Use Case 2:<br>
- * ===========<br>
+ * Use Case 2:
+ * ===========
  * If users want some of their existing cluster (s3a://bucketA/)
  * data to mount with other hdfs and object store clusters
- * (hdfs://NN1, o3fs://bucket1.volume1/) </p>
+ * (hdfs://NN1, o3fs://bucket1.volume1/)
  *
- * <p>
- * fs.viewfs.mounttable.bucketA.link./user = hdfs://NN1/user<br>
- * fs.viewfs.mounttable.bucketA.link./data = o3fs://bucket1.volume1/data<br>
+ * fs.viewfs.mounttable.bucketA.link./user = hdfs://NN1/user
+ * fs.viewfs.mounttable.bucketA.link./data = o3fs://bucket1.volume1/data
  * fs.viewfs.mounttable.bucketA.link./salesDB = s3a://bucketA/salesDB/
- * </p>
  *
- * <p>
  * Op1: Create file s3a://bucketA/user/fileA will go to hdfs://NN1/user/fileA
- * <br>
  * Op2: Create file s3a://bucketA/data/datafile will go to
- *      o3fs://bucket1.volume1/data/datafile<br>
+ *      o3fs://bucket1.volume1/data/datafile
  * Op3: Create file s3a://bucketA/salesDB/dbfile will go to
  *      s3a://bucketA/salesDB/dbfile
- * </p>
  *
- * <p> Note:<br>
+ * Note:
  * (1) In ViewFileSystemOverloadScheme, by default the mount links will be
  * represented as non-symlinks. If you want to change this behavior, please see
- * {@link ViewFileSystem#listStatus(Path)}<br>
+ * {@link ViewFileSystem#listStatus(Path)}
  * (2) In ViewFileSystemOverloadScheme, only the initialized uri's hostname will
  * be considered as the mount table name. When the passed uri has hostname:port,
  * it will simply ignore the port number and only hostname will be considered as
- * the mount table name.<br>
+ * the mount table name.
  * (3) If there are no mount links configured with the initializing uri's
  * hostname as the mount table name, then it will automatically consider the
- * current uri as fallback( ex:
- * {@literal fs.viewfs.mounttable.<mycluster>.linkFallback}) target fs uri.
- * </p>
- */
+ * current uri as fallback( ex: fs.viewfs.mounttable.<mycluster>.linkFallBack)
+ * target fs uri.
+ *****************************************************************************/
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase", "Hive" })
 @InterfaceStability.Evolving
 public class ViewFileSystemOverloadScheme extends ViewFileSystem {
@@ -139,8 +124,6 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
 
   /**
    * Sets whether to add fallback automatically when no mount points found.
-   *
-   * @param addAutoFallbackOnNoMounts addAutoFallbackOnNoMounts.
    */
   public void setSupportAutoAddingFallbackOnNoMounts(
       boolean addAutoFallbackOnNoMounts) {
@@ -165,7 +148,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
         conf.getBoolean(Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
             true));
     if (null != mountTableConfigPath) {
-      MountTableConfigLoader loader = getMountTableConfigLoader(conf);
+      MountTableConfigLoader loader = new HCFSMountTableConfigLoader();
       loader.load(mountTableConfigPath, conf);
     } else {
       // TODO: Should we fail here.?
@@ -178,40 +161,15 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     super.initialize(theUri, conf);
   }
 
-  private MountTableConfigLoader getMountTableConfigLoader(
-      final Configuration conf) {
-    Class<? extends MountTableConfigLoader> clazz =
-        conf.getClass(CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL,
-            DEFAULT_MOUNT_TABLE_CONFIG_LOADER_IMPL,
-                MountTableConfigLoader.class);
-
-    if (clazz == null) {
-      throw new RuntimeException(
-          String.format("Errors on getting mount table loader class. "
-              + "The fs.viewfs.mounttable.config.loader.impl conf is %s. ",
-                  conf.get(CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL,
-                      DEFAULT_MOUNT_TABLE_CONFIG_LOADER_IMPL.getName())));
-    }
-
-    try {
-      MountTableConfigLoader mountTableConfigLoader =
-          ReflectionUtils.newInstance(clazz, conf);
-      return mountTableConfigLoader;
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   /**
    * This method is overridden because in ViewFileSystemOverloadScheme if
    * overloaded scheme matches with mounted target fs scheme, file system
-   * should be created without going into {@literal fs.<scheme>.impl} based
-   * resolution. Otherwise it will end up in an infinite loop as the target
-   * will be resolved again to ViewFileSystemOverloadScheme as
-   * {@literal fs.<scheme>.impl} points to ViewFileSystemOverloadScheme.
-   * So, below method will initialize the
-   * {@literal fs.viewfs.overload.scheme.target.<scheme>.impl}.
-   * Other schemes can follow fs.newInstance
+   * should be created without going into fs.<scheme>.impl based resolution.
+   * Otherwise it will end up in an infinite loop as the target will be
+   * resolved again to ViewFileSystemOverloadScheme as fs.<scheme>.impl points
+   * to ViewFileSystemOverloadScheme. So, below method will initialize the
+   * fs.viewfs.overload.scheme.target.<scheme>.impl. Other schemes can
+   * follow fs.newInstance
    */
   @Override
   protected FsGetter fsGetter() {
@@ -221,7 +179,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   /**
    * This class checks whether the rooScheme is same as URI scheme. If both are
    * same, then it will initialize file systems by using the configured
-   * {@literal fs.viewfs.overload.scheme.target.<scheme>.impl} class.
+   * fs.viewfs.overload.scheme.target.<scheme>.impl class.
    */
   static class ChildFsGetter extends FsGetter {
 
@@ -322,8 +280,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
    *
    * @param path - fs uri path
    * @param conf - configuration
-   * @throws IOException raised on errors performing I/O.
-   * @return file system.
+   * @throws IOException
    */
   public FileSystem getRawFileSystem(Path path, Configuration conf)
       throws IOException {
@@ -342,11 +299,6 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   /**
    * Gets the mount path info, which contains the target file system and
    * remaining path to pass to the target file system.
-   *
-   * @param path the path.
-   * @param conf configuration.
-   * @return mount path info.
-   * @throws IOException raised on errors performing I/O.
    */
   public MountPathInfo<FileSystem> getMountPathInfo(Path path,
       Configuration conf) throws IOException {
@@ -355,15 +307,12 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
       res = fsState.resolve(getUriPath(path), true);
       FileSystem fs = res.isInternalDir() ?
           (fsState.getRootFallbackLink() != null ?
-              fsState.getRootFallbackLink().getTargetFileSystem() :
+              ((ChRootedFileSystem) fsState
+                  .getRootFallbackLink().getTargetFileSystem()).getMyFs() :
               fsGetter().get(path.toUri(), conf)) :
-          res.targetFileSystem;
-      if (fs instanceof ChRootedFileSystem) {
-        ChRootedFileSystem chFs = (ChRootedFileSystem) fs;
-        return new MountPathInfo<>(chFs.fullPath(res.remainingPath),
-            chFs.getMyFs());
-      }
-      return new MountPathInfo<FileSystem>(res.remainingPath, fs);
+          ((ChRootedFileSystem) res.targetFileSystem).getMyFs();
+      return new MountPathInfo<FileSystem>(res.remainingPath, res.resolvedPath,
+          fs);
     } catch (FileNotFoundException e) {
       // No link configured with passed path.
       throw new NotInMountpointException(path,
@@ -379,7 +328,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     private Path pathOnTarget;
     private T targetFs;
 
-    public MountPathInfo(Path pathOnTarget, T targetFs) {
+    public MountPathInfo(Path pathOnTarget, String resolvedPath, T targetFs) {
       this.pathOnTarget = pathOnTarget;
       this.targetFs = targetFs;
     }
@@ -410,9 +359,4 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     return null;
   }
 
-  @Override
-  @InterfaceAudience.LimitedPrivate("HDFS")
-  public URI canonicalizeUri(URI uri) {
-    return super.canonicalizeUri(uri);
-  }
 }

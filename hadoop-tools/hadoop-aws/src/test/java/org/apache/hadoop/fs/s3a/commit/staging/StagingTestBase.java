@@ -44,7 +44,7 @@ import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -105,15 +105,10 @@ public class StagingTestBase {
   /** The raw bucket URI Path before any canonicalization. */
   public static final URI RAW_BUCKET_URI =
       RAW_BUCKET_PATH.toUri();
-
-  @SuppressWarnings("StaticNonFinalField")
-  private static Path outputPath =
+  public static Path outputPath =
       new Path("s3a://" + BUCKET + "/" + OUTPUT_PREFIX);
-
-  @SuppressWarnings("StaticNonFinalField")
-  private static URI outputPathUri = getOutputPath().toUri();
-  @SuppressWarnings("StaticNonFinalField")
-  private static Path root;
+  public static URI outputPathUri = outputPath.toUri();
+  public static Path root;
 
   protected StagingTestBase() {
   }
@@ -136,8 +131,8 @@ public class StagingTestBase {
     URI uri = RAW_BUCKET_URI;
     wrapperFS.initialize(uri, conf);
     root = wrapperFS.makeQualified(new Path("/"));
-    outputPath = new Path(getRoot(), OUTPUT_PREFIX);
-    outputPathUri = getOutputPath().toUri();
+    outputPath = new Path(root, OUTPUT_PREFIX);
+    outputPathUri = outputPath.toUri();
     FileSystemTestHelper.addFileSystemForTesting(uri, conf, wrapperFS);
     return mockFs;
   }
@@ -159,7 +154,7 @@ public class StagingTestBase {
    */
   public static MockS3AFileSystem lookupWrapperFS(Configuration conf)
       throws IOException {
-    return (MockS3AFileSystem) FileSystem.get(getOutputPathUri(), conf);
+    return (MockS3AFileSystem) FileSystem.get(outputPathUri, conf);
   }
 
   public static void verifyCompletion(FileSystem mockS3) throws IOException {
@@ -174,13 +169,13 @@ public class StagingTestBase {
 
   public static void verifyDeleted(FileSystem mockS3, String child)
       throws IOException {
-    verifyDeleted(mockS3, new Path(getOutputPath(), child));
+    verifyDeleted(mockS3, new Path(outputPath, child));
   }
 
   public static void verifyCleanupTempFiles(FileSystem mockS3)
       throws IOException {
     verifyDeleted(mockS3,
-        new Path(getOutputPath(), CommitConstants.TEMPORARY));
+        new Path(outputPath, CommitConstants.TEMPORARY));
   }
 
   protected static void assertConflictResolution(
@@ -194,7 +189,7 @@ public class StagingTestBase {
   public static void pathsExist(FileSystem mockS3, String... children)
       throws IOException {
     for (String child : children) {
-      pathExists(mockS3, new Path(getOutputPath(), child));
+      pathExists(mockS3, new Path(outputPath, child));
     }
   }
 
@@ -236,7 +231,7 @@ public class StagingTestBase {
   public static void canDelete(FileSystem mockS3, String... children)
       throws IOException {
     for (String child : children) {
-      canDelete(mockS3, new Path(getOutputPath(), child));
+      canDelete(mockS3, new Path(outputPath, child));
     }
   }
 
@@ -248,7 +243,7 @@ public class StagingTestBase {
 
   public static void verifyExistenceChecked(FileSystem mockS3, String child)
       throws IOException {
-    verifyExistenceChecked(mockS3, new Path(getOutputPath(), child));
+    verifyExistenceChecked(mockS3, new Path(outputPath, child));
   }
 
   public static void verifyExistenceChecked(FileSystem mockS3, Path path)
@@ -265,18 +260,6 @@ public class StagingTestBase {
   public static void verifyMkdirsInvoked(FileSystem mockS3, Path path)
       throws IOException {
     verify(mockS3).mkdirs(path);
-  }
-
-  protected static URI getOutputPathUri() {
-    return outputPathUri;
-  }
-
-  static Path getRoot() {
-    return root;
-  }
-
-  static Path getOutputPath() {
-    return outputPath;
   }
 
   /**

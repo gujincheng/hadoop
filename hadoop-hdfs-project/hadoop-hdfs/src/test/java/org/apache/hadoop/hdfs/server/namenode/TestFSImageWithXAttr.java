@@ -24,12 +24,11 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -124,9 +123,9 @@ public class TestFSImageWithXAttr {
   private void restart(DistributedFileSystem fs, boolean persistNamespace)
       throws IOException {
     if (persistNamespace) {
-      fs.setSafeMode(SafeModeAction.ENTER);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.LEAVE);
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     }
 
     cluster.restartNameNode();

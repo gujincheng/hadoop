@@ -18,26 +18,23 @@
 
 package org.apache.hadoop.yarn.webapp.test;
 
-import java.io.PrintWriter;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.servlet.RequestScoped;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.PrintWriter;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import org.junit.Test;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.Mockito.verify;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 public class TestWebAppTests {
   static final Logger LOG = LoggerFactory.getLogger(TestWebAppTests.class);
 
-  @Test
-  void testInstances() throws Exception {
+  @Test public void testInstances() throws Exception {
     Injector injector = WebAppTests.createMockInjector(this);
     HttpServletRequest req = injector.getInstance(HttpServletRequest.class);
     HttpServletResponse res = injector.getInstance(HttpServletResponse.class);
@@ -64,27 +61,24 @@ public class TestWebAppTests {
   static class FooBar extends Bar {
   }
 
-  @Test
-  void testCreateInjector() throws Exception {
+  @Test public void testCreateInjector() throws Exception {
     Bar bar = new Bar();
     Injector injector = WebAppTests.createMockInjector(Foo.class, bar);
     logInstances(injector.getInstance(HttpServletRequest.class),
-        injector.getInstance(HttpServletResponse.class),
-        injector.getInstance(HttpServletResponse.class).getWriter());
+                 injector.getInstance(HttpServletResponse.class),
+                 injector.getInstance(HttpServletResponse.class).getWriter());
     assertSame(bar, injector.getInstance(Foo.class));
   }
 
-  @Test
-  void testCreateInjector2() {
+  @Test public void testCreateInjector2() {
     final FooBar foobar = new FooBar();
     Bar bar = new Bar();
     Injector injector = WebAppTests.createMockInjector(Foo.class, bar,
         new AbstractModule() {
-          @Override
-          protected void configure() {
-            bind(Bar.class).toInstance(foobar);
-          }
-        });
+      @Override protected void configure() {
+        bind(Bar.class).toInstance(foobar);
+      }
+    });
     assertNotSame(bar, injector.getInstance(Bar.class));
     assertSame(foobar, injector.getInstance(Bar.class));
   }
@@ -93,12 +87,11 @@ public class TestWebAppTests {
   static class ScopeTest {
   }
 
-  @Test
-  void testRequestScope() {
+  @Test public void testRequestScope() {
     Injector injector = WebAppTests.createMockInjector(this);
 
     assertSame(injector.getInstance(ScopeTest.class),
-        injector.getInstance(ScopeTest.class));
+               injector.getInstance(ScopeTest.class));
   }
 
   private void logInstances(HttpServletRequest req, HttpServletResponse res,

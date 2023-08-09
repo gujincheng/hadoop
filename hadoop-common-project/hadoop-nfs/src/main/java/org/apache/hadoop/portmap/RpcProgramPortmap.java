@@ -18,16 +18,7 @@
 package org.apache.hadoop.portmap;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Map;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
-import io.netty.handler.timeout.IdleStateHandler;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.RpcCall;
 import org.apache.hadoop.oncrpc.RpcInfo;
@@ -36,12 +27,20 @@ import org.apache.hadoop.oncrpc.RpcResponse;
 import org.apache.hadoop.oncrpc.RpcUtil;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.group.ChannelGroup;
+import org.jboss.netty.handler.timeout.IdleState;
+import org.jboss.netty.handler.timeout.IdleStateAwareChannelUpstreamHandler;
+import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@ChannelHandler.Sharable
-final class RpcProgramPortmap extends IdleStateHandler {
+final class RpcProgramPortmap extends IdleStateAwareChannelUpstreamHandler {
   static final int PROGRAM = 100000;
   static final int VERSION = 2;
 
@@ -55,14 +54,12 @@ final class RpcProgramPortmap extends IdleStateHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(RpcProgramPortmap.class);
 
-  private final ConcurrentHashMap<String, PortmapMapping> map = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, PortmapMapping> map = new ConcurrentHashMap<String, PortmapMapping>();
 
   /** ChannelGroup that remembers all active channels for gracefully shutdown. */
   private final ChannelGroup allChannels;
 
   RpcProgramPortmap(ChannelGroup allChannels) {
-    super(1, 1, 1);
-    // FIXME: set default idle timeout 1 second.
     this.allChannels = allChannels;
     PortmapMapping m = new PortmapMapping(PROGRAM, VERSION,
         PortmapMapping.TRANSPORT_TCP, RpcProgram.RPCB_PORT);
@@ -154,14 +151,14 @@ final class RpcProgramPortmap extends IdleStateHandler {
   }
 
   @Override
-  public void channelRead(ChannelHandlerContext ctx, Object msg)
+  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
       throws Exception {
 
-    RpcInfo info = (RpcInfo) msg;
+    RpcInfo info = (RpcInfo) e.getMessage();
     RpcCall rpcCall = (RpcCall) info.header();
     final int portmapProc = rpcCall.getProcedure();
     int xid = rpcCall.getXid();
-    XDR in = new XDR(info.data().nioBuffer().asReadOnlyBuffer(),
+    XDR in = new XDR(info.data().toByteBuffer().asReadOnlyBuffer(),
         XDR.State.READING);
     XDR out = new XDR();
 
@@ -184,33 +181,29 @@ final class RpcProgramPortmap extends IdleStateHandler {
       reply.write(out);
     }
 
-    ByteBuf buf = Unpooled.wrappedBuffer(out.asReadOnlyWrap()
+    ChannelBuffer buf = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
         .buffer());
     RpcResponse rsp = new RpcResponse(buf, info.remoteAddress());
     RpcUtil.sendRpcResponse(ctx, rsp);
   }
 
   @Override
-  public void channelActive(ChannelHandlerContext ctx)
+  public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
       throws Exception {
-    allChannels.add(ctx.channel());
+    allChannels.add(e.getChannel());
   }
 
   @Override
   public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e)
       throws Exception {
-    if (e.state() == IdleState.ALL_IDLE) {
-      ctx.channel().close();
+    if (e.getState() == IdleState.ALL_IDLE) {
+      e.getChannel().close();
     }
   }
 
   @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, Throwable t) {
-    LOG.warn("Encountered ", t);
-    ctx.channel().close();
-  }
-
-  public Map<String, PortmapMapping> getMap() {
-    return map;
+  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+    LOG.warn("Encountered ", e.getCause());
+    e.getChannel().close();
   }
 }

@@ -19,23 +19,15 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY;
-import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -49,7 +41,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -109,7 +100,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
@@ -128,11 +118,9 @@ import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.apache.hadoop.util.functional.RemoteIterators;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.InOrder;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -674,44 +662,6 @@ public class TestDistributedFileSystem {
       checkStatistics(dfs, 0, 0, 0);
     } finally {
       cluster.shutdown();
-    }
-  }
-
-  /**
-   * This is to test that {@link DFSConfigKeys#DFS_LIST_LIMIT} works as
-   * expected when {@link DistributedFileSystem#listLocatedStatus} is called.
-   */
-  @Test
-  public void testGetListingLimit() throws Exception {
-    final Configuration conf = getTestConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 9);
-    try (MiniDFSCluster cluster =
-             new MiniDFSCluster.Builder(conf).numDataNodes(9).build()) {
-      cluster.waitActive();
-      ErasureCodingPolicy ecPolicy = StripedFileTestUtil.getDefaultECPolicy();
-      final DistributedFileSystem fs = cluster.getFileSystem();
-      fs.dfs = spy(fs.dfs);
-      Path dir1 = new Path("/testRep");
-      Path dir2 = new Path("/testEC");
-      fs.mkdirs(dir1);
-      fs.mkdirs(dir2);
-      fs.setErasureCodingPolicy(dir2, ecPolicy.getName());
-      for (int i = 0; i < 3; i++) {
-        DFSTestUtil.createFile(fs, new Path(dir1, String.valueOf(i)),
-            20 * 1024L, (short) 3, 1);
-        DFSTestUtil.createStripedFile(cluster, new Path(dir2,
-            String.valueOf(i)), dir2, 1, 1, false);
-      }
-
-      List<LocatedFileStatus> str = RemoteIterators.toList(fs.listLocatedStatus(dir1));
-      assertThat(str).hasSize(3);
-      Mockito.verify(fs.dfs, Mockito.times(1)).listPaths(anyString(), any(),
-          anyBoolean());
-
-      str = RemoteIterators.toList(fs.listLocatedStatus(dir2));
-      assertThat(str).hasSize(3);
-      Mockito.verify(fs.dfs, Mockito.times(4)).listPaths(anyString(), any(),
-          anyBoolean());
     }
   }
 
@@ -1603,56 +1553,6 @@ public class TestDistributedFileSystem {
   }
 
   @Test
-  public void testListFilesRecursive() throws IOException {
-    Configuration conf = getTestConfiguration();
-
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();) {
-      DistributedFileSystem fs = cluster.getFileSystem();
-
-      // Create some directories and files.
-      Path dir = new Path("/dir");
-      Path subDir1 = fs.makeQualified(new Path(dir, "subDir1"));
-      Path subDir2 = fs.makeQualified(new Path(dir, "subDir2"));
-
-      fs.create(new Path(dir, "foo1")).close();
-      fs.create(new Path(dir, "foo2")).close();
-      fs.create(new Path(subDir1, "foo3")).close();
-      fs.create(new Path(subDir2, "foo4")).close();
-
-      // Mock the filesystem, and throw FNF when listing is triggered for the subdirectory.
-      FileSystem mockFs = spy(fs);
-      Mockito.doThrow(new FileNotFoundException("")).when(mockFs).listLocatedStatus(eq(subDir1));
-      List<LocatedFileStatus> str = RemoteIterators.toList(mockFs.listFiles(dir, true));
-      assertThat(str).hasSize(3);
-
-      // Mock the filesystem to depict a scenario where the directory got deleted and a file
-      // got created with the same name.
-      Mockito.doReturn(getMockedIterator(subDir1)).when(mockFs).listLocatedStatus(eq(subDir1));
-
-      str = RemoteIterators.toList(mockFs.listFiles(dir, true));
-      assertThat(str).hasSize(4);
-    }
-  }
-
-  private static RemoteIterator<LocatedFileStatus> getMockedIterator(Path subDir1) {
-    return new RemoteIterator<LocatedFileStatus>() {
-      private int remainingEntries = 1;
-
-      @Override
-      public boolean hasNext() throws IOException {
-        return remainingEntries > 0;
-      }
-
-      @Override
-      public LocatedFileStatus next() throws IOException {
-        remainingEntries--;
-        return new LocatedFileStatus(0, false, 1, 1024, 0L, 0, null, null, null, null, subDir1,
-            false, false, false, null);
-      }
-    };
-  }
-
-  @Test
   public void testListStatusOfSnapshotDirs() throws IOException {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(getTestConfiguration())
         .build();
@@ -1714,7 +1614,7 @@ public class TestDistributedFileSystem {
       cluster.waitActive();
       DistributedFileSystem dfs = cluster.getFileSystem();
       FsServerDefaults fsServerDefaults = dfs.getServerDefaults();
-      assertNotNull(fsServerDefaults);
+      Assert.assertNotNull(fsServerDefaults);
     } finally {
       cluster.shutdown();
     }
@@ -2205,446 +2105,4 @@ public class TestDistributedFileSystem {
       assertFalse(result.isSupported());
     }
   }
-
-  @Test
-  public void testECCloseCommittedBlock() throws Exception {
-    HdfsConfiguration conf = getTestConfiguration();
-    conf.setInt(DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY, 1);
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(3).build()) {
-      cluster.waitActive();
-      final DistributedFileSystem dfs = cluster.getFileSystem();
-      Path dir = new Path("/dir");
-      dfs.mkdirs(dir);
-      dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
-      dfs.setErasureCodingPolicy(dir, "XOR-2-1-1024k");
-
-      try (FSDataOutputStream str = dfs.create(new Path("/dir/file"));) {
-        for (int i = 0; i < 1024 * 1024 * 4; i++) {
-          str.write(i);
-        }
-        DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(0));
-        DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(1));
-      }
-      DataNodeTestUtils.resumeIBR(cluster.getDataNodes().get(0));
-      DataNodeTestUtils.resumeIBR(cluster.getDataNodes().get(1));
-
-      // Check if the blockgroup isn't complete then file close shouldn't be
-      // success with block in committed state.
-      cluster.getDataNodes().get(0).shutdown();
-      FSDataOutputStream str = dfs.create(new Path("/dir/file1"));
-
-      for (int i = 0; i < 1024 * 1024 * 4; i++) {
-        str.write(i);
-      }
-      DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(1));
-      DataNodeTestUtils.pauseIBR(cluster.getDataNodes().get(2));
-      LambdaTestUtils.intercept(IOException.class, "", () -> str.close());
-    }
-  }
-
-  @Test
-  public void testGetTrashRoot() throws IOException {
-    Configuration conf = getTestConfiguration();
-    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    try {
-      DistributedFileSystem dfs = cluster.getFileSystem();
-      Path testDir = new Path("/ssgtr/test1/");
-      Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
-      Path file0path = new Path(testDir, "file-0");
-      dfs.create(file0path).close();
-
-      Path trBeforeAllowSnapshot = dfs.getTrashRoot(file0path);
-      String trBeforeAllowSnapshotStr = trBeforeAllowSnapshot.toUri().getPath();
-      // The trash root should be in user home directory
-      String homeDirStr = dfs.getHomeDirectory().toUri().getPath();
-      assertTrue(trBeforeAllowSnapshotStr.startsWith(homeDirStr));
-
-      dfs.allowSnapshot(testDir);
-
-      // Provision trash root
-      // Note: DFS#allowSnapshot doesn't auto create trash root.
-      //  Only HdfsAdmin#allowSnapshot creates trash root when
-      //  dfs.namenode.snapshot.trashroot.enabled is set to true on NameNode.
-      dfs.provisionSnapshotTrash(testDir, TRASH_PERMISSION);
-      // Expect trash root to be created with permission 777 and sticky bit
-      FileStatus trashRootFileStatus = dfs.getFileStatus(testDirTrashRoot);
-      assertEquals(TRASH_PERMISSION, trashRootFileStatus.getPermission());
-
-      Path trAfterAllowSnapshot = dfs.getTrashRoot(file0path);
-      String trAfterAllowSnapshotStr = trAfterAllowSnapshot.toUri().getPath();
-      // The trash root should now be in the snapshot root
-      String testDirStr = testDir.toUri().getPath();
-      assertTrue(trAfterAllowSnapshotStr.startsWith(testDirStr));
-
-      // test2Dir has the same prefix as testDir, but not snapshottable
-      Path test2Dir = new Path("/ssgtr/test12/");
-      Path file1path = new Path(test2Dir, "file-1");
-      trAfterAllowSnapshot = dfs.getTrashRoot(file1path);
-      trAfterAllowSnapshotStr = trAfterAllowSnapshot.toUri().getPath();
-      // The trash root should not be in the snapshot root
-      assertFalse(trAfterAllowSnapshotStr.startsWith(testDirStr));
-      assertTrue(trBeforeAllowSnapshotStr.startsWith(homeDirStr));
-
-      // Cleanup
-      // DFS#disallowSnapshot would remove empty trash root without throwing.
-      dfs.disallowSnapshot(testDir);
-      dfs.delete(testDir, true);
-      dfs.delete(test2Dir, true);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
-  private boolean isPathInUserHome(String pathStr, DistributedFileSystem dfs) {
-    String homeDirStr = dfs.getHomeDirectory().toUri().getPath();
-    return pathStr.startsWith(homeDirStr);
-  }
-
-  @Test
-  public void testGetTrashRoots() throws IOException {
-    Configuration conf = getTestConfiguration();
-    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    try {
-      DistributedFileSystem dfs = cluster.getFileSystem();
-      Path testDir = new Path("/ssgtr/test1/");
-      Path file0path = new Path(testDir, "file-0");
-      dfs.create(file0path);
-      // Create user trash
-      Path currUserHome = dfs.getHomeDirectory();
-      Path currUserTrash = new Path(currUserHome, FileSystem.TRASH_PREFIX);
-      dfs.mkdirs(currUserTrash);
-      // Create trash inside test directory
-      Path testDirTrash = new Path(testDir, FileSystem.TRASH_PREFIX);
-      Path testDirTrashCurrUser = new Path(testDirTrash,
-          UserGroupInformation.getCurrentUser().getShortUserName());
-      dfs.mkdirs(testDirTrashCurrUser);
-
-      Collection<FileStatus> trashRoots = dfs.getTrashRoots(false);
-      // getTrashRoots should only return 1 empty user trash in the home dir now
-      assertEquals(1, trashRoots.size());
-      FileStatus firstFileStatus = trashRoots.iterator().next();
-      String pathStr = firstFileStatus.getPath().toUri().getPath();
-      assertTrue(isPathInUserHome(pathStr, dfs));
-      // allUsers should not make a difference for now because we have one user
-      Collection<FileStatus> trashRootsAllUsers = dfs.getTrashRoots(true);
-      assertEquals(trashRoots, trashRootsAllUsers);
-
-      dfs.allowSnapshot(testDir);
-
-      Collection<FileStatus> trashRootsAfter = dfs.getTrashRoots(false);
-      // getTrashRoots should return 1 more trash root inside snapshottable dir
-      assertEquals(trashRoots.size() + 1, trashRootsAfter.size());
-      boolean foundUserHomeTrash = false;
-      boolean foundSnapDirUserTrash = false;
-      String testDirStr = testDir.toUri().getPath();
-      for (FileStatus fileStatus : trashRootsAfter) {
-        String currPathStr = fileStatus.getPath().toUri().getPath();
-        if (isPathInUserHome(currPathStr, dfs)) {
-          foundUserHomeTrash = true;
-        } else if (currPathStr.startsWith(testDirStr)) {
-          foundSnapDirUserTrash = true;
-        }
-      }
-      assertTrue(foundUserHomeTrash);
-      assertTrue(foundSnapDirUserTrash);
-      // allUsers should not make a difference for now because we have one user
-      Collection<FileStatus> trashRootsAfterAllUsers = dfs.getTrashRoots(true);
-      assertEquals(trashRootsAfter, trashRootsAfterAllUsers);
-
-      // Create trash root for user0
-      UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user0");
-      String user0HomeStr = DFSUtilClient.getHomeDirectory(conf, ugi);
-      Path user0Trash = new Path(user0HomeStr, FileSystem.TRASH_PREFIX);
-      dfs.mkdirs(user0Trash);
-      // allUsers flag set to false should be unaffected
-      Collection<FileStatus> trashRootsAfter2 = dfs.getTrashRoots(false);
-      assertEquals(trashRootsAfter, trashRootsAfter2);
-      // allUsers flag set to true should include new user's trash
-      trashRootsAfter2 = dfs.getTrashRoots(true);
-      assertEquals(trashRootsAfter.size() + 1, trashRootsAfter2.size());
-
-      // Create trash root inside the snapshottable directory for user0
-      Path testDirTrashUser0 = new Path(testDirTrash, ugi.getShortUserName());
-      dfs.mkdirs(testDirTrashUser0);
-      Collection<FileStatus> trashRootsAfter3 = dfs.getTrashRoots(true);
-      assertEquals(trashRootsAfter2.size() + 1, trashRootsAfter3.size());
-
-      // Cleanup
-      dfs.delete(new Path(testDir, FileSystem.TRASH_PREFIX), true);
-      dfs.disallowSnapshot(testDir);
-      dfs.delete(testDir, true);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
-  @Test
-  public void testGetTrashRootsOnSnapshottableDirWithEZ()
-      throws IOException, NoSuchAlgorithmException {
-    Configuration conf = getTestConfiguration();
-    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
-    // Set encryption zone config
-    File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    // Create key for EZ
-    final KeyProvider provider =
-        cluster.getNameNode().getNamesystem().getProvider();
-    final KeyProvider.Options options = KeyProvider.options(conf);
-    provider.createKey("key", options);
-    provider.flush();
-
-    try {
-      DistributedFileSystem dfs = cluster.getFileSystem();
-      Path testDir = new Path("/ssgtr/test2/");
-      dfs.mkdirs(testDir);
-      dfs.createEncryptionZone(testDir, "key");
-
-      // Create trash inside test directory
-      Path testDirTrash = new Path(testDir, FileSystem.TRASH_PREFIX);
-      Path testDirTrashCurrUser = new Path(testDirTrash,
-          UserGroupInformation.getCurrentUser().getShortUserName());
-      dfs.mkdirs(testDirTrashCurrUser);
-
-      Collection<FileStatus> trashRoots = dfs.getTrashRoots(false);
-      assertEquals(1, trashRoots.size());
-      FileStatus firstFileStatus = trashRoots.iterator().next();
-      String pathStr = firstFileStatus.getPath().toUri().getPath();
-      String testDirStr = testDir.toUri().getPath();
-      assertTrue(pathStr.startsWith(testDirStr));
-
-      dfs.allowSnapshot(testDir);
-
-      Collection<FileStatus> trashRootsAfter = dfs.getTrashRoots(false);
-      // getTrashRoots should give the same result
-      assertEquals(trashRoots, trashRootsAfter);
-
-      // Cleanup
-      dfs.delete(new Path(testDir, FileSystem.TRASH_PREFIX), true);
-      dfs.disallowSnapshot(testDir);
-      dfs.delete(testDir, true);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
-  @Test
-  public void testGetTrashRootOnSnapshottableDirInEZ()
-      throws IOException, NoSuchAlgorithmException {
-    Configuration conf = getTestConfiguration();
-    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
-    // Set EZ config
-    File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    // Create key for EZ
-    final KeyProvider provider =
-        cluster.getNameNode().getNamesystem().getProvider();
-    final KeyProvider.Options options = KeyProvider.options(conf);
-    provider.createKey("key", options);
-    provider.flush();
-
-    try {
-      DistributedFileSystem dfs = cluster.getFileSystem();
-
-      Path testDir = new Path("/ssgtr/test3ez/");
-      dfs.mkdirs(testDir);
-      dfs.createEncryptionZone(testDir, "key");
-      Path testSubD = new Path(testDir, "sssubdir");
-      Path file1Path = new Path(testSubD, "file1");
-      dfs.create(file1Path);
-
-      final Path trBefore = dfs.getTrashRoot(file1Path);
-      final String trBeforeStr = trBefore.toUri().getPath();
-      // The trash root should be directly under testDir
-      final Path testDirTrash = new Path(testDir, FileSystem.TRASH_PREFIX);
-      final String testDirTrashStr = testDirTrash.toUri().getPath();
-      assertTrue(trBeforeStr.startsWith(testDirTrashStr));
-
-      dfs.allowSnapshot(testSubD);
-      final Path trAfter = dfs.getTrashRoot(file1Path);
-      final String trAfterStr = trAfter.toUri().getPath();
-      // The trash is now located in the dir inside
-      final Path testSubDirTrash = new Path(testSubD, FileSystem.TRASH_PREFIX);
-      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-      final Path testSubDirUserTrash = new Path(testSubDirTrash,
-          ugi.getShortUserName());
-      final String testSubDirUserTrashStr =
-          testSubDirUserTrash.toUri().getPath();
-      assertEquals(testSubDirUserTrashStr, trAfterStr);
-
-      // Cleanup
-      dfs.disallowSnapshot(testSubD);
-      dfs.delete(testDir, true);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
-  @Test
-  public void testGetTrashRootOnEZInSnapshottableDir()
-      throws IOException, NoSuchAlgorithmException {
-    Configuration conf = getTestConfiguration();
-    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
-    // Set EZ config
-    File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
-    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
-        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    // Create key for EZ
-    final KeyProvider provider =
-        cluster.getNameNode().getNamesystem().getProvider();
-    final KeyProvider.Options options = KeyProvider.options(conf);
-    provider.createKey("key", options);
-    provider.flush();
-
-    try {
-      DistributedFileSystem dfs = cluster.getFileSystem();
-
-      Path testDir = new Path("/ssgtr/test3ss/");
-      dfs.mkdirs(testDir);
-      dfs.allowSnapshot(testDir);
-      Path testSubD = new Path(testDir, "ezsubdir");
-      dfs.mkdirs(testSubD);
-      Path file1Path = new Path(testSubD, "file1");
-      dfs.create(file1Path);
-
-      final Path trBefore = dfs.getTrashRoot(file1Path);
-      final String trBeforeStr = trBefore.toUri().getPath();
-      // The trash root should be directly under testDir
-      final Path testDirTrash = new Path(testDir, FileSystem.TRASH_PREFIX);
-      final String testDirTrashStr = testDirTrash.toUri().getPath();
-      assertTrue(trBeforeStr.startsWith(testDirTrashStr));
-
-      // Need to remove the file inside the dir to establish EZ
-      dfs.delete(file1Path, false);
-      dfs.createEncryptionZone(testSubD, "key");
-      dfs.create(file1Path);
-
-      final Path trAfter = dfs.getTrashRoot(file1Path);
-      final String trAfterStr = trAfter.toUri().getPath();
-      // The trash is now located in the dir inside
-      final Path testSubDirTrash = new Path(testSubD, FileSystem.TRASH_PREFIX);
-      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-      final Path testSubDirUserTrash = new Path(testSubDirTrash,
-          ugi.getShortUserName());
-      final String testSubDirUserTrashStr =
-          testSubDirUserTrash.toUri().getPath();
-      assertEquals(testSubDirUserTrashStr, trAfterStr);
-
-      // Cleanup
-      dfs.disallowSnapshot(testDir);
-      dfs.delete(testDir, true);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
-  @Test
-  public void testDisallowSnapshotShouldThrowWhenTrashRootExists()
-      throws Exception {
-    Configuration conf = getTestConfiguration();
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    try {
-      DistributedFileSystem dfs = cluster.getFileSystem();
-      Path testDir = new Path("/disallowss/test1/");
-      Path file0path = new Path(testDir, "file-0");
-      dfs.create(file0path);
-      dfs.allowSnapshot(testDir);
-      // Create trash root manually
-      Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
-      Path dirInsideTrash = new Path(testDirTrashRoot, "user1");
-      dfs.mkdirs(dirInsideTrash);
-      // Try disallowing snapshot, should throw
-      LambdaTestUtils.intercept(IOException.class,
-          () -> dfs.disallowSnapshot(testDir));
-      // Remove the trash root and try again, should pass this time
-      dfs.delete(testDirTrashRoot, true);
-      dfs.disallowSnapshot(testDir);
-      // Cleanup
-      dfs.delete(testDir, true);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
-  @Test
-  public void testNameNodeCreateSnapshotTrashRootOnStartup()
-      throws Exception {
-    // Start NN with dfs.namenode.snapshot.trashroot.enabled=false
-    Configuration conf = getTestConfiguration();
-    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", false);
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    try {
-      DistributedFileSystem dfs = cluster.getFileSystem();
-      final Path testDir = new Path("/disallowss/test2/");
-      final Path file0path = new Path(testDir, "file-0");
-      dfs.create(file0path).close();
-      dfs.allowSnapshot(testDir);
-      // .Trash won't be created right now since snapshot trash is disabled
-      final Path trashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
-      assertFalse(dfs.exists(trashRoot));
-      // Set dfs.namenode.snapshot.trashroot.enabled=true
-      conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
-      cluster.setNameNodeConf(0, conf);
-      cluster.shutdown();
-      conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
-      conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 1);
-      cluster.restartNameNode(0);
-      dfs = cluster.getFileSystem();
-      assertTrue(cluster.getNameNode().isInSafeMode());
-      // Check .Trash existence, won't be created now
-      assertFalse(dfs.exists(trashRoot));
-      // Start a datanode
-      cluster.startDataNodes(conf, 1, true, null, null);
-      // Wait long enough for safemode check to retire
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException ignored) {}
-      // Check .Trash existence, should be created now
-      assertTrue(dfs.exists(trashRoot));
-      // Check permission
-      FileStatus trashRootStatus = dfs.getFileStatus(trashRoot);
-      assertNotNull(trashRootStatus);
-      assertEquals(TRASH_PERMISSION, trashRootStatus.getPermission());
-
-      // Cleanup
-      dfs.delete(trashRoot, true);
-      dfs.disallowSnapshot(testDir);
-      dfs.delete(testDir, true);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
-
 }

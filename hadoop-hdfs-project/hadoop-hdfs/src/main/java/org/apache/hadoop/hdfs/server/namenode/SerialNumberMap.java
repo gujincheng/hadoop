@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -68,7 +69,6 @@ public class SerialNumberMap<T> {
       }
       Integer old = t2i.putIfAbsent(t, sn);
       if (old != null) {
-        current.getAndDecrement();
         return old;
       }
       i2t.put(sn, t);

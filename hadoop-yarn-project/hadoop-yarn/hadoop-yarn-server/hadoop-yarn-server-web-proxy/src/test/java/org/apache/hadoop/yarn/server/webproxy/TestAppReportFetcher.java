@@ -20,22 +20,20 @@ package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestAppReportFetcher {
 
@@ -45,7 +43,7 @@ public class TestAppReportFetcher {
   private static AppReportFetcher fetcher;
   private final String appNotFoundExceptionMsg = "APP NOT FOUND";
 
-  @AfterEach
+  @After
   public void cleanUp() {
     historyManager = null;
     appManager = null;
@@ -66,29 +64,29 @@ public class TestAppReportFetcher {
   }
 
   @Test
-  void testFetchReportAHSEnabled() throws YarnException, IOException {
+  public void testFetchReportAHSEnabled() throws YarnException, IOException {
     testHelper(true);
     Mockito.verify(historyManager, Mockito.times(1))
-        .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
+    .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
     Mockito.verify(appManager, Mockito.times(1))
-        .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
+    .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
   }
 
   @Test
-  void testFetchReportAHSDisabled() throws YarnException, IOException {
+  public void testFetchReportAHSDisabled() throws YarnException, IOException {
     try {
       testHelper(false);
     } catch (ApplicationNotFoundException e) {
-      assertEquals(appNotFoundExceptionMsg, e.getMessage());
+      Assert.assertTrue(e.getMessage() == appNotFoundExceptionMsg);
       /* RM will not know of the app and Application History Service is disabled
        * So we will not try to get the report from AHS and RM will throw
        * ApplicationNotFoundException
        */
     }
     Mockito.verify(appManager, Mockito.times(1))
-        .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
+    .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
     if (historyManager != null) {
-      fail("HistoryManager should be null as AHS is disabled");
+      Assert.fail("HistoryManager should be null as AHS is disabled");
     }
   }
 

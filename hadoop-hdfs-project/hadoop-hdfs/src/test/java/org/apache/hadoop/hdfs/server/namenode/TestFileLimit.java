@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
@@ -209,9 +210,8 @@ public class TestFileLimit {
         assert false : "Expected IOException after creating a file with small" +
             " blocks ";
       } catch (IOException e) {
-        GenericTestUtils.assertExceptionContains(
-            "is less than configured minimum value " +
-                "dfs.namenode.fs-limits.min-block-size=", e);
+        GenericTestUtils.assertExceptionContains("Specified block size is less",
+            e);
       }
     } finally {
       cluster.shutdown();

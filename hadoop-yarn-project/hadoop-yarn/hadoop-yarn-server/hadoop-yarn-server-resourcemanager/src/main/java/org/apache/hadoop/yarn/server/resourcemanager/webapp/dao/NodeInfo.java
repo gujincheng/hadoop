@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @XmlRootElement(name = "node")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -68,7 +68,6 @@ public class NodeInfo {
   protected ResourceInfo availableResource;
   protected NodeAttributesInfo nodeAttributesInfo;
   private ResourceInfo totalResource;
-  private String subClusterId;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -287,13 +286,5 @@ public class NodeInfo {
 
   public ResourceInfo getTotalResource() {
     return this.totalResource;
-  }
-
-  public String getSubClusterId() {
-    return subClusterId;
-  }
-
-  public void setSubClusterId(String subClusterId) {
-    this.subClusterId = subClusterId;
   }
 }

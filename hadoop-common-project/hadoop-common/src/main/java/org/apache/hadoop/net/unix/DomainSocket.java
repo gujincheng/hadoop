@@ -32,7 +32,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.CloseableReferenceCount;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,8 +106,6 @@ public class DomainSocket implements Closeable {
 
   /**
    * Return true only if UNIX domain sockets are available.
-   *
-   * @return loadingFailureReason.
    */
   public static String getLoadingFailureReason() {
     return loadingFailureReason;
@@ -186,7 +184,6 @@ public class DomainSocket implements Closeable {
    *
    * @param path         The path to bind and listen on.
    * @return             The new DomainSocket.
-   * @throws IOException raised on errors performing I/O.
    */
   public static DomainSocket bindAndListen(String path) throws IOException {
     if (loadingFailureReason != null) {
@@ -390,7 +387,7 @@ public class DomainSocket implements Closeable {
   /**
    * Call shutdown(SHUT_RDWR) on the UNIX domain socket.
    *
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public void shutdown() throws IOException {
     refCount.reference();
@@ -416,7 +413,6 @@ public class DomainSocket implements Closeable {
    *                          one byte.
    * @param offset            The offset in the jbuf array to start at.
    * @param length            Length of the jbuf array to use.
-   * @throws IOException raised on errors performing I/O.
    */
   public void sendFileDescriptors(FileDescriptor descriptors[],
       byte jbuf[], int offset, int length) throws IOException {
@@ -437,13 +433,6 @@ public class DomainSocket implements Closeable {
   /**
    * Receive some FileDescriptor objects from the process on the other side of
    * this socket, and wrap them in FileInputStream objects.
-   *
-   * @param streams input stream.
-   * @param buf input buf.
-   * @param offset input offset.
-   * @param length input length.
-   * @return wrap them in FileInputStream objects.
-   * @throws IOException raised on errors performing I/O.
    */
   public int recvFileInputStreams(FileInputStream[] streams, byte buf[],
         int offset, int length) throws IOException {

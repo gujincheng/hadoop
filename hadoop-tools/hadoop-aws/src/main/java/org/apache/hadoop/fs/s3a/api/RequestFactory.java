@@ -44,13 +44,11 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
-import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
-import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 
 /**
  * Factory for S3 objects.
@@ -103,18 +101,6 @@ public interface RequestFactory {
   S3AEncryptionMethods getServerSideEncryptionAlgorithm();
 
   /**
-   * Get the content encoding (e.g. gzip) or return null if none.
-   * @return content encoding
-   */
-  String getContentEncoding();
-
-  /**
-   * Get the object storage class, return null if none.
-   * @return storage class
-   */
-  StorageClass getStorageClass();
-
-  /**
    * Create a new object metadata instance.
    * Any standard metadata headers are added here, for example:
    * encryption.
@@ -142,12 +128,11 @@ public interface RequestFactory {
    * Adds the ACL and metadata
    * @param key key of object
    * @param metadata metadata header
-   * @param options options for the request
    * @param srcfile source file
    * @return the request
    */
   PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata, PutObjectOptions options, File srcfile);
+      ObjectMetadata metadata, File srcfile);
 
   /**
    * Create a {@link PutObjectRequest} request.
@@ -155,13 +140,11 @@ public interface RequestFactory {
    * operation.
    * @param key key of object
    * @param metadata metadata header
-   * @param options options for the request
    * @param inputStream source data.
    * @return the request
    */
   PutObjectRequest newPutObjectRequest(String key,
       ObjectMetadata metadata,
-      PutObjectOptions options,
       InputStream inputStream);
 
   /**
@@ -194,13 +177,10 @@ public interface RequestFactory {
   /**
    * Start a multipart upload.
    * @param destKey destination object key
-   * @param options options for the request
    * @return the request.
-   * @throws PathIOException if multipart uploads are disabled
    */
   InitiateMultipartUploadRequest newMultipartUploadRequest(
-      String destKey,
-      @Nullable PutObjectOptions options) throws PathIOException;
+      String destKey);
 
   /**
    * Complete a multipart upload.
@@ -249,7 +229,7 @@ public interface RequestFactory {
       String destKey,
       String uploadId,
       int partNumber,
-      long size,
+      int size,
       InputStream uploadStream,
       File sourceFile,
       long offset) throws PathIOException;
@@ -305,9 +285,12 @@ public interface RequestFactory {
   /**
    * Bulk delete request.
    * @param keysToDelete list of keys to delete.
+   * @param quiet should a bulk query be quiet, or should its result list
+   * all deleted keys?
    * @return the request
    */
   DeleteObjectsRequest newBulkDeleteRequest(
-          List<DeleteObjectsRequest.KeyVersion> keysToDelete);
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      boolean quiet);
 
 }

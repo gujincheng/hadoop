@@ -19,17 +19,15 @@
 #ifndef LIB_COMMON_ASYNC_STREAM_H_
 #define LIB_COMMON_ASYNC_STREAM_H_
 
-#include <boost/asio/buffer.hpp>
-#include <boost/system/error_code.hpp>
-#include <boost/asio/system_executor.hpp>
-
+#include <asio/buffer.hpp>
+#include <asio/error_code.hpp>
 #include <functional>
 
 namespace hdfs {
 
 // Contiguous buffer types
-typedef boost::asio::mutable_buffers_1 MutableBuffer;
-typedef boost::asio::const_buffers_1   ConstBuffer;
+typedef asio::mutable_buffers_1 MutableBuffer;
+typedef asio::const_buffers_1   ConstBuffer;
 
 /*
  * asio-compatible stream implementation.
@@ -40,23 +38,13 @@ typedef boost::asio::const_buffers_1   ConstBuffer;
  */
 class AsyncStream  {
 public:
-  using executor_type = boost::asio::system_executor;
-
   virtual void async_read_some(const MutableBuffer &buf,
-          std::function<void (const boost::system::error_code & error,
+          std::function<void (const asio::error_code & error,
                                  std::size_t bytes_transferred) > handler) = 0;
 
   virtual void async_write_some(const ConstBuffer &buf,
-            std::function<void (const boost::system::error_code & error,
+            std::function<void (const asio::error_code & error,
                                  std::size_t bytes_transferred) > handler) = 0;
-
-  executor_type get_executor() {
-      return executor_;
-  }
-
-private:
-  executor_type executor_;
-
 };
 
 }

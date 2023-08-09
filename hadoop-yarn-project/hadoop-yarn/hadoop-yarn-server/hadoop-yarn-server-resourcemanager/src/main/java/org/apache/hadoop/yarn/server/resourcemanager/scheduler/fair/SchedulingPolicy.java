@@ -84,7 +84,7 @@ public abstract class SchedulingPolicy {
    * 
    * @param policy canonical class name or "drf" or "fair" or "fifo"
    * @return a {@link SchedulingPolicy} instance parsed from given policy
-   * @throws AllocationConfigurationException for any errors.
+   * @throws AllocationConfigurationException
    *
    */
   @SuppressWarnings("unchecked")

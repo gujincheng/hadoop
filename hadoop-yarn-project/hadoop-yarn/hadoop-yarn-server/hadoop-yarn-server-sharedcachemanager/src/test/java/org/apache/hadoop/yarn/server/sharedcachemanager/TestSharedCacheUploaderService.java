@@ -18,16 +18,16 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.spy;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
-
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
@@ -41,12 +41,11 @@ import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.SharedCacheUploa
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.InMemorySCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SharedCacheResourceReference;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 
 /**
@@ -55,7 +54,7 @@ import static org.mockito.Mockito.spy;
 public class TestSharedCacheUploaderService {
   private static File testDir = null;
 
-  @BeforeAll
+  @BeforeClass
   public static void setupTestDirs() throws IOException {
     testDir = new File("target",
         TestSharedCacheUploaderService.class.getCanonicalName());
@@ -64,7 +63,7 @@ public class TestSharedCacheUploaderService {
     testDir = testDir.getAbsoluteFile();
   }
 
-  @AfterAll
+  @AfterClass
   public static void cleanupTestDirs() throws IOException {
     if (testDir != null) {
       testDir.delete();
@@ -77,7 +76,7 @@ public class TestSharedCacheUploaderService {
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
-  @BeforeEach
+  @Before
   public void startUp() {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.SCM_STORE_CLASS,
@@ -104,7 +103,7 @@ public class TestSharedCacheUploaderService {
             SCMUploaderProtocol.class, scmAddress, conf);
   }
 
-  @AfterEach
+  @After
   public void cleanUp() {
     if (store != null) {
       store.stop();
@@ -120,7 +119,7 @@ public class TestSharedCacheUploaderService {
   }
 
   @Test
-  void testNotify_noEntry() throws Exception {
+  public void testNotify_noEntry() throws Exception {
     long accepted =
         SharedCacheUploaderMetrics.getInstance().getAcceptedUploads();
 
@@ -135,15 +134,14 @@ public class TestSharedCacheUploaderService {
     assertEquals(0, set.size());
 
     assertEquals(
-        1,
+        "NM upload metrics aren't updated.", 1,
         SharedCacheUploaderMetrics.getInstance().getAcceptedUploads() -
-            accepted,
-        "NM upload metrics aren't updated.");
+            accepted);
 
   }
 
   @Test
-  void testNotify_entryExists_differentName() throws Exception {
+  public void testNotify_entryExists_differentName() throws Exception {
 
     long rejected =
         SharedCacheUploaderMetrics.getInstance().getRejectUploads();
@@ -159,15 +157,14 @@ public class TestSharedCacheUploaderService {
     assertNotNull(set);
     assertEquals(0, set.size());
     assertEquals(
-        1,
+        "NM upload metrics aren't updated.", 1,
         SharedCacheUploaderMetrics.getInstance().getRejectUploads() -
-            rejected,
-        "NM upload metrics aren't updated.");
+            rejected);
 
   }
 
   @Test
-  void testNotify_entryExists_sameName() throws Exception {
+  public void testNotify_entryExists_sameName() throws Exception {
 
     long accepted =
         SharedCacheUploaderMetrics.getInstance().getAcceptedUploads();
@@ -183,10 +180,9 @@ public class TestSharedCacheUploaderService {
     assertNotNull(set);
     assertEquals(0, set.size());
     assertEquals(
-        1,
+        "NM upload metrics aren't updated.", 1,
         SharedCacheUploaderMetrics.getInstance().getAcceptedUploads() -
-            accepted,
-        "NM upload metrics aren't updated.");
+            accepted);
 
   }
 }

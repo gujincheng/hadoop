@@ -193,8 +193,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
         if (stat.isDirectory()) {
           addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
         } else {
-          result.add(org.apache.hadoop.mapreduce.lib.input.
-              FileInputFormat.shrinkStatus(stat));
+          result.add(stat);
         }
       }
     }
@@ -291,8 +290,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
                   addInputPathRecursively(result, fs, stat.getPath(),
                       inputFilter);
                 } else {
-                  result.add(org.apache.hadoop.mapreduce.lib.input.
-                      FileInputFormat.shrinkStatus(stat));
+                  result.add(stat);
                 }
               }
             }

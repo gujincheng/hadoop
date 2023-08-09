@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
@@ -135,7 +136,9 @@ public abstract class MappableBlockLoader {
         BlockMetadataHeader.readHeader(new DataInputStream(
             new BufferedInputStream(metaIn, BlockMetadataHeader
                 .getHeaderSize())));
-    try (FileChannel metaChannel = metaIn.getChannel()) {
+    FileChannel metaChannel = null;
+    try {
+      metaChannel = metaIn.getChannel();
       if (metaChannel == null) {
         throw new IOException(
             "Block InputStream meta file has no FileChannel.");
@@ -169,6 +172,8 @@ public abstract class MappableBlockLoader {
         blockBuf.clear();
         checksumBuf.clear();
       }
+    } finally {
+      IOUtils.closeQuietly(metaChannel);
     }
   }
 

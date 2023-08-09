@@ -17,11 +17,8 @@
  */
 
 #include <hdfspp/fsinfo.h>
-
-#include <algorithm>
 #include <sstream>
 #include <iomanip>
-#include <algorithm>
 
 namespace hdfs {
 

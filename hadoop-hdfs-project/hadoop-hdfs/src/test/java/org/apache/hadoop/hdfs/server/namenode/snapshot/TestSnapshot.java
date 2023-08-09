@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -208,9 +208,9 @@ public class TestSnapshot {
     SnapshotTestHelper.dumpTree2File(fsdir, fsnMiddle);
    
     // save namespace and restart cluster
-    hdfs.setSafeMode(SafeModeAction.ENTER);
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     hdfs.saveNamespace();
-    hdfs.setSafeMode(SafeModeAction.LEAVE);
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(REPLICATION).build();
@@ -548,7 +548,7 @@ public class TestSnapshot {
    * paths work and the NN can load the resulting edits. This test if for
    * snapshots at the root level.
    */
-  @Test(timeout = 120000)
+  @Test(timeout = 60000)
   public void testSnapshotOpsOnRootReservedPath() throws Exception {
     Path dir = new Path("/");
     Path sub = new Path(dir, "sub");

@@ -32,8 +32,6 @@ public class TestKeyProviderCache {
 
   public static class DummyKeyProvider extends KeyProvider {
 
-    public static int CLOSE_CALL_COUNT = 0;
-
     public DummyKeyProvider(Configuration conf) {
       super(conf);
     }
@@ -78,10 +76,6 @@ public class TestKeyProviderCache {
     public void flush() throws IOException {
     }
 
-    @Override
-    public void close() {
-      CLOSE_CALL_COUNT += 1;
-    }
   }
 
   public static class Factory extends KeyProviderFactory {
@@ -130,9 +124,6 @@ public class TestKeyProviderCache {
     Assert.assertFalse("Same KeyProviders returned !!",
         keyProvider1 == keyProvider4);
 
-    kpCache.invalidateCache();
-    Assert.assertEquals("Expected number of closing calls doesn't match",
-        3, DummyKeyProvider.CLOSE_CALL_COUNT);
   }
 
   private URI getKeyProviderUriFromConf(Configuration conf) {

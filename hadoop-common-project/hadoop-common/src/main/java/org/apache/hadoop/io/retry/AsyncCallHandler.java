@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.io.retry;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.Client;
@@ -28,6 +28,7 @@ import org.apache.hadoop.util.concurrent.AsyncGet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InterruptedIOException;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.Queue;
@@ -48,11 +49,7 @@ public class AsyncCallHandler {
   private static final ThreadLocal<AsyncGet<Object, Throwable>>
       ASYNC_RETURN = new ThreadLocal<>();
 
-  /**
-   * @return the async return value from {@link AsyncCallHandler}.
-   * @param <T> T.
-   * @param <R> R.
-   */
+  /** @return the async return value from {@link AsyncCallHandler}. */
   @InterfaceStability.Unstable
   @SuppressWarnings("unchecked")
   public static <R, T extends  Throwable> AsyncGet<R, T> getAsyncReturn() {
@@ -65,10 +62,7 @@ public class AsyncCallHandler {
     }
   }
 
-  /**
-   * For the lower rpc layers to set the async return value.
-   * @param asyncReturn asyncReturn.
-   */
+  /** For the lower rpc layers to set the async return value. */
   @InterfaceStability.Unstable
   public static void setLowerLayerAsyncReturn(
       AsyncGet<?, Exception> asyncReturn) {

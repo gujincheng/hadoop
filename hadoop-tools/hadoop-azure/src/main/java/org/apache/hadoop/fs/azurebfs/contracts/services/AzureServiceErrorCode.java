@@ -66,10 +66,6 @@ public enum AzureServiceErrorCode {
     return this.errorCode;
   }
 
-  public String getErrorMessage() {
-    return this.errorMessage;
-  }
-
   public static List<AzureServiceErrorCode> getAzureServiceCode(int httpStatusCode) {
     List<AzureServiceErrorCode> errorCodes = new ArrayList<>();
     if (httpStatusCode == UNKNOWN.httpStatusCode) {

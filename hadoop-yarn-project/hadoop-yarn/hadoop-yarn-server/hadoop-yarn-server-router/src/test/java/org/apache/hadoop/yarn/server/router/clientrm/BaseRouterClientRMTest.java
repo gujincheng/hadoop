@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
-import static org.mockito.Mockito.mock;
-
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
@@ -28,7 +26,6 @@ import java.util.concurrent.Executors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
@@ -81,8 +78,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
@@ -93,13 +88,8 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemTestUtil;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
-import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -129,12 +119,12 @@ public abstract class BaseRouterClientRMTest {
     return this.clientrmService;
   }
 
-  protected Configuration createConfiguration() {
+  protected YarnConfiguration createConfiguration() {
     YarnConfiguration config = new YarnConfiguration();
     String mockPassThroughInterceptorClass =
         PassThroughClientRequestInterceptor.class.getName();
 
-    // Create a request interceptor pipeline for testing. The last one in the
+    // Create a request intercepter pipeline for testing. The last one in the
     // chain will call the mock resource manager. The others in the chain will
     // simply forward it to the next one in the chain
     config.set(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
@@ -144,18 +134,11 @@ public abstract class BaseRouterClientRMTest {
 
     config.setInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
         TEST_MAX_CACHE_SIZE);
-    CapacitySchedulerConfiguration schedulerConf =
-        new CapacitySchedulerConfiguration(config);
-    ReservationSystemTestUtil.setupQueueConfiguration(schedulerConf);
-    schedulerConf.setClass(YarnConfiguration.RM_SCHEDULER,
-        CapacityScheduler.class, ResourceScheduler.class);
-    schedulerConf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE,
-        true);
-    return schedulerConf;
+    return config;
   }
 
   @Before
-  public void setUp() throws IOException {
+  public void setUp() {
     this.conf = createConfiguration();
     this.dispatcher = new AsyncDispatcher();
     this.dispatcher.init(conf);
@@ -222,19 +205,13 @@ public abstract class BaseRouterClientRMTest {
         .doAs(new PrivilegedExceptionAction<SubmitApplicationResponse>() {
           @Override
           public SubmitApplicationResponse run() throws Exception {
-            ContainerLaunchContext amContainerSpec = mock(
-                ContainerLaunchContext.class);
-            ApplicationSubmissionContext context = ApplicationSubmissionContext
-                .newInstance(appId, MockApps.newAppName(), "q1",
-                    Priority.newInstance(0), amContainerSpec, false, false, -1,
-                    Resources.createResource(
-                        YarnConfiguration.
-                        DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
-                    "MockApp");
-            SubmitApplicationRequest req = SubmitApplicationRequest
-                .newInstance(context);
-            SubmitApplicationResponse response = getRouterClientRMService()
-                .submitApplication(req);
+            ApplicationSubmissionContext context =
+                ApplicationSubmissionContext.newInstance(appId, "", "", null,
+                    null, false, false, -1, null, null);
+            SubmitApplicationRequest req =
+                SubmitApplicationRequest.newInstance(context);
+            SubmitApplicationResponse response =
+                getRouterClientRMService().submitApplication(req);
             return response;
           }
         });
@@ -357,9 +334,9 @@ public abstract class BaseRouterClientRMTest {
             long arrival = clock.getTime();
             long duration = 60000;
             long deadline = (long) (arrival + 1.05 * duration);
-            ReservationSubmissionRequest req = ReservationSystemTestUtil
-                .createSimpleReservationRequest(reservationId, 1, arrival,
-                    deadline, duration);
+
+            ReservationSubmissionRequest req = createSimpleReservationRequest(1,
+                arrival, deadline, duration, reservationId);
             ReservationSubmissionResponse response =
                 getRouterClientRMService().submitReservation(req);
             return response;

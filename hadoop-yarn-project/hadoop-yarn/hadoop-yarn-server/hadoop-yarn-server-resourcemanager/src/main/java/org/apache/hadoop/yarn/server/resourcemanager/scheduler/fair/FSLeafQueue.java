@@ -29,7 +29,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.TreeSet;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -352,19 +352,9 @@ public class FSLeafQueue extends FSQueue {
         continue;
       }
       assigned = sched.assignContainer(node);
-
-      boolean isContainerAssignedOrReserved = !assigned.equals(none());
-      boolean isContainerReserved =
-                assigned.equals(FairScheduler.CONTAINER_RESERVED);
-
-      // check if an assignment or a reservation was made.
-      if (isContainerAssignedOrReserved) {
-        // only log container assignment if there was an actual allocation,
-        // not a reservation.
-        if (!isContainerReserved && LOG.isDebugEnabled()) {
-          LOG.debug("Assigned container in queue:{} container:{}",
-              getName(), assigned);
-        }
+      if (!assigned.equals(none())) {
+        LOG.debug("Assigned container in queue:{} container:{}",
+            getName(), assigned);
         break;
       }
     }
@@ -483,7 +473,6 @@ public class FSLeafQueue extends FSQueue {
   /**
    * TODO: Based on how frequently this is called, we might want to club
    * counting pending and active apps in the same method.
-   * @return active apps.
    */
   public int getNumActiveApps() {
     int numActiveApps = 0;

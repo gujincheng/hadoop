@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.tools.rumen;
 
-import java.io.IOException;
-import java.io.StringReader;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+
+import java.nio.charset.Charset;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
@@ -29,15 +33,12 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.util.XMLUtils;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
 import org.w3c.dom.Element;
 import org.w3c.dom.Text;
 
-import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 class ParsedConfigFile {
@@ -45,6 +46,7 @@ class ParsedConfigFile {
       Pattern.compile("_(job_[0-9]+_[0-9]+)_");
   private static final Pattern heapPattern =
       Pattern.compile("-Xmx([0-9]+)([mMgG])");
+  private static final Charset UTF_8 = Charset.forName("UTF-8");
 
   final int heapMegabytes;
 
@@ -101,11 +103,13 @@ class ParsedConfigFile {
     }
 
     try {
-      DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
+      InputStream is = new ByteArrayInputStream(xmlString.getBytes(UTF_8));
+
+      DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 
       DocumentBuilder db = dbf.newDocumentBuilder();
 
-      Document doc = db.parse(new InputSource(new StringReader(xmlString)));
+      Document doc = db.parse(is);
 
       Element root = doc.getDocumentElement();
 

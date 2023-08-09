@@ -25,20 +25,19 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.URI;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
-import org.apache.hadoop.security.UserGroupInformation;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 
 /**
  * 
@@ -50,8 +49,8 @@ import org.slf4j.LoggerFactory;
  */
 
 public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestViewFileSystemLocalFileSystem.class);
+  private static final Log LOG =
+      LogFactory.getLog(TestViewFileSystemLocalFileSystem.class);
 
   @Override
   @Before
@@ -60,13 +59,6 @@ public class TestViewFileSystemLocalFileSystem extends ViewFileSystemBaseTest {
     fsTarget = FileSystem.getLocal(new Configuration());
     super.setUp();
     
-  }
-
-  @Override
-  Path getTrashRootInFallBackFS() throws IOException {
-    return new Path(
-        "/" + TRASH_PREFIX + "/" + UserGroupInformation.getCurrentUser()
-            .getShortUserName());
   }
 
   @Test

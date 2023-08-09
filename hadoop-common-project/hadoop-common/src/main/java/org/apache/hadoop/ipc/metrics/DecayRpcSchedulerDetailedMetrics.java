@@ -27,7 +27,7 @@ import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class is for maintaining queue (priority) level related
@@ -65,7 +65,6 @@ public class DecayRpcSchedulerDetailedMetrics {
 
   /**
    * Initialize the metrics for JMX with priority levels.
-   * @param numLevels input numLevels.
    */
   public void init(int numLevels) {
     LOG.info("Initializing RPC stats for {} priority levels", numLevels);
@@ -107,16 +106,14 @@ public class DecayRpcSchedulerDetailedMetrics {
   }
 
   /**
-   * @return Returns the rate name inside the metric.
-   * @param priority input priority.
+   * Returns the rate name inside the metric.
    */
   public String getQueueName(int priority) {
     return "DecayRPCSchedulerPriority."+priority+".RpcQueueTime";
   }
 
   /**
-   * @return Returns the rate name inside the metric.
-   * @param priority input priority.
+   * Returns the rate name inside the metric.
    */
   public String getProcessingName(int priority) {
     return "DecayRPCSchedulerPriority."+priority+".RpcProcessingTime";

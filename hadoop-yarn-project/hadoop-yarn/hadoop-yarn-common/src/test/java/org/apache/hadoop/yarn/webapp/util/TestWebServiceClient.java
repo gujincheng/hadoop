@@ -22,8 +22,6 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.http.HttpServer2;
@@ -31,9 +29,8 @@ import org.apache.hadoop.http.TestHttpServer.EchoServlet;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class TestWebServiceClient {
 
@@ -46,17 +43,17 @@ public class TestWebServiceClient {
   static final String SERVLET_PATH_ECHO = "/" + SERVLET_NAME_ECHO;
 
   @Test
-  void testGetWebServiceClient() throws Exception {
+  public void testGetWebServiceClient() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY, "HTTPS_ONLY");
     WebServiceClient.initialize(conf);
     WebServiceClient client = WebServiceClient.getWebServiceClient();
-    assertNotNull(client.getSSLFactory());
+    Assert.assertNotNull(client.getSSLFactory());
     WebServiceClient.destroy();
   }
 
   @Test
-  void testCreateClient() throws Exception {
+  public void testCreateClient() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY, "HTTPS_ONLY");
     File base = new File(BASEDIR);
@@ -94,7 +91,7 @@ public class TestWebServiceClient {
     WebServiceClient client = WebServiceClient.getWebServiceClient();
     HttpURLConnection conn = client.getHttpURLConnectionFactory()
         .getHttpURLConnection(u);
-    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     WebServiceClient.destroy();
     server.stop();
     FileUtil.fullyDelete(new File(BASEDIR));

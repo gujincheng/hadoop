@@ -24,7 +24,7 @@ import java.util.*;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.StreamCapabilities;
@@ -36,6 +36,8 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
@@ -45,6 +47,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.MergeSort;
 import org.apache.hadoop.util.PriorityQueue;
 import org.apache.hadoop.util.Time;
@@ -57,11 +60,6 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SEQFILE_COMP
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SEQFILE_COMPRESS_BLOCKSIZE_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSUM_ERRORS_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_SKIP_CHECKSUM_ERRORS_KEY;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
-import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /** 
  * <code>SequenceFile</code>s are flat files consisting of binary key/value 
@@ -269,7 +267,7 @@ public class SequenceFile {
    * @param conf the configuration to use
    * @param opts the options to create the file with
    * @return a new Writer
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public static Writer createWriter(Configuration conf, Writer.Option... opts
                                     ) throws IOException {
@@ -301,7 +299,7 @@ public class SequenceFile {
    * @param keyClass The 'key' type.
    * @param valClass The 'value' type.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    * @deprecated Use {@link #createWriter(Configuration, Writer.Option...)}
    *     instead.
    */
@@ -323,7 +321,7 @@ public class SequenceFile {
    * @param valClass The 'value' type.
    * @param compressionType The compression type.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    * @deprecated Use {@link #createWriter(Configuration, Writer.Option...)}
    *     instead.
    */
@@ -348,7 +346,7 @@ public class SequenceFile {
    * @param compressionType The compression type.
    * @param progress The Progressable object to track progress.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    * @deprecated Use {@link #createWriter(Configuration, Writer.Option...)}
    *     instead.
    */
@@ -375,7 +373,7 @@ public class SequenceFile {
    * @param compressionType The compression type.
    * @param codec The compression codec.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    * @deprecated Use {@link #createWriter(Configuration, Writer.Option...)}
    *     instead.
    */
@@ -403,7 +401,7 @@ public class SequenceFile {
    * @param progress The Progressable object to track progress.
    * @param metadata The metadata of the file.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    * @deprecated Use {@link #createWriter(Configuration, Writer.Option...)}
    *     instead.
    */
@@ -437,7 +435,7 @@ public class SequenceFile {
    * @param progress The Progressable object to track progress.
    * @param metadata The metadata of the file.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    * @deprecated Use {@link #createWriter(Configuration, Writer.Option...)}
    *     instead.
    */
@@ -475,7 +473,7 @@ public class SequenceFile {
    * @param codec The compression codec.
    * @param metadata The metadata of the file.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   @Deprecated
   public static Writer
@@ -508,7 +506,7 @@ public class SequenceFile {
    * @param createFlag gives the semantics of create: overwrite, append etc.
    * @param opts file creation options; see {@link CreateOpts}.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public static Writer
   createWriter(FileContext fc, Configuration conf, Path name,
@@ -532,7 +530,7 @@ public class SequenceFile {
    * @param codec The compression codec.
    * @param progress The Progressable object to track progress.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    * @deprecated Use {@link #createWriter(Configuration, Writer.Option...)}
    *     instead.
    */
@@ -560,7 +558,7 @@ public class SequenceFile {
    * @param codec The compression codec.
    * @param metadata The metadata of the file.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    * @deprecated Use {@link #createWriter(Configuration, Writer.Option...)}
    *     instead.
    */
@@ -585,7 +583,7 @@ public class SequenceFile {
    * @param compressionType The compression type.
    * @param codec The compression codec.
    * @return Returns the handle to the constructed SequenceFile Writer.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    * @deprecated Use {@link #createWriter(Configuration, Writer.Option...)}
    *     instead.
    */
@@ -603,26 +601,22 @@ public class SequenceFile {
   /** The interface to 'raw' values of SequenceFiles. */
   public static interface ValueBytes {
 
-    /**
-     * Writes the uncompressed bytes to the outStream.
+    /** Writes the uncompressed bytes to the outStream.
      * @param outStream : Stream to write uncompressed bytes into.
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public void writeUncompressedBytes(DataOutputStream outStream)
       throws IOException;
 
-    /**
-     * Write compressed bytes to outStream.
+    /** Write compressed bytes to outStream. 
      * Note: that it will NOT compress the bytes if they are not compressed.
      * @param outStream : Stream to write compressed bytes into.
-     * @throws IllegalArgumentException an illegal or inappropriate argument.
-     * @throws IOException raised on errors performing I/O.
      */
     public void writeCompressedBytes(DataOutputStream outStream) 
       throws IllegalArgumentException, IOException;
 
     /**
-     * @return Size of stored data.
+     * Size of stored data.
      */
     public int getSize();
   }
@@ -1186,6 +1180,14 @@ public class SequenceFile {
           new Metadata() : metadataOption.getValue();
       this.compress = compressionTypeOption.getValue();
       final CompressionCodec codec = compressionTypeOption.getCodec();
+      if (codec != null &&
+          (codec instanceof GzipCodec) &&
+          !NativeCodeLoader.isNativeCodeLoaded() &&
+          !ZlibFactory.isNativeZlibLoaded(conf)) {
+        throw new IllegalArgumentException("SequenceFile doesn't work with " +
+                                           "GzipCodec without native-hadoop " +
+                                           "code!");
+      }
       this.syncInterval = (syncIntervalOption == null) ?
           SYNC_INTERVAL :
           syncIntervalOption.getValue();
@@ -1194,17 +1196,10 @@ public class SequenceFile {
           codec, metadata, syncInterval);
     }
 
-    /**
-     * Create the named file.
+    /** Create the named file.
      * @deprecated Use 
      *   {@link SequenceFile#createWriter(Configuration, Writer.Option...)} 
      *   instead.
-     * @param fs input filesystem.
-     * @param conf input configuration.
-     * @param name input name.
-     * @param keyClass input keyClass.
-     * @param valClass input valClass.
-     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Writer(FileSystem fs, Configuration conf, Path name, 
@@ -1214,19 +1209,10 @@ public class SequenceFile {
            new Metadata(), SYNC_INTERVAL);
     }
     
-    /**
-     * Create the named file with write-progress reporter.
+    /** Create the named file with write-progress reporter.
      * @deprecated Use 
      *   {@link SequenceFile#createWriter(Configuration, Writer.Option...)} 
      *   instead.
-     * @param fs input filesystem.
-     * @param conf input configuration.
-     * @param name input name.
-     * @param keyClass input keyClass.
-     * @param valClass input valClass.
-     * @param progress input progress.
-     * @param metadata input metadata.
-     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Writer(FileSystem fs, Configuration conf, Path name, 
@@ -1237,22 +1223,10 @@ public class SequenceFile {
            null, metadata, SYNC_INTERVAL);
     }
     
-    /**
-     * Create the named file with write-progress reporter.
+    /** Create the named file with write-progress reporter. 
      * @deprecated Use 
      *   {@link SequenceFile#createWriter(Configuration, Writer.Option...)} 
      *   instead.
-     * @param fs input filesystem.
-     * @param conf input configuration.
-     * @param name input name.
-     * @param keyClass input keyClass.
-     * @param valClass input valClass.
-     * @param bufferSize input bufferSize.
-     * @param replication input replication.
-     * @param blockSize input blockSize.
-     * @param progress input progress.
-     * @param metadata input metadata.
-     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public Writer(FileSystem fs, Configuration conf, Path name,
@@ -1353,19 +1327,16 @@ public class SequenceFile {
       }
     }
     
-    /** @return Returns the class of keys in this file. */
+    /** Returns the class of keys in this file. */
     public Class getKeyClass() { return keyClass; }
 
-    /** @return Returns the class of values in this file. */
+    /** Returns the class of values in this file. */
     public Class getValueClass() { return valClass; }
 
-    /** @return Returns the compression codec of data in this file. */
+    /** Returns the compression codec of data in this file. */
     public CompressionCodec getCompressionCodec() { return codec; }
     
-    /**
-     * create a sync point.
-     * @throws IOException raised on errors performing I/O.
-     */
+    /** create a sync point */
     public void sync() throws IOException {
       if (sync != null && lastSyncPos != out.getPos()) {
         out.writeInt(SYNC_ESCAPE);                // mark the start of the sync
@@ -1375,9 +1346,8 @@ public class SequenceFile {
     }
 
     /**
-     * flush all currently written data to the file system.
+     * flush all currently written data to the file system
      * @deprecated Use {@link #hsync()} or {@link #hflush()} instead
-     * @throws IOException raised on errors performing I/O.
      */
     @Deprecated
     public void syncFs() throws IOException {
@@ -1449,23 +1419,13 @@ public class SequenceFile {
       }
     }
 
-    /**
-     * Append a key/value pair.
-     * @param key input Writable key.
-     * @param val input Writable val.
-     * @throws IOException raised on errors performing I/O.
-     */
+    /** Append a key/value pair. */
     public void append(Writable key, Writable val)
       throws IOException {
       append((Object) key, (Object) val);
     }
 
-    /**
-     * Append a key/value pair.
-     * @param key input Object key.
-     * @param val input Object val.
-     * @throws IOException raised on errors performing I/O.
-     */
+    /** Append a key/value pair. */
     @SuppressWarnings("unchecked")
     public synchronized void append(Object key, Object val)
       throws IOException {
@@ -1516,16 +1476,14 @@ public class SequenceFile {
       val.writeUncompressedBytes(out);            // value
     }
 
-    /** @return Returns the current length of the output file.
+    /** Returns the current length of the output file.
      *
      * <p>This always returns a synchronized position.  In other words,
      * immediately after calling {@link SequenceFile.Reader#seek(long)} with a position
      * returned by this method, {@link SequenceFile.Reader#next(Writable)} may be called.  However
      * the key may be earlier in the file than key last written when this
      * method was called (e.g., with block-compression, it may be the first key
-     * in the block that was being written when this method was called).</p>
-     *
-     * @throws IOException raised on errors performing I/O.
+     * in the block that was being written when this method was called).
      */
     public synchronized long getLength() throws IOException {
       return out.getPos();
@@ -1936,7 +1894,7 @@ public class SequenceFile {
      * @param fs The file system used to open the file.
      * @param file The file being read.
      * @param conf Configuration
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      * @deprecated Use Reader(Configuration, Option...) instead.
      */
     @Deprecated
@@ -1952,7 +1910,7 @@ public class SequenceFile {
      * @param start The starting position.
      * @param length The length being read.
      * @param conf Configuration
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      * @deprecated Use Reader(Configuration, Reader.Option...) instead.
      */
     @Deprecated
@@ -1997,18 +1955,11 @@ public class SequenceFile {
      * @param length The length being read if it is {@literal >=} 0.
      *               Otherwise, the length is not available.
      * @return The opened stream.
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     protected FSDataInputStream openFile(FileSystem fs, Path file,
         int bufferSize, long length) throws IOException {
-      FutureDataInputStreamBuilder builder = fs.openFile(file)
-          .opt(FS_OPTION_OPENFILE_READ_POLICY,
-              FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
-          .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, bufferSize);
-      if (length >= 0) {
-        builder.optLong(FS_OPTION_OPENFILE_LENGTH, length);
-      }
-      return awaitFuture(builder.build());
+      return fs.open(file, bufferSize);
     }
     
     /**
@@ -2187,12 +2138,12 @@ public class SequenceFile {
       in.close();
     }
 
-    /** @return Returns the name of the key class. */
+    /** Returns the name of the key class. */
     public String getKeyClassName() {
       return keyClassName;
     }
 
-    /** @return Returns the class of keys in this file. */
+    /** Returns the class of keys in this file. */
     public synchronized Class<?> getKeyClass() {
       if (null == keyClass) {
         try {
@@ -2204,12 +2155,12 @@ public class SequenceFile {
       return keyClass;
     }
 
-    /** @return Returns the name of the value class. */
+    /** Returns the name of the value class. */
     public String getValueClassName() {
       return valClassName;
     }
 
-    /** @return Returns the class of values in this file. */
+    /** Returns the class of values in this file. */
     public synchronized Class<?> getValueClass() {
       if (null == valClass) {
         try {
@@ -2221,22 +2172,13 @@ public class SequenceFile {
       return valClass;
     }
 
-    /**
-     * Returns true if values are compressed.
-     * @return if values are compressed true, not false.
-     */
+    /** Returns true if values are compressed. */
     public boolean isCompressed() { return decompress; }
     
-    /**
-     * Returns true if records are block-compressed.
-     * @return if records are block-compressed true, not false.
-     */
+    /** Returns true if records are block-compressed. */
     public boolean isBlockCompressed() { return blockCompressed; }
     
-    /**
-     * Returns the compression codec of data in this file.
-     * @return CompressionCodec.
-     */
+    /** Returns the compression codec of data in this file. */
     public CompressionCodec getCompressionCodec() { return codec; }
     
     private byte[] getSync() {
@@ -2259,10 +2201,7 @@ public class SequenceFile {
       }
     }
 
-    /**
-     * Returns the metadata object of the file.
-     * @return metadata.
-     */
+    /** Returns the metadata object of the file */
     public Metadata getMetadata() {
       return this.metadata;
     }
@@ -2371,7 +2310,7 @@ public class SequenceFile {
     /**
      * Get the 'value' corresponding to the last read 'key'.
      * @param val : The 'value' to be read.
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public synchronized void getCurrentValue(Writable val) 
       throws IOException {
@@ -2408,9 +2347,9 @@ public class SequenceFile {
     }
     
     /**
-     * @return Get the 'value' corresponding to the last read 'key'.
+     * Get the 'value' corresponding to the last read 'key'.
      * @param val : The 'value' to be read.
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public synchronized Object getCurrentValue(Object val) 
       throws IOException {
@@ -2452,13 +2391,8 @@ public class SequenceFile {
       return valDeserializer.deserialize(val);
     }
     
-    /**
-     * @return Read the next key in the file into <code>key</code>, skipping its
-     * value.True if another entry exists, and false at end of file.
-     *
-     * @param key key.
-     * @throws IOException raised on errors performing I/O.
-     */
+    /** Read the next key in the file into <code>key</code>, skipping its
+     * value.  True if another entry exists, and false at end of file. */
     public synchronized boolean next(Writable key) throws IOException {
       if (key.getClass() != getKeyClass())
         throw new IOException("wrong key class: "+key.getClass().getName()
@@ -2505,16 +2439,9 @@ public class SequenceFile {
       return true;
     }
 
-    /**
-     * Read the next key/value pair in the file into <code>key</code> and
-     * <code>val</code>.
-     * @return Returns true if such a pair exists and false when at
-     * end of file.
-     *
-     * @param key input key.
-     * @param val input val.
-     * @throws IOException raised on errors performing I/O.
-     */
+    /** Read the next key/value pair in the file into <code>key</code> and
+     * <code>val</code>.  Returns true if such a pair exists and false when at
+     * end of file */
     public synchronized boolean next(Writable key, Writable val)
       throws IOException {
       if (val.getClass() != getValueClass())
@@ -2598,7 +2525,7 @@ public class SequenceFile {
      * @param key - The buffer into which the key is read
      * @param val - The 'raw' value
      * @return Returns the total record length or -1 for end of file
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public synchronized int nextRaw(DataOutputBuffer key, ValueBytes val) 
       throws IOException {
@@ -2657,7 +2584,7 @@ public class SequenceFile {
      * Read 'raw' keys.
      * @param key - The buffer into which the key is read
      * @return Returns the key length or -1 for end of file
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public synchronized int nextRawKey(DataOutputBuffer key) 
       throws IOException {
@@ -2696,14 +2623,8 @@ public class SequenceFile {
       
     }
 
-    /**
-     * Read the next key in the file, skipping its
-     * value.
-     *
-     * @param key input Object key.
-     * @throws IOException raised on errors performing I/O.
-     * @return Return null at end of file.
-     */
+    /** Read the next key in the file, skipping its
+     * value.  Return null at end of file. */
     public synchronized Object next(Object key) throws IOException {
       if (key != null && key.getClass() != getKeyClass()) {
         throw new IOException("wrong key class: "+key.getClass().getName()
@@ -2760,7 +2681,7 @@ public class SequenceFile {
      * Read 'raw' values.
      * @param val - The 'raw' value
      * @return Returns the value length
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public synchronized int nextRawValue(ValueBytes val) 
       throws IOException {
@@ -2800,20 +2721,16 @@ public class SequenceFile {
       }
     }
 
-    /** disables sync. often invoked for tmp files. */
+    /** disables sync. often invoked for tmp files */
     synchronized void ignoreSync() {
       sync = null;
     }
     
-    /**
-     * Set the current byte position in the input file.
+    /** Set the current byte position in the input file.
      *
      * <p>The position passed must be a position returned by {@link
      * SequenceFile.Writer#getLength()} when writing this file.  To seek to an arbitrary
-     * position, use {@link SequenceFile.Reader#sync(long)}. </p>
-     *
-     * @param position input position.
-     * @throws IOException raised on errors performing I/O.
+     * position, use {@link SequenceFile.Reader#sync(long)}.
      */
     public synchronized void seek(long position) throws IOException {
       in.seek(position);
@@ -2823,11 +2740,7 @@ public class SequenceFile {
       }
     }
 
-    /**
-     * Seek to the next sync mark past a given position.
-     * @param position position.
-     * @throws IOException raised on errors performing I/O.
-     */
+    /** Seek to the next sync mark past a given position.*/
     public synchronized void sync(long position) throws IOException {
       if (position+SYNC_SIZE >= end) {
         seek(end);
@@ -2863,13 +2776,10 @@ public class SequenceFile {
       }
     }
 
-    /** @return Returns true iff the previous call to next passed a sync mark.*/
+    /** Returns true iff the previous call to next passed a sync mark.*/
     public synchronized boolean syncSeen() { return syncSeen; }
 
-    /**
-     * @return Return the current byte position in the input file.
-     * @throws IOException raised on errors performing I/O.
-     */
+    /** Return the current byte position in the input file. */
     public synchronized long getPosition() throws IOException {
       return in.getPos();
     }
@@ -2911,40 +2821,19 @@ public class SequenceFile {
     
     private Progressable progressable = null;
 
-    /**
-     * Sort and merge files containing the named classes.
-     * @param fs input FileSystem.
-     * @param keyClass input keyClass.
-     * @param valClass input valClass.
-     * @param conf input Configuration.
-     */
+    /** Sort and merge files containing the named classes. */
     public Sorter(FileSystem fs, Class<? extends WritableComparable> keyClass,
                   Class valClass, Configuration conf)  {
       this(fs, WritableComparator.get(keyClass, conf), keyClass, valClass, conf);
     }
 
-    /**
-     * Sort and merge using an arbitrary {@link RawComparator}.
-     * @param fs input FileSystem.
-     * @param comparator input RawComparator.
-     * @param keyClass input keyClass.
-     * @param valClass input valClass.
-     * @param conf input Configuration.
-     */
+    /** Sort and merge using an arbitrary {@link RawComparator}. */
     public Sorter(FileSystem fs, RawComparator comparator, Class keyClass, 
                   Class valClass, Configuration conf) {
       this(fs, comparator, keyClass, valClass, conf, new Metadata());
     }
 
-    /**
-     * Sort and merge using an arbitrary {@link RawComparator}.
-     * @param fs input FileSystem.
-     * @param comparator input RawComparator.
-     * @param keyClass input keyClass.
-     * @param valClass input valClass.
-     * @param conf input Configuration.
-     * @param metadata input metadata.
-     */
+    /** Sort and merge using an arbitrary {@link RawComparator}. */
     @SuppressWarnings("deprecation")
     public Sorter(FileSystem fs, RawComparator comparator, Class keyClass,
                   Class valClass, Configuration conf, Metadata metadata) {
@@ -2973,28 +2862,19 @@ public class SequenceFile {
       this.metadata = metadata;
     }
 
-    /**
-     * Set the number of streams to merge at once.
-     * @param factor factor.
-     */
+    /** Set the number of streams to merge at once.*/
     public void setFactor(int factor) { this.factor = factor; }
 
-    /** @return Get the number of streams to merge at once.*/
+    /** Get the number of streams to merge at once.*/
     public int getFactor() { return factor; }
 
-    /**
-     * Set the total amount of buffer memory, in bytes.
-     * @param memory buffer memory.
-     */
+    /** Set the total amount of buffer memory, in bytes.*/
     public void setMemory(int memory) { this.memory = memory; }
 
-    /** @return Get the total amount of buffer memory, in bytes.*/
+    /** Get the total amount of buffer memory, in bytes.*/
     public int getMemory() { return memory; }
 
-    /**
-     * Set the progressable object in order to report progress.
-     * @param progressable input Progressable.
-     */
+    /** Set the progressable object in order to report progress. */
     public void setProgressable(Progressable progressable) {
       this.progressable = progressable;
     }
@@ -3004,7 +2884,6 @@ public class SequenceFile {
      * @param inFiles the files to be sorted
      * @param outFile the sorted output file
      * @param deleteInput should the input files be deleted as they are read?
-     * @throws IOException raised on errors performing I/O.
      */
     public void sort(Path[] inFiles, Path outFile,
                      boolean deleteInput) throws IOException {
@@ -3027,7 +2906,6 @@ public class SequenceFile {
      * @param tempDir the directory where temp files are created during sort
      * @param deleteInput should the input files be deleted as they are read?
      * @return iterator the RawKeyValueIterator
-     * @throws IOException raised on errors performing I/O.
      */
     public RawKeyValueIterator sortAndIterate(Path[] inFiles, Path tempDir, 
                                               boolean deleteInput) throws IOException {
@@ -3053,9 +2931,8 @@ public class SequenceFile {
 
     /**
      * The backwards compatible interface to sort.
-     * @param inFile the input file to sort.
-     * @param outFile the sorted output file.
-     * @throws IOException raised on errors performing I/O.
+     * @param inFile the input file to sort
+     * @param outFile the sorted output file
      */
     public void sort(Path inFile, Path outFile) throws IOException {
       sort(new Path[]{inFile}, outFile, false);
@@ -3273,32 +3150,27 @@ public class SequenceFile {
 
     /** The interface to iterate over raw keys/values of SequenceFiles. */
     public static interface RawKeyValueIterator {
-      /**
-       * Gets the current raw key.
+      /** Gets the current raw key
        * @return DataOutputBuffer
-       * @throws IOException raised on errors performing I/O.
+       * @throws IOException
        */
       DataOutputBuffer getKey() throws IOException; 
-      /**
-       * Gets the current raw value.
+      /** Gets the current raw value
        * @return ValueBytes 
-       * @throws IOException raised on errors performing I/O.
+       * @throws IOException
        */
       ValueBytes getValue() throws IOException; 
-      /**
-       * Sets up the current key and value (for getKey and getValue).
+      /** Sets up the current key and value (for getKey and getValue)
        * @return true if there exists a key/value, false otherwise 
-       * @throws IOException raised on errors performing I/O.
+       * @throws IOException
        */
       boolean next() throws IOException;
-      /**
-       * closes the iterator so that the underlying streams can be closed.
-       * @throws IOException raised on errors performing I/O.
+      /** closes the iterator so that the underlying streams can be closed
+       * @throws IOException
        */
       void close() throws IOException;
-      /**
-       * @return Gets the Progress object; this has a float (0.0 - 1.0)
-       * indicating the bytes processed by the iterator so far.
+      /** Gets the Progress object; this has a float (0.0 - 1.0) 
+       * indicating the bytes processed by the iterator so far
        */
       Progress getProgress();
     }    
@@ -3308,7 +3180,7 @@ public class SequenceFile {
      * @param segments the list of SegmentDescriptors
      * @param tmpDir the directory to write temporary files into
      * @return RawKeyValueIterator
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public RawKeyValueIterator merge(List <SegmentDescriptor> segments, 
                                      Path tmpDir) 
@@ -3326,7 +3198,7 @@ public class SequenceFile {
      * unnecessary
      * @param tmpDir the directory to write temporary files into
      * @return RawKeyValueIteratorMergeQueue
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs,
                                      Path tmpDir) 
@@ -3344,7 +3216,7 @@ public class SequenceFile {
      * @param factor the factor that will be used as the maximum merge fan-in
      * @param tmpDir the directory to write temporary files into
      * @return RawKeyValueIteratorMergeQueue
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public RawKeyValueIterator merge(Path [] inNames, boolean deleteInputs,
                                      int factor, Path tmpDir) 
@@ -3370,7 +3242,7 @@ public class SequenceFile {
      * @param deleteInputs true if the input files should be deleted when 
      * unnecessary
      * @return RawKeyValueIteratorMergeQueue
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public RawKeyValueIterator merge(Path [] inNames, Path tempDir, 
                                      boolean deleteInputs) 
@@ -3401,7 +3273,7 @@ public class SequenceFile {
      * @param outputFile the path of the output file 
      * @param prog the Progressable to report status during the file write
      * @return Writer
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public Writer cloneFileAttributes(Path inputFile, Path outputFile, 
                                       Progressable prog) throws IOException {
@@ -3423,10 +3295,10 @@ public class SequenceFile {
 
     /**
      * Writes records from RawKeyValueIterator into a file represented by the 
-     * passed writer.
+     * passed writer
      * @param records the RawKeyValueIterator
      * @param writer the Writer created earlier 
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public void writeFile(RawKeyValueIterator records, Writer writer) 
       throws IOException {
@@ -3440,7 +3312,7 @@ public class SequenceFile {
     /** Merge the provided files.
      * @param inFiles the array of input path names
      * @param outFile the final output file
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public void merge(Path[] inFiles, Path outFile) throws IOException {
       if (fs.exists(outFile)) {
@@ -3776,13 +3648,10 @@ public class SequenceFile {
         this.segmentPathName = segmentPathName;
       }
       
-      /** Do the sync checks. */
+      /** Do the sync checks */
       public void doSync() {ignoreSync = false;}
       
-      /**
-       * Whether to delete the files when no longer needed.
-       * @param preserve input boolean preserve.
-       */
+      /** Whether to delete the files when no longer needed */
       public void preserveInput(boolean preserve) {
         preserveInput = preserve;
       }
@@ -3824,10 +3693,9 @@ public class SequenceFile {
         return 37 * 17 + (int) (segmentOffset^(segmentOffset>>>32));
       }
 
-      /**
-       * Fills up the rawKey object with the key returned by the Reader.
+      /** Fills up the rawKey object with the key returned by the Reader
        * @return true if there is a key returned; false, otherwise
-       * @throws IOException raised on errors performing I/O.
+       * @throws IOException
        */
       public boolean nextRawKey() throws IOException {
         if (in == null) {
@@ -3856,19 +3724,18 @@ public class SequenceFile {
         return (keyLength >= 0);
       }
 
-      /**
-       * Fills up the passed rawValue with the value corresponding to the key
-       * read earlier.
-       * @param rawValue input ValueBytes rawValue.
+      /** Fills up the passed rawValue with the value corresponding to the key
+       * read earlier
+       * @param rawValue
        * @return the length of the value
-       * @throws IOException raised on errors performing I/O.
+       * @throws IOException
        */
       public int nextRawValue(ValueBytes rawValue) throws IOException {
         int valLength = in.nextRawValue(rawValue);
         return valLength;
       }
       
-      /** @return Returns the stored rawKey */
+      /** Returns the stored rawKey */
       public DataOutputBuffer getKey() {
         return rawKey;
       }
@@ -3879,10 +3746,8 @@ public class SequenceFile {
         this.in = null;
       }
 
-      /**
-       * The default cleanup. Subclasses can override this with a custom
-       * cleanup.
-       * @throws IOException raised on errors performing I/O.
+      /** The default cleanup. Subclasses can override this with a custom 
+       * cleanup 
        */
       public void cleanup() throws IOException {
         close();

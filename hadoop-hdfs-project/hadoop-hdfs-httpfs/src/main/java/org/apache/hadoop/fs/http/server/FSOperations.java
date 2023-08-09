@@ -19,12 +19,10 @@ package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -44,14 +42,10 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
-import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.util.StringUtils;
@@ -65,7 +59,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -424,23 +417,6 @@ public final class FSOperations {
     }
     policies.put(HttpFSFileSystem.STORAGE_POLICY_JSON, jsonArray);
     json.put(HttpFSFileSystem.STORAGE_POLICIES_JSON, policies);
-    return json;
-  }
-
-  /**
-   * Executes the fsStatus operation.
-   *
-   * @param fsStatus a FsStatus object
-   * @return JSON map suitable for wire transport
-   */
-  @SuppressWarnings("unchecked")
-  private static Map<String, Object> toJson(FsStatus fsStatus) {
-    Map<String, Object> json = new LinkedHashMap<>();
-    JSONObject statusJson = new JSONObject();
-    statusJson.put(HttpFSFileSystem.USED_JSON, fsStatus.getUsed());
-    statusJson.put(HttpFSFileSystem.REMAINING_JSON, fsStatus.getRemaining());
-    statusJson.put(HttpFSFileSystem.CAPACITY_JSON, fsStatus.getCapacity());
-    json.put(HttpFSFileSystem.FS_STATUS_JSON, statusJson);
     return json;
   }
 
@@ -1903,65 +1879,6 @@ public final class FSOperations {
   }
 
   /**
-   *  Executor that performs a getSnapshotDiffListing operation.
-   */
-  @InterfaceAudience.Private
-  public static class FSGetSnapshotDiffListing implements
-      FileSystemAccess.FileSystemExecutor<String> {
-
-    private final Path path;
-    private final String oldSnapshotName;
-    private final String snapshotName;
-    private final String snapshotDiffStartPath;
-    private final int snapshotDiffIndex;
-
-    /**
-     * Creates a getSnapshotDiffListing executor.
-     *
-     * @param path directory path of the snapshots to be examined.
-     * @param oldSnapshotName Older snapshot name.
-     * @param snapshotName Newer snapshot name.
-     * @param snapshotDiffStartPath snapshot diff start path.
-     * @param snapshotDiffIndex snapshot diff index.
-     */
-    public FSGetSnapshotDiffListing(String path, String oldSnapshotName,
-        String snapshotName, String snapshotDiffStartPath, int snapshotDiffIndex) {
-      this.path = new Path(path);
-      this.oldSnapshotName = oldSnapshotName;
-      this.snapshotName = snapshotName;
-      this.snapshotDiffStartPath = snapshotDiffStartPath;
-      this.snapshotDiffIndex = snapshotDiffIndex;
-    }
-
-    /**
-     * Executes the filesystem operation.
-     *
-     * @param fs filesystem instance to use.
-     * @return A serialized JSON string of snapshot diffs.
-     * @throws IOException thrown if an IO error occurred.
-     */
-    @Override
-    public String execute(FileSystem fs) throws IOException {
-      SnapshotDiffReportListing snapshotDiffReportListing = null;
-      if (fs instanceof DistributedFileSystem) {
-        DistributedFileSystem dfs = (DistributedFileSystem) fs;
-        snapshotDiffReportListing =
-            dfs.getSnapshotDiffReportListing(path, oldSnapshotName, snapshotName,
-                snapshotDiffStartPath, snapshotDiffIndex);
-      } else {
-        throw new UnsupportedOperationException("getSnapshotDiffListing is not "
-            + "supported for HttpFs on " + fs.getClass()
-            + ". Please check your fs.defaultFS configuration");
-      }
-      if (snapshotDiffReportListing != null) {
-        return JsonUtil.toJsonString(snapshotDiffReportListing);
-      } else {
-        return "";
-      }
-    }
-  }
-
-  /**
    *  Executor that performs a getSnapshottableDirListing operation.
    */
   @InterfaceAudience.Private
@@ -1988,43 +1905,6 @@ public final class FSOperations {
         sds = dfs.getSnapshottableDirListing();
       } else {
         throw new UnsupportedOperationException("getSnapshottableDirListing is "
-            + "not supported for HttpFs on " + fs.getClass()
-            + ". Please check your fs.defaultFS configuration");
-      }
-      return JsonUtil.toJsonString(sds);
-    }
-  }
-
-  /**
-   *  Executor that performs a getSnapshotListing operation.
-   */
-  @InterfaceAudience.Private
-  public static class FSGetSnapshotListing implements
-      FileSystemAccess.FileSystemExecutor<String> {
-    private Path path;
-
-    /**
-     * Creates a getSnapshotDiff executor.
-     * @param path directory path of the snapshots to be examined.
-     */
-    public FSGetSnapshotListing(String path) {
-      this.path = new Path(path);
-    }
-
-    /**
-     * Executes the filesystem operation.
-     * @param fs filesystem instance to use.
-     * @return A JSON string of all snapshots for a snapshottable directory.
-     * @throws IOException thrown if an IO error occurred.
-     */
-    @Override
-    public String execute(FileSystem fs) throws IOException {
-      SnapshotStatus[] sds = null;
-      if (fs instanceof DistributedFileSystem) {
-        DistributedFileSystem dfs = (DistributedFileSystem) fs;
-        sds = dfs.getSnapshotListing(path);
-      } else {
-        throw new UnsupportedOperationException("getSnapshotListing is "
             + "not supported for HttpFs on " + fs.getClass()
             + ". Please check your fs.defaultFS configuration");
       }
@@ -2212,188 +2092,6 @@ public final class FSOperations {
             + ". Please check your fs.defaultFS configuration");
       }
       return null;
-    }
-  }
-
-  /**
-   * Executor that performs a getFileBlockLocations operation.
-   */
-
-  @InterfaceAudience.Private
-  @SuppressWarnings("rawtypes")
-  public static class FSFileBlockLocations implements FileSystemAccess.FileSystemExecutor<Map> {
-    final private Path path;
-    final private long offsetValue;
-    final private long lengthValue;
-
-    /**
-     * Creates a file-block-locations executor.
-     *
-     * @param path the path to retrieve the location
-     * @param offsetValue offset into the given file
-     * @param lengthValue length for which to get locations for
-     */
-    public FSFileBlockLocations(String path, long offsetValue, long lengthValue) {
-      this.path = new Path(path);
-      this.offsetValue = offsetValue;
-      this.lengthValue = lengthValue;
-    }
-
-    @Override
-    public Map execute(FileSystem fs) throws IOException {
-      BlockLocation[] locations = fs.getFileBlockLocations(this.path,
-          this.offsetValue, this.lengthValue);
-      return JsonUtil.toJsonMap(locations);
-    }
-  }
-
-  /**
-   * Executor that performs a getFileBlockLocations operation for legacy
-   * clients that supports only GET_BLOCK_LOCATIONS.
-   */
-
-  @InterfaceAudience.Private
-  @SuppressWarnings("rawtypes")
-  public static class FSFileBlockLocationsLegacy
-      implements FileSystemAccess.FileSystemExecutor<Map> {
-    final private Path path;
-    final private long offsetValue;
-    final private long lengthValue;
-
-    /**
-     * Creates a file-block-locations executor.
-     *
-     * @param path the path to retrieve the location
-     * @param offsetValue offset into the given file
-     * @param lengthValue length for which to get locations for
-     */
-    public FSFileBlockLocationsLegacy(String path, long offsetValue, long lengthValue) {
-      this.path = new Path(path);
-      this.offsetValue = offsetValue;
-      this.lengthValue = lengthValue;
-    }
-
-    @Override
-    public Map execute(FileSystem fs) throws IOException {
-      if (fs instanceof DistributedFileSystem) {
-        DistributedFileSystem dfs = (DistributedFileSystem)fs;
-        LocatedBlocks locations = dfs.getLocatedBlocks(
-            this.path, this.offsetValue, this.lengthValue);
-        return JsonUtil.toJsonMap(locations);
-      }
-      throw new IOException("Unable to support FSFileBlockLocationsLegacy " +
-          "because the file system is not DistributedFileSystem.");
-    }
-  }
-
-  /**
-   * Executor that performs a linkFile-status FileSystemAccess files
-   * system operation.
-   */
-  @InterfaceAudience.Private
-  @SuppressWarnings("rawtypes")
-  public static class FSFileLinkStatus
-      implements FileSystemAccess.FileSystemExecutor<Map> {
-    final private Path path;
-
-    /**
-     * Creates a linkFile-status executor.
-     *
-     * @param path the path to retrieve the status.
-     */
-    public FSFileLinkStatus(String path) {
-      this.path = new Path(path);
-    }
-
-    /**
-     * Executes the filesystem getFileLinkStatus operation and returns the
-     * result in a JSON Map.
-     *
-     * @param fs filesystem instance to use.
-     * @return a Map object (JSON friendly) with the file status.
-     * @throws IOException thrown if an IO error occurred.
-     */
-    @Override
-    public Map execute(FileSystem fs) throws IOException {
-      FileStatus status = fs.getFileLinkStatus(path);
-      HttpFSServerWebApp.get().getMetrics().incrOpsStat();
-      return toJson(status);
-    }
-  }
-
-  /**
-   * Executor that performs a getFsStatus operation.
-   */
-  @InterfaceAudience.Private
-  public static class FSStatus implements FileSystemAccess.FileSystemExecutor<Map> {
-    final private Path path;
-
-    /**
-     * Creates a fsStatus executor.
-     *
-     * @param path the path to retrieve the status.
-     */
-    public FSStatus(String path) {
-      this.path = new Path(path);
-    }
-
-    @Override
-    public Map execute(FileSystem fs) throws IOException {
-      FsStatus fsStatus = fs.getStatus(path);
-      HttpFSServerWebApp.get().getMetrics().incrOpsStatus();
-      return toJson(fsStatus);
-    }
-  }
-
-  /**
-   * Executor that performs a FSGetErasureCodingPolicies operation.
-   */
-  @InterfaceAudience.Private
-  public static class FSGetErasureCodingPolicies
-      implements FileSystemAccess.FileSystemExecutor<String> {
-
-    public FSGetErasureCodingPolicies() {
-    }
-
-    @Override
-    public String execute(FileSystem fs) throws IOException {
-      Collection<ErasureCodingPolicyInfo> ecPolicyInfos = null;
-      if (fs instanceof DistributedFileSystem) {
-        DistributedFileSystem dfs = (DistributedFileSystem) fs;
-        ecPolicyInfos = dfs.getAllErasureCodingPolicies();
-      } else {
-        throw new UnsupportedOperationException("getErasureCodingPolicies is " +
-            "not supported for HttpFs on " + fs.getClass() +
-            ". Please check your fs.defaultFS configuration");
-      }
-      HttpFSServerWebApp.get().getMetrics().incrOpsAllECPolicies();
-      return JsonUtil.toJsonString(ecPolicyInfos.stream().toArray(ErasureCodingPolicyInfo[]::new));
-    }
-  }
-
-  /**
-   * Executor that performs a FSGetErasureCodingCodecs operation.
-   */
-  @InterfaceAudience.Private
-  public static class FSGetErasureCodingCodecs
-      implements FileSystemAccess.FileSystemExecutor<Map> {
-
-    public FSGetErasureCodingCodecs() {
-    }
-
-    @Override
-    public Map execute(FileSystem fs) throws IOException {
-      Map<String, Map<String, String>> ecCodecs = new HashMap<>();
-      if (fs instanceof DistributedFileSystem) {
-        DistributedFileSystem dfs = (DistributedFileSystem) fs;
-        ecCodecs.put("ErasureCodingCodecs", dfs.getAllErasureCodingCodecs());
-      } else {
-        throw new UnsupportedOperationException("getErasureCodeCodecs is " +
-            "not supported for HttpFs on " + fs.getClass() +
-            ". Please check your fs.defaultFS configuration");
-      }
-      HttpFSServerWebApp.get().getMetrics().incrOpsECCodecs();
-      return ecCodecs;
     }
   }
 }

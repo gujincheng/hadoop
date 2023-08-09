@@ -36,7 +36,6 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -56,10 +55,12 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 
+import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Time;
 
 
 /**
@@ -123,7 +124,7 @@ public class EditLogTailer {
 
   /**
    * The timeout in milliseconds of calling rollEdits RPC to Active NN.
-   * See HDFS-4176.
+   * @see HDFS-4176.
    */
   private final long rollEditsTimeoutMs;
 
@@ -171,21 +172,14 @@ public class EditLogTailer {
    */
   private final long maxTxnsPerLock;
 
-  /**
-   * Timer instance to be set only using constructor.
-   * Only tests can reassign this by using setTimerForTests().
-   * For source code, this timer instance should be treated as final.
-   */
-  private Timer timer;
-
   public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
     this.tailerThread = new EditLogTailerThread();
     this.conf = conf;
     this.namesystem = namesystem;
-    this.timer = new Timer();
     this.editLog = namesystem.getEditLog();
-    this.lastLoadTimeMs = timer.monotonicNow();
-    this.lastRollTimeMs = timer.monotonicNow();
+    
+    lastLoadTimeMs = monotonicNow();
+    lastRollTimeMs = monotonicNow();
 
     logRollPeriodMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
@@ -262,7 +256,9 @@ public class EditLogTailer {
     nnCount = nns.size();
     // setup the iterator to endlessly loop the nns
     this.nnLookup = Iterators.cycle(nns);
-    LOG.debug("logRollPeriodMs={} sleepTime={}.", logRollPeriodMs, sleepTimeMs);
+
+    LOG.debug("logRollPeriodMs=" + logRollPeriodMs +
+        " sleepTime=" + sleepTimeMs);
   }
 
   public void start() {
@@ -305,65 +301,59 @@ public class EditLogTailer {
         long editsTailed = 0;
         // Fully tail the journal to the end
         do {
-          long startTime = timer.monotonicNow();
+          long startTime = Time.monotonicNow();
           try {
             NameNode.getNameNodeMetrics().addEditLogTailInterval(
                 startTime - lastLoadTimeMs);
             // It is already under the name system lock and the checkpointer
             // thread is already stopped. No need to acquire any other lock.
-            // HDFS-16689. Disable inProgress to use the streaming mechanism
-            editsTailed = doTailEdits(false);
+            editsTailed = doTailEdits();
           } catch (InterruptedException e) {
             throw new IOException(e);
           } finally {
             NameNode.getNameNodeMetrics().addEditLogTailTime(
-                timer.monotonicNow() - startTime);
+                Time.monotonicNow() - startTime);
           }
         } while(editsTailed > 0);
         return null;
       }
     });
   }
-
+  
   @VisibleForTesting
   public long doTailEdits() throws IOException, InterruptedException {
-    return doTailEdits(inProgressOk);
-  }
-
-  private long doTailEdits(boolean enableInProgress) throws IOException, InterruptedException {
-    Collection<EditLogInputStream> streams;
-    FSImage image = namesystem.getFSImage();
-
-    long lastTxnId = image.getLastAppliedTxId();
-    LOG.debug("lastTxnId: {}", lastTxnId);
-    long startTime = timer.monotonicNow();
-    try {
-      streams = editLog.selectInputStreams(lastTxnId + 1, 0,
-          null, enableInProgress, true);
-    } catch (IOException ioe) {
-      // This is acceptable. If we try to tail edits in the middle of an edits
-      // log roll, i.e. the last one has been finalized but the new inprogress
-      // edits file hasn't been started yet.
-      LOG.warn("Edits tailer failed to find any streams. Will try again " +
-          "later.", ioe);
-      return 0;
-    } finally {
-      NameNode.getNameNodeMetrics().addEditLogFetchTime(
-          timer.monotonicNow() - startTime);
-    }
     // Write lock needs to be interruptible here because the 
     // transitionToActive RPC takes the write lock before calling
     // tailer.stop() -- so if we're not interruptible, it will
     // deadlock.
     namesystem.writeLockInterruptibly();
     try {
-      long currentLastTxnId = image.getLastAppliedTxId();
-      if (lastTxnId != currentLastTxnId) {
-        LOG.warn("The currentLastTxnId({}) is different from preLastTxtId({})",
-            currentLastTxnId, lastTxnId);
-        return 0;
+      FSImage image = namesystem.getFSImage();
+
+      long lastTxnId = image.getLastAppliedTxId();
+      
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("lastTxnId: " + lastTxnId);
       }
-      LOG.debug("edit streams to load from: {}.", streams.size());
+      Collection<EditLogInputStream> streams;
+      long startTime = Time.monotonicNow();
+      try {
+        streams = editLog.selectInputStreams(lastTxnId + 1, 0,
+            null, inProgressOk, true);
+      } catch (IOException ioe) {
+        // This is acceptable. If we try to tail edits in the middle of an edits
+        // log roll, i.e. the last one has been finalized but the new inprogress
+        // edits file hasn't been started yet.
+        LOG.warn("Edits tailer failed to find any streams. Will try again " +
+            "later.", ioe);
+        return 0;
+      } finally {
+        NameNode.getNameNodeMetrics().addEditLogFetchTime(
+            Time.monotonicNow() - startTime);
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("edit streams to load from: " + streams.size());
+      }
       
       // Once we have streams to load, errors encountered are legitimate cause
       // for concern, so we don't catch them here. Simple errors reading from
@@ -376,17 +366,20 @@ public class EditLogTailer {
         editsLoaded = elie.getNumEditsLoaded();
         throw elie;
       } finally {
-        LOG.debug("Loaded {} edits starting from txid {}.", editsLoaded, lastTxnId);
+        if (editsLoaded > 0 || LOG.isDebugEnabled()) {
+          LOG.debug(String.format("Loaded %d edits starting from txid %d ",
+              editsLoaded, lastTxnId));
+        }
         NameNode.getNameNodeMetrics().addNumEditLogLoaded(editsLoaded);
       }
 
       if (editsLoaded > 0) {
-        lastLoadTimeMs = timer.monotonicNow();
+        lastLoadTimeMs = monotonicNow();
       }
       lastLoadedTxnId = image.getLastAppliedTxId();
       return editsLoaded;
     } finally {
-      namesystem.writeUnlock("doTailEdits");
+      namesystem.writeUnlock();
     }
   }
 
@@ -402,7 +395,7 @@ public class EditLogTailer {
    */
   private boolean tooLongSinceLastLoad() {
     return logRollPeriodMs >= 0 && 
-      (timer.monotonicNow() - lastRollTimeMs) > logRollPeriodMs;
+      (monotonicNow() - lastRollTimeMs) > logRollPeriodMs;
   }
 
   /**
@@ -414,8 +407,6 @@ public class EditLogTailer {
     return new MultipleNameNodeProxy<Void>() {
       @Override
       protected Void doWork() throws IOException {
-        LOG.info("Triggering log rolling to the remote NameNode, " +
-            "active NameNode = {}", currentNN.getIpcAddress());
         cachedActiveProxy.rollEditLog();
         return null;
       }
@@ -427,13 +418,14 @@ public class EditLogTailer {
    */
   @VisibleForTesting
   void triggerActiveLogRoll() {
+    LOG.info("Triggering log roll on remote NameNode");
     Future<Void> future = null;
     try {
       future = rollEditsRpcExecutor.submit(getNameNodeProxy());
       future.get(rollEditsTimeoutMs, TimeUnit.MILLISECONDS);
-      this.lastRollTimeMs = timer.monotonicNow();
+      lastRollTimeMs = monotonicNow();
       lastRollTriggerTxId = lastLoadedTxnId;
-    } catch (ExecutionException | InterruptedException e) {
+    } catch (ExecutionException e) {
       LOG.warn("Unable to trigger a roll of the active NN", e);
     } catch (TimeoutException e) {
       if (future != null) {
@@ -441,28 +433,9 @@ public class EditLogTailer {
       }
       LOG.warn(String.format(
           "Unable to finish rolling edits in %d ms", rollEditsTimeoutMs));
+    } catch (InterruptedException e) {
+      LOG.warn("Unable to trigger a roll of the active NN", e);
     }
-  }
-
-  /**
-   * This is only to be used by tests. For source code, the only way to
-   * set timer is by using EditLogTailer constructor.
-   *
-   * @param newTimer Timer instance provided by tests.
-   */
-  @VisibleForTesting
-  void setTimerForTest(final Timer newTimer) {
-    this.timer = newTimer;
-  }
-
-  /**
-   * Used by tests. Return Timer instance used by EditLogTailer.
-   *
-   * @return Return Timer instance used by EditLogTailer.
-   */
-  @VisibleForTesting
-  Timer getTimer() {
-    return timer;
   }
 
   @VisibleForTesting
@@ -524,7 +497,7 @@ public class EditLogTailer {
           // name system lock will be acquired to further block even the block
           // state updates.
           namesystem.cpLockInterruptibly();
-          long startTime = timer.monotonicNow();
+          long startTime = Time.monotonicNow();
           try {
             NameNode.getNameNodeMetrics().addEditLogTailInterval(
                 startTime - lastLoadTimeMs);
@@ -532,7 +505,7 @@ public class EditLogTailer {
           } finally {
             namesystem.cpUnlock();
             NameNode.getNameNodeMetrics().addEditLogTailTime(
-                timer.monotonicNow() - startTime);
+                Time.monotonicNow() - startTime);
           }
           //Update NameDirSize Metric
           if (triggeredLogRoll) {

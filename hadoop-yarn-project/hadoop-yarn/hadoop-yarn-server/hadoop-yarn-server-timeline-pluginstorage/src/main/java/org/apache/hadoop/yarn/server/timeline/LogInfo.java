@@ -21,7 +21,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -58,17 +58,7 @@ abstract class LogInfo {
     this.offset = newOffset;
   }
 
-
-  public long getLastProcessedTime() {
-    return lastProcessedTime;
-  }
-
-  public void setLastProcessedTime(long lastProcessedTime) {
-    this.lastProcessedTime = lastProcessedTime;
-  }
-
   private String attemptDirName;
-  private long lastProcessedTime = -1;
   private String filename;
   private String user;
   private long offset = 0;
@@ -118,31 +108,22 @@ abstract class LogInfo {
     FileStatus status = fs.getFileStatus(logPath);
     long numParsed = 0;
     if (status != null) {
-      long curModificationTime = status.getModificationTime();
-      if (curModificationTime > getLastProcessedTime()) {
-        long startTime = Time.monotonicNow();
-        try {
-          LOG.info("Parsing {} at offset {}", logPath, offset);
-          long count =
-              parsePath(tdm, logPath, appCompleted, jsonFactory, objMapper, fs);
-          setLastProcessedTime(curModificationTime);
-          LOG.info("Parsed {} entities from {} in {} msec", count, logPath,
-              Time.monotonicNow() - startTime);
-          numParsed += count;
-        } catch (RuntimeException e) {
-          // If AppLogs cannot parse this log, it may be corrupted or just empty
-          if (e.getCause() instanceof JsonParseException
-              && (status.getLen() > 0 || offset > 0)) {
-            // log on parse problems if the file as been read in the past or
-            // is visibly non-empty
-            LOG.info("Log {} appears to be corrupted. Skip. ", logPath);
-          } else {
-            LOG.error("Failed to parse " + logPath + " from offset " + offset,
-                e);
-          }
+      long startTime = Time.monotonicNow();
+      try {
+        LOG.debug("Parsing {} at offset {}", logPath, offset);
+        long count = parsePath(tdm, logPath, appCompleted, jsonFactory,
+            objMapper, fs);
+        LOG.info("Parsed {} entities from {} in {} msec",
+            count, logPath, Time.monotonicNow() - startTime);
+        numParsed += count;
+      } catch (RuntimeException e) {
+        // If AppLogs cannot parse this log, it may be corrupted or just empty
+        if (e.getCause() instanceof JsonParseException &&
+            (status.getLen() > 0 || offset > 0)) {
+          // log on parse problems if the file as been read in the past or
+          // is visibly non-empty
+          LOG.info("Log {} appears to be corrupted. Skip. ", logPath);
         }
-      } else {
-        LOG.info("Skip Parsing {} as there is no change", logPath);
       }
     } else {
       LOG.warn("{} no longer exists. Skip for scanning. ", logPath);
@@ -201,19 +182,21 @@ class EntityLogInfo extends LogInfo {
     long count = 0;
     TimelineEntities entities = new TimelineEntities();
     ArrayList<TimelineEntity> entityList = new ArrayList<TimelineEntity>(1);
+    long bytesParsed;
+    long bytesParsedLastBatch = 0;
     boolean postError = false;
     try {
       MappingIterator<TimelineEntity> iter = objMapper.readValues(parser,
           TimelineEntity.class);
-      long curPos;
+
       while (iter.hasNext()) {
         TimelineEntity entity = iter.next();
         String etype = entity.getEntityType();
         String eid = entity.getEntityId();
-        LOG.debug("Read entity {} of {}", eid, etype);
+        LOG.trace("Read entity {}", etype);
         ++count;
-        curPos = ((FSDataInputStream) parser.getInputSource()).getPos();
-        LOG.debug("Parser now at offset {}", curPos);
+        bytesParsed = parser.getCurrentLocation().getCharOffset() + 1;
+        LOG.trace("Parser now at offset {}", bytesParsed);
 
         try {
           LOG.debug("Adding {}({}) to store", eid, etype);
@@ -225,7 +208,8 @@ class EntityLogInfo extends LogInfo {
             LOG.warn("Error putting entity: {} ({}): {}",
                 e.getEntityId(), e.getEntityType(), e.getErrorCode());
           }
-          setOffset(curPos);
+          setOffset(getOffset() + bytesParsed - bytesParsedLastBatch);
+          bytesParsedLastBatch = bytesParsed;
           entityList.clear();
         } catch (YarnException e) {
           postError = true;
@@ -263,7 +247,8 @@ class DomainLogInfo extends LogInfo {
       ObjectMapper objMapper, UserGroupInformation ugi, boolean appCompleted)
       throws IOException {
     long count = 0;
-    long curPos;
+    long bytesParsed;
+    long bytesParsedLastBatch = 0;
     boolean putError = false;
     try {
       MappingIterator<TimelineDomain> iter = objMapper.readValues(parser,
@@ -274,12 +259,13 @@ class DomainLogInfo extends LogInfo {
         domain.setOwner(ugi.getShortUserName());
         LOG.trace("Read domain {}", domain.getId());
         ++count;
-        curPos = ((FSDataInputStream) parser.getInputSource()).getPos();
-        LOG.debug("Parser now at offset {}", curPos);
+        bytesParsed = parser.getCurrentLocation().getCharOffset() + 1;
+        LOG.trace("Parser now at offset {}", bytesParsed);
 
         try {
           tdm.putDomain(domain, ugi);
-          setOffset(curPos);
+          setOffset(getOffset() + bytesParsed - bytesParsedLastBatch);
+          bytesParsedLastBatch = bytesParsed;
         } catch (YarnException e) {
           putError = true;
           throw new IOException("Error posting domain", e);

@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
+import static org.apache.hadoop.yarn.webapp.Params.TITLE;
+import static org.mockito.Mockito.mock;
+
 import java.util.Map;
-
-import com.google.inject.Injector;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -40,11 +38,11 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.MemoryApplication
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-import static org.apache.hadoop.yarn.webapp.Params.TITLE;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
+import com.google.inject.Injector;
 
 public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
 
@@ -52,45 +50,46 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
     this.store = store;
   }
 
-  @BeforeEach
+  @Before
   public void setup() {
     store = new MemoryApplicationHistoryStore();
   }
 
   @Test
-  void testAppControllerIndex() throws Exception {
+  public void testAppControllerIndex() throws Exception {
     ApplicationHistoryManager ahManager = mock(ApplicationHistoryManager.class);
     Injector injector =
         WebAppTests.createMockInjector(ApplicationHistoryManager.class,
-            ahManager);
+          ahManager);
     AHSController controller = injector.getInstance(AHSController.class);
     controller.index();
-    assertEquals("Application History", controller.get(TITLE, "unknown"));
+    Assert
+      .assertEquals("Application History", controller.get(TITLE, "unknown"));
   }
 
   @Test
-  void testView() throws Exception {
+  public void testView() throws Exception {
     Injector injector =
         WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
-            mockApplicationHistoryClientService(5, 1, 1));
+          mockApplicationHistoryClientService(5, 1, 1));
     AHSView ahsViewInstance = injector.getInstance(AHSView.class);
 
     ahsViewInstance.render();
     WebAppTests.flushOutput(injector);
 
     ahsViewInstance.set(YarnWebParams.APP_STATE,
-        YarnApplicationState.FAILED.toString());
+      YarnApplicationState.FAILED.toString());
     ahsViewInstance.render();
     WebAppTests.flushOutput(injector);
 
     ahsViewInstance.set(YarnWebParams.APP_STATE, StringHelper.cjoin(
-        YarnApplicationState.FAILED.toString(), YarnApplicationState.KILLED));
+      YarnApplicationState.FAILED.toString(), YarnApplicationState.KILLED));
     ahsViewInstance.render();
     WebAppTests.flushOutput(injector);
   }
 
   @Test
-  void testAPPViewNaturalSortType() throws Exception {
+  public void testAPPViewNaturalSortType() throws Exception {
     Injector injector =
         WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
             mockApplicationHistoryClientService(5, 1, 1));
@@ -101,11 +100,11 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
     Map<String, String> moreParams =
         ahsViewInstance.context().requestContext().moreParams();
     String appTableColumnsMeta = moreParams.get("ui.dataTables.apps.init");
-    assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
+    Assert.assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
   }
 
   @Test
-  void testAboutPage() throws Exception {
+  public void testAboutPage() throws Exception {
     Injector injector =
         WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
             mockApplicationHistoryClientService(0, 0, 0));
@@ -119,23 +118,23 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
   }
 
   @Test
-  void testAppPage() throws Exception {
+  public void testAppPage() throws Exception {
     Injector injector =
         WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
-            mockApplicationHistoryClientService(1, 5, 1));
+          mockApplicationHistoryClientService(1, 5, 1));
     AppPage appPageInstance = injector.getInstance(AppPage.class);
 
     appPageInstance.render();
     WebAppTests.flushOutput(injector);
 
     appPageInstance.set(YarnWebParams.APPLICATION_ID, ApplicationId
-        .newInstance(0, 1).toString());
+      .newInstance(0, 1).toString());
     appPageInstance.render();
     WebAppTests.flushOutput(injector);
   }
 
   @Test
-  void testAppPageNaturalSortType() throws Exception {
+  public void testAppPageNaturalSortType() throws Exception {
     Injector injector =
         WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
             mockApplicationHistoryClientService(1, 5, 1));
@@ -147,14 +146,14 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
         appPageInstance.context().requestContext().moreParams();
     String attemptsTableColumnsMeta =
         moreParams.get("ui.dataTables.attempts.init");
-    assertTrue(attemptsTableColumnsMeta.indexOf("natural") != -1);
+    Assert.assertTrue(attemptsTableColumnsMeta.indexOf("natural") != -1);
   }
 
   @Test
-  void testAppAttemptPage() throws Exception {
+  public void testAppAttemptPage() throws Exception {
     Injector injector =
         WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
-            mockApplicationHistoryClientService(1, 1, 5));
+          mockApplicationHistoryClientService(1, 1, 5));
     AppAttemptPage appAttemptPageInstance =
         injector.getInstance(AppAttemptPage.class);
 
@@ -162,14 +161,14 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
     WebAppTests.flushOutput(injector);
 
     appAttemptPageInstance.set(YarnWebParams.APPLICATION_ATTEMPT_ID,
-        ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1)
-            .toString());
+      ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1)
+        .toString());
     appAttemptPageInstance.render();
     WebAppTests.flushOutput(injector);
   }
 
   @Test
-  void testAppAttemptPageNaturalSortType() throws Exception {
+  public void testAppAttemptPageNaturalSortType() throws Exception {
     Injector injector =
         WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
             mockApplicationHistoryClientService(1, 1, 5));
@@ -180,14 +179,14 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
     Map<String, String> moreParams =
         appAttemptPageInstance.context().requestContext().moreParams();
     String tableColumnsMeta = moreParams.get("ui.dataTables.containers.init");
-    assertTrue(tableColumnsMeta.indexOf("natural") != -1);
+    Assert.assertTrue(tableColumnsMeta.indexOf("natural") != -1);
   }
 
   @Test
-  void testContainerPage() throws Exception {
+  public void testContainerPage() throws Exception {
     Injector injector =
         WebAppTests.createMockInjector(ApplicationBaseProtocol.class,
-            mockApplicationHistoryClientService(1, 1, 1));
+          mockApplicationHistoryClientService(1, 1, 1));
     ContainerPage containerPageInstance =
         injector.getInstance(ContainerPage.class);
 
@@ -195,11 +194,11 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
     WebAppTests.flushOutput(injector);
 
     containerPageInstance.set(
-        YarnWebParams.CONTAINER_ID,
-        ContainerId
-            .newContainerId(
-                ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1),
-                1).toString());
+      YarnWebParams.CONTAINER_ID,
+      ContainerId
+        .newContainerId(
+          ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1),
+          1).toString());
     containerPageInstance.render();
     WebAppTests.flushOutput(injector);
   }
@@ -231,7 +230,7 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
 
   class MockApplicationHistoryManagerImpl extends ApplicationHistoryManagerImpl {
 
-    MockApplicationHistoryManagerImpl(ApplicationHistoryStore store) {
+    public MockApplicationHistoryManagerImpl(ApplicationHistoryStore store) {
       super();
       init(new YarnConfiguration());
       start();

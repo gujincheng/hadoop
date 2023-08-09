@@ -49,8 +49,7 @@ public interface ResourceScheduler extends YarnScheduler, Recoverable {
   /**
    * Re-initialize the <code>ResourceScheduler</code>.
    * @param conf configuration
-   * @param rmContext RMContext.
-   * @throws IOException an I/O exception has occurred.
+   * @throws IOException
    */
   void reinitialize(Configuration conf, RMContext rmContext) throws IOException;
 

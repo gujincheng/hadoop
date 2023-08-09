@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.yarn.api;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * The class to test {@link ResourceRequest}.
@@ -33,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 public class TestResourceRequest {
 
   @Test
-  void testEqualsOnExecutionTypeRequest() {
+  public void testEqualsOnExecutionTypeRequest() {
     ResourceRequest resourceRequestA =
         ResourceRequest.newInstance(Priority.newInstance(0), "localhost",
             Resource.newInstance(1024, 1), 1, false, "",
@@ -44,6 +42,6 @@ public class TestResourceRequest {
             Resource.newInstance(1024, 1), 1, false, "",
             ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED, false));
 
-    assertNotEquals(resourceRequestA, resourceRequestB);
+    Assert.assertFalse(resourceRequestA.equals(resourceRequestB));
   }
 }

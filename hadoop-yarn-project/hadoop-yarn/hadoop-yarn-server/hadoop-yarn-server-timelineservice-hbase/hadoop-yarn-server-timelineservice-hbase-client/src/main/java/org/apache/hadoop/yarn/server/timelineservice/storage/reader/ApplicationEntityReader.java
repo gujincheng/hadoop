@@ -58,6 +58,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.RowKeyPrefix
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 /**
  * Timeline entity reader for application entities that are stored in the
  * application table.
@@ -334,29 +336,21 @@ class ApplicationEntityReader extends GenericEntityReader {
 
   @Override
   protected void validateParams() {
-    if (getContext() == null) {
-      throw new NullPointerException("context shouldn't be null");
-    }
-    if (getDataToRetrieve() == null) {
-      throw new NullPointerException("data to retrieve shouldn't be null");
-    }
-    if (getContext().getClusterId() == null) {
-      throw new NullPointerException("clusterId shouldn't be null");
-    }
-    if (getContext().getEntityType() == null) {
-      throw new NullPointerException("entityType shouldn't be null");
-    }
+    Preconditions.checkNotNull(getContext(), "context shouldn't be null");
+    Preconditions.checkNotNull(
+        getDataToRetrieve(), "data to retrieve shouldn't be null");
+    Preconditions.checkNotNull(getContext().getClusterId(),
+        "clusterId shouldn't be null");
+    Preconditions.checkNotNull(getContext().getEntityType(),
+        "entityType shouldn't be null");
     if (isSingleEntityRead()) {
-      if (getContext().getAppId() == null) {
-        throw new NullPointerException("appId shouldn't be null");
-      }
+      Preconditions.checkNotNull(getContext().getAppId(),
+          "appId shouldn't be null");
     } else {
-      if (getContext().getUserId() == null) {
-        throw new NullPointerException("userId shouldn't be null");
-      }
-      if (getContext().getFlowName() == null) {
-        throw new NullPointerException("flowName shouldn't be null");
-      }
+      Preconditions.checkNotNull(getContext().getUserId(),
+          "userId shouldn't be null");
+      Preconditions.checkNotNull(getContext().getFlowName(),
+          "flowName shouldn't be null");
     }
   }
 
@@ -412,7 +406,7 @@ class ApplicationEntityReader extends GenericEntityReader {
       }
 
       // set start row
-      scan.withStartRow(applicationRowKey.getRowKey());
+      scan.setStartRow(applicationRowKey.getRowKey());
 
       // get the bytes for stop row
       applicationRowKeyPrefix = new ApplicationRowKeyPrefix(
@@ -420,7 +414,7 @@ class ApplicationEntityReader extends GenericEntityReader {
           context.getFlowRunId());
 
       // set stop row
-      scan.withStopRow(
+      scan.setStopRow(
           HBaseTimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(
               applicationRowKeyPrefix.getRowKeyPrefix()));
     }

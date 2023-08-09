@@ -25,19 +25,17 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSystem;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -74,6 +72,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 public class TestNodeLabelContainerAllocation {
   private final int GB = 1024;
@@ -1119,7 +1118,6 @@ public class TestNodeLabelContainerAllocation {
         RMNodeLabelsManager.NO_LABEL);
     checkNodePartitionOfRequestedPriority(app.getAppSchedulingInfo(), 2,
         RMNodeLabelsManager.NO_LABEL);
-    rm1.stop();
   }
 
   private void checkNodePartitionOfRequestedPriority(AppSchedulingInfo info,
@@ -1665,11 +1663,9 @@ public class TestNodeLabelContainerAllocation {
     };
 
     rm1.getRMContext().setNodeLabelManager(mgr);
-    Resource resource = Resource.newInstance(8 * GB, 8);
-    ((NullRMNodeLabelsManager)mgr).setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, resource);
     rm1.start();
     String nodeIdStr = "h1:1234";
-    MockNM nm1 = rm1.registerNode(nodeIdStr, resource); // label = x
+    MockNM nm1 = rm1.registerNode(nodeIdStr, 8 * GB); // label = x
 
     // launch an app to queue b1 (label = y), AM container should be launched in nm3
     MockRMAppSubmissionData data =
@@ -2322,7 +2318,6 @@ public class TestNodeLabelContainerAllocation {
     checkNumOfContainersInAnAppOnGivenNode(1, nm1.getNodeId(),
         cs.getApplicationAttempt(am4.getApplicationAttemptId()));
 
-    rm.stop();
   }
 
   @Test
@@ -2412,7 +2407,6 @@ public class TestNodeLabelContainerAllocation {
     doNMHeartbeat(rm, nm1.getNodeId(), 1);
     checkNumOfContainersInAnAppOnGivenNode(2, nm1.getNodeId(),
         cs.getApplicationAttempt(am1.getApplicationAttemptId()));
-    rm.stop();
   }
 
   @Test
@@ -2525,7 +2519,6 @@ public class TestNodeLabelContainerAllocation {
     doNMHeartbeat(rm, nm1.getNodeId(), 10);
     checkNumOfContainersInAnAppOnGivenNode(1, nm1.getNodeId(),
         cs.getApplicationAttempt(am2.getApplicationAttemptId()));
-    rm.stop();
   }
 
   @Test

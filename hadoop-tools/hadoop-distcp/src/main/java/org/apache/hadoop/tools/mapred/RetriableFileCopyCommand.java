@@ -23,11 +23,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.EnumSet;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.tools.DistCpOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -50,12 +45,7 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.tools.util.RetriableCommand;
 import org.apache.hadoop.tools.util.ThrottledInputStream;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
-import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
-import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class extends RetriableCommand to implement the copy of files,
@@ -115,20 +105,18 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   @SuppressWarnings("unchecked")
   @Override
   protected Object doExecute(Object... arguments) throws Exception {
-    assert arguments.length == 5 : "Unexpected argument list.";
+    assert arguments.length == 4 : "Unexpected argument list.";
     CopyListingFileStatus source = (CopyListingFileStatus)arguments[0];
     assert !source.isDirectory() : "Unexpected file-status. Expected file.";
     Path target = (Path)arguments[1];
     Mapper.Context context = (Mapper.Context)arguments[2];
     EnumSet<FileAttribute> fileAttributes
             = (EnumSet<FileAttribute>)arguments[3];
-    FileStatus sourceStatus = (FileStatus)arguments[4];
-    return doCopy(source, target, context, fileAttributes, sourceStatus);
+    return doCopy(source, target, context, fileAttributes);
   }
 
   private long doCopy(CopyListingFileStatus source, Path target,
-      Mapper.Context context, EnumSet<FileAttribute> fileAttributes,
-      FileStatus sourceStatus)
+      Mapper.Context context, EnumSet<FileAttribute> fileAttributes)
       throws IOException {
     LOG.info("Copying {} to {}", source.getPath(), target);
 
@@ -152,7 +140,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       long offset = (action == FileAction.APPEND) ?
           targetFS.getFileStatus(target).getLen() : source.getChunkOffset();
       long bytesRead = copyToFile(targetPath, targetFS, source,
-          offset, context, fileAttributes, sourceChecksum, sourceStatus);
+          offset, context, fileAttributes, sourceChecksum);
 
       if (!source.isSplit()) {
         DistCpUtils.compareFileLengthsAndChecksums(source.getLen(), sourceFS,
@@ -191,26 +179,15 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     return null;
   }
 
-  @SuppressWarnings("checkstyle:parameternumber")
   private long copyToFile(Path targetPath, FileSystem targetFS,
       CopyListingFileStatus source, long sourceOffset, Mapper.Context context,
-      EnumSet<FileAttribute> fileAttributes, final FileChecksum sourceChecksum,
-      FileStatus sourceStatus)
+      EnumSet<FileAttribute> fileAttributes, final FileChecksum sourceChecksum)
       throws IOException {
     FsPermission permission = FsPermission.getFileDefault().applyUMask(
         FsPermission.getUMask(targetFS.getConf()));
     int copyBufferSize = context.getConfiguration().getInt(
         DistCpOptionSwitch.COPY_BUFFER_SIZE.getConfigLabel(),
         DistCpConstants.COPY_BUFFER_SIZE_DEFAULT);
-    boolean preserveEC = getFileAttributeSettings(context)
-        .contains(DistCpOptions.FileAttribute.ERASURECODINGPOLICY);
-
-    ErasureCodingPolicy ecPolicy = null;
-    if (preserveEC && sourceStatus.isErasureCoded()
-        && sourceStatus instanceof HdfsFileStatus
-        && targetFS instanceof DistributedFileSystem) {
-      ecPolicy = ((HdfsFileStatus) sourceStatus).getErasureCodingPolicy();
-    }
     final OutputStream outStream;
     if (action == FileAction.OVERWRITE) {
       // If there is an erasure coding policy set on the target directory,
@@ -220,24 +197,10 @@ public class RetriableFileCopyCommand extends RetriableCommand {
           targetFS, targetPath);
       final long blockSize = getBlockSize(fileAttributes, source,
           targetFS, targetPath);
-      FSDataOutputStream out;
-      ChecksumOpt checksumOpt = getChecksumOpt(fileAttributes, sourceChecksum);
-      if (!preserveEC || ecPolicy == null) {
-        out = targetFS.create(targetPath, permission,
-            EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
-            repl, blockSize, context, checksumOpt);
-      } else {
-        DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
-        DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
-            dfs.createFile(targetPath).permission(permission).create()
-                .overwrite(true).bufferSize(copyBufferSize).replication(repl)
-                .blockSize(blockSize).progress(context).recursive()
-                .ecPolicyName(ecPolicy.getName());
-        if (checksumOpt != null) {
-          builder.checksumOpt(checksumOpt);
-        }
-        out = builder.build();
-      }
+      FSDataOutputStream out = targetFS.create(targetPath, permission,
+          EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE),
+          copyBufferSize, repl, blockSize, context,
+          getChecksumOpt(fileAttributes, sourceChecksum));
       outStream = new BufferedOutputStream(out);
     } else {
       outStream = new BufferedOutputStream(targetFS.append(targetPath,
@@ -365,11 +328,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       FileSystem fs = path.getFileSystem(conf);
       float bandwidthMB = conf.getFloat(DistCpConstants.CONF_LABEL_BANDWIDTH_MB,
               DistCpConstants.DEFAULT_BANDWIDTH_MB);
-      // open with sequential read, but not whole-file
-      FSDataInputStream in = awaitFuture(fs.openFile(path)
-          .opt(FS_OPTION_OPENFILE_READ_POLICY,
-              FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
-          .build());
+      FSDataInputStream in = fs.open(path);
       return new ThrottledInputStream(in, bandwidthMB * 1024 * 1024);
     }
     catch (IOException e) {

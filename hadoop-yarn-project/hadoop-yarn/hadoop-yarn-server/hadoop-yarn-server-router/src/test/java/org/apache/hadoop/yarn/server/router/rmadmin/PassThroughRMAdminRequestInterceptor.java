@@ -50,14 +50,10 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
 
 /**
- * Mock interceptor that does not do anything other than forwarding it to the
- * next interceptor in the chain.
+ * Mock intercepter that does not do anything other than forwarding it to the
+ * next intercepter in the chain.
  */
 public class PassThroughRMAdminRequestInterceptor
     extends AbstractRMAdminRequestInterceptor {
@@ -158,15 +154,4 @@ public class PassThroughRMAdminRequestInterceptor
     return getNextInterceptor().mapAttributesToNodes(request);
   }
 
-  @Override
-  public DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
-      throws YarnException, IOException {
-    return getNextInterceptor().deregisterSubCluster(request);
-  }
-
-  @Override
-  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
-      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
-    return getNextInterceptor().saveFederationQueuePolicy(request);
-  }
 }

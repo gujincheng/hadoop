@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import javax.annotation.Nullable;
-
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Base class of operations in the store.
@@ -37,7 +37,7 @@ public abstract class AbstractStoreOperation {
   /**
    * Audit Span.
    */
-  private final AuditSpan auditSpan;
+  private AuditSpan auditSpan;
 
   /**
    * Constructor.
@@ -45,11 +45,8 @@ public abstract class AbstractStoreOperation {
    * stores it for later.
    * @param storeContext store context.
    */
-  protected AbstractStoreOperation(final @Nullable StoreContext storeContext) {
-    this(storeContext,
-        storeContext != null
-        ? storeContext.getActiveAuditSpan()
-        : null);
+  protected AbstractStoreOperation(final StoreContext storeContext) {
+    this(storeContext, storeContext.getActiveAuditSpan());
   }
 
   /**
@@ -57,11 +54,10 @@ public abstract class AbstractStoreOperation {
    * @param storeContext store context.
    * @param auditSpan active span
    */
-  protected AbstractStoreOperation(
-      final @Nullable StoreContext storeContext,
+  protected AbstractStoreOperation(final StoreContext storeContext,
       final AuditSpan auditSpan) {
-    this.storeContext = storeContext;
-    this.auditSpan = auditSpan;
+    this.storeContext = checkNotNull(storeContext);
+    this.auditSpan = checkNotNull(auditSpan);
   }
 
   /**
@@ -74,7 +70,7 @@ public abstract class AbstractStoreOperation {
 
   /**
    * Get the audit span this object was created with.
-   * @return the current span or null
+   * @return the current span
    */
   public AuditSpan getAuditSpan() {
     return auditSpan;
@@ -84,8 +80,6 @@ public abstract class AbstractStoreOperation {
    * Activate the audit span.
    */
   public void activateAuditSpan() {
-    if (auditSpan != null) {
-      auditSpan.activate();
-    }
+    auditSpan.activate();
   }
 }

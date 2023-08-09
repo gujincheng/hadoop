@@ -275,7 +275,7 @@ public class TestIOUtils {
     File dir = new File("testListDirectory");
     Files.createDirectory(dir.toPath());
     try {
-      Set<String> entries = new HashSet<>();
+      Set<String> entries = new HashSet<String>();
       entries.add("entry1");
       entries.add("entry2");
       entries.add("entry3");

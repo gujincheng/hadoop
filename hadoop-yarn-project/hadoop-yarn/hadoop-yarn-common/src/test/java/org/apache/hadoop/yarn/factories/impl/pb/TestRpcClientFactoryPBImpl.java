@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.yarn.factories.impl.pb;
 
-import java.net.InetSocketAddress;
-
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
+import org.junit.Test;
+
+import java.net.InetSocketAddress;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
@@ -34,7 +33,7 @@ import static org.mockito.Mockito.verify;
  */
 public class TestRpcClientFactoryPBImpl {
   @Test
-  void testToUseCustomClassloader() throws Exception {
+  public void testToUseCustomClassloader() throws Exception {
     Configuration configuration = mock(Configuration.class);
     RpcClientFactoryPBImpl rpcClientFactoryPB = RpcClientFactoryPBImpl.get();
     try {

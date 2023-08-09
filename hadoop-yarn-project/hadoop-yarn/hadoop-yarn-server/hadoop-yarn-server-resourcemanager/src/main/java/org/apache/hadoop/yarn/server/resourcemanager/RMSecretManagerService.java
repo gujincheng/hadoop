@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 public class RMSecretManagerService extends AbstractService {
 
@@ -44,8 +43,7 @@ public class RMSecretManagerService extends AbstractService {
 
   /**
    * Construct the service.
-   * @param conf Configuration.
-   * @param rmContext RMContext.
+   *
    */
   public RMSecretManagerService(Configuration conf, RMContextImpl rmContext) {
     super(RMSecretManagerService.class.getName());
@@ -137,13 +135,9 @@ public class RMSecretManagerService extends AbstractService {
     long tokenRenewInterval =
         conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
             YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
-    long removeScanInterval =
-        conf.getTimeDuration(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
-        YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
-        TimeUnit.MILLISECONDS);
 
     return new RMDelegationTokenSecretManager(secretKeyInterval,
-        tokenMaxLifetime, tokenRenewInterval, removeScanInterval, rmContext);
+        tokenMaxLifetime, tokenRenewInterval, 3600000, rmContext);
   }
 
 }

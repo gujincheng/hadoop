@@ -54,10 +54,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonParser;
+import org.codehaus.jackson.JsonToken;
 import org.slf4j.Logger;
 
 
@@ -485,7 +484,7 @@ public final class DynoInfraUtils {
     final Set<String> dataNodesToReport = new HashSet<>();
 
     JsonFactory fac = new JsonFactory();
-    JsonParser parser = fac.createParser(IOUtils
+    JsonParser parser = fac.createJsonParser(IOUtils
         .toInputStream(liveNodeJsonString, StandardCharsets.UTF_8.name()));
 
     int objectDepth = 0;
@@ -555,7 +554,7 @@ public final class DynoInfraUtils {
     }
     InputStream in = conn.getInputStream();
     JsonFactory fac = new JsonFactory();
-    JsonParser parser = fac.createParser(in);
+    JsonParser parser = fac.createJsonParser(in);
     if (parser.nextToken() != JsonToken.START_OBJECT
         || parser.nextToken() != JsonToken.FIELD_NAME
         || !parser.getCurrentName().equals("beans")

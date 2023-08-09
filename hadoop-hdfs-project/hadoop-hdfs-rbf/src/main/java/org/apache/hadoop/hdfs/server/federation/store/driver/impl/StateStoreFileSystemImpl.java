@@ -28,14 +28,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
@@ -45,7 +44,7 @@ import org.slf4j.LoggerFactory;
 /**
  * {@link StateStoreDriver} implementation based on a filesystem. The common
  * implementation uses HDFS as a backend. The path can be specified setting
- * dfs.federation.router.store.driver.fs.path=hdfs://host:port/path/to/store.
+ * dfs.federation.router.driver.fs.path=hdfs://host:port/path/to/store.
  */
 public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
 
@@ -83,8 +82,17 @@ public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
   @Override
   protected boolean rename(String src, String dst) {
     try {
-      FileUtil.rename(fs, new Path(src), new Path(dst), Options.Rename.OVERWRITE);
-      return true;
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem)fs;
+        dfs.rename(new Path(src), new Path(dst), Options.Rename.OVERWRITE);
+        return true;
+      } else {
+        // Replace should be atomic but not available
+        if (fs.exists(new Path(dst))) {
+          fs.delete(new Path(dst), true);
+        }
+        return fs.rename(new Path(src), new Path(dst));
+      }
     } catch (Exception e) {
       LOG.error("Cannot rename {} to {}", src, dst, e);
       return false;
@@ -118,14 +126,7 @@ public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
   }
 
   @Override
-  protected int getConcurrentFilesAccessNumThreads() {
-    return getConf().getInt(RBFConfigKeys.FEDERATION_STORE_FS_ASYNC_THREADS,
-        RBFConfigKeys.FEDERATION_STORE_FS_ASYNC_THREADS_DEFAULT);
-  }
-
-  @Override
   public void close() throws Exception {
-    super.close();
     if (fs != null) {
       fs.close();
     }
@@ -147,8 +148,7 @@ public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
   }
 
   @Override
-  @VisibleForTesting
-  public <T extends BaseRecord> BufferedWriter getWriter(String pathName) {
+  protected <T extends BaseRecord> BufferedWriter getWriter(String pathName) {
     BufferedWriter writer = null;
     Path path = new Path(pathName);
     try {

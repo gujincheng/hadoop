@@ -20,12 +20,11 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.runc;
 
 import org.apache.hadoop.classification.InterfaceStability;
+import org.codehaus.jackson.annotate.JsonRawValue;
+import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import java.util.List;
 import java.util.Map;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonRawValue;
 
 /**
  *  This class is used by the
@@ -36,7 +35,7 @@ import com.fasterxml.jackson.annotation.JsonRawValue;
  *  a JSON object named ociRuntimeConfig that mirrors the
  *  OCI runtime specification.
  */
-@JsonInclude(JsonInclude.Include.NON_DEFAULT)
+@JsonSerialize(include=JsonSerialize.Inclusion.NON_DEFAULT)
 @InterfaceStability.Unstable
 public class RuncContainerExecutorConfig {
   final private String version;
@@ -165,7 +164,7 @@ public class RuncContainerExecutorConfig {
   /**
    * This class is a Java representation of an OCI image layer.
    */
-  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
   @InterfaceStability.Unstable
   public static class OCILayer {
     final private String mediaType;
@@ -193,7 +192,7 @@ public class RuncContainerExecutorConfig {
    * This class is a Java representation of the OCI Runtime Specification.
    */
   @InterfaceStability.Unstable
-  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
   public static class OCIRuntimeConfig {
     final private OCIRootConfig root;
     final private List<OCIMount> mounts;
@@ -255,7 +254,7 @@ public class RuncContainerExecutorConfig {
      * This class is a Java representation of the oci root config section
      * of the OCI Runtime Specification.
      */
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
     public static class OCIRootConfig {
       public String getPath() {
         return path;
@@ -282,7 +281,7 @@ public class RuncContainerExecutorConfig {
      * This class is a Java representation of the oci mount section
      * of the OCI Runtime Specification.
      */
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
     public static class OCIMount {
       final private String destination;
       final private String type;
@@ -330,7 +329,7 @@ public class RuncContainerExecutorConfig {
      * This class is a Java representation of the oci process section
      * of the OCI Runtime Specification.
      */
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
     public static class OCIProcessConfig {
       final private boolean terminal;
       final private ConsoleSize consoleSize;
@@ -423,7 +422,7 @@ public class RuncContainerExecutorConfig {
        * This class is a Java representation of the console size section
        * of the OCI Runtime Specification.
        */
-      @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+      @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
       public static class ConsoleSize {
         public int getHeight() {
           return height;
@@ -451,7 +450,7 @@ public class RuncContainerExecutorConfig {
        * This class is a Java representation of the rlimits section
        * of the OCI Runtime Specification.
        */
-      @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+      @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
       public static class RLimits {
         public String getType() {
           return type;
@@ -485,7 +484,7 @@ public class RuncContainerExecutorConfig {
        * This class is a Java representation of the capabilities section
        * of the OCI Runtime Specification.
        */
-      @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+      @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
       public static class Capabilities {
         final private List<String> effective;
         final private List<String> bounding;
@@ -555,7 +554,7 @@ public class RuncContainerExecutorConfig {
      * This class is a Java representation of the oci hooks section
      * of the OCI Runtime Specification.
      */
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
     public static class OCIHooksConfig {
       final private List<HookType> prestart;
       final private List<HookType> poststart;
@@ -588,7 +587,7 @@ public class RuncContainerExecutorConfig {
        * This class is a Java representation of the hook type section
        * of the OCI Runtime Specification.
        */
-      @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+      @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
       public static class HookType {
         final private String path;
         final private List<String> args;
@@ -651,7 +650,7 @@ public class RuncContainerExecutorConfig {
      * This class is a Java representation of the oci linux config section
      * of the OCI Runtime Specification.
      */
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
     public static class OCILinuxConfig {
       final private List<Namespace> namespaces;
       final private List<IDMapping> uidMappings;
@@ -769,7 +768,7 @@ public class RuncContainerExecutorConfig {
        * This class is a Java representation of the idmapping section
        * of the OCI Runtime Specification.
        */
-      @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+      @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
       public static class IDMapping {
         final private int containerID;
         final private int hostID;
@@ -803,7 +802,7 @@ public class RuncContainerExecutorConfig {
        * This class is a Java representation of the device section
        * of the OCI Runtime Specification.
        */
-      @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+      @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
       public static class Device {
         final private String type;
         final private String path;
@@ -862,7 +861,7 @@ public class RuncContainerExecutorConfig {
        * This class is a Java representation of the resources section
        * of the OCI Runtime Specification.
        */
-      @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+      @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
       public static class Resources {
         final private List<Device> device;
         final private Memory memory;
@@ -928,7 +927,7 @@ public class RuncContainerExecutorConfig {
          * This class is a Java representation of the device section
          * of the OCI Runtime Specification.
          */
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
         public static class Device {
           final private boolean allow;
           final private String type;
@@ -974,7 +973,7 @@ public class RuncContainerExecutorConfig {
          * This class is a Java representation of the memory section
          * of the OCI Runtime Specification.
          */
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
         public static class Memory {
           final private long limit;
           final private long reservation;
@@ -1033,7 +1032,7 @@ public class RuncContainerExecutorConfig {
          * This class is a Java representation of the cpu section
          * of the OCI Runtime Specification.
          */
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
         public static class CPU {
           final private long quota;
           final private long period;
@@ -1093,7 +1092,7 @@ public class RuncContainerExecutorConfig {
          * This class is a Java representation of the blockio section
          * of the OCI Runtime Specification.
          */
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
         public static class BlockIO {
           final private int weight;
           final private int leafWeight;
@@ -1154,7 +1153,7 @@ public class RuncContainerExecutorConfig {
            * This class is a Java representation of the weight device section
            * of the OCI Runtime Specification.
            */
-          @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+          @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
           public static class WeightDevice {
             final private long major;
             final private long minor;
@@ -1194,7 +1193,7 @@ public class RuncContainerExecutorConfig {
            * This class is a Java representation of the throttle device section
            * of the OCI Runtime Specification.
            */
-          @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+          @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
           public static class ThrottleDevice {
             final private long major;
             final private long minor;
@@ -1228,7 +1227,7 @@ public class RuncContainerExecutorConfig {
          * This class is a Java representation of the huge page limits section
          * of the OCI Runtime Specification.
          */
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
         public static class HugePageLimits {
           final private String pageSize;
           final private long limit;
@@ -1255,7 +1254,7 @@ public class RuncContainerExecutorConfig {
          * This class is a Java representation of the network section
          * of the OCI Runtime Specification.
          */
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
         public static class Network {
           final private int classID;
           final private List<NetworkPriority> priorities;
@@ -1281,7 +1280,7 @@ public class RuncContainerExecutorConfig {
            * This class is a Java representation of the network priority section
            * of the OCI Runtime Specification.
            */
-          @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+          @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
           public static class NetworkPriority {
             final private String name;
             final private int priority;
@@ -1309,7 +1308,7 @@ public class RuncContainerExecutorConfig {
          * This class is a Java representation of the pid section
          * of the OCI Runtime Specification.
          */
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
         public static class PID {
           final private long limit;
 
@@ -1330,7 +1329,7 @@ public class RuncContainerExecutorConfig {
          * This class is a Java representation of the rdma section
          * of the OCI Runtime Specification.
          */
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
         public static class RDMA {
           final private int hcaHandles;
           final private int hcaObjects;
@@ -1358,7 +1357,7 @@ public class RuncContainerExecutorConfig {
        * This class is a Java representation of the intelrdt section
        * of the OCI Runtime Specification.
        */
-      @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+      @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
       public static class IntelRdt {
         final private String closID;
         final private String l3CacheSchema;
@@ -1392,7 +1391,7 @@ public class RuncContainerExecutorConfig {
        * This class is a Java representation of the sysctl section
        * of the OCI Runtime Specification.
        */
-      @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+      @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
       public static class Sysctl {
         // for kernel params
       }
@@ -1401,7 +1400,7 @@ public class RuncContainerExecutorConfig {
        * This class is a Java representation of the seccomp section
        * of the OCI Runtime Specification.
        */
-      @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+      @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
       public static class Seccomp {
         final private String defaultAction;
         final private List<String> architectures;
@@ -1434,7 +1433,7 @@ public class RuncContainerExecutorConfig {
          * This class is a Java representation of the syscall section
          * of the OCI Runtime Specification.
          */
-        @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+        @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
         public static class Syscall {
           final private List<String> names;
           final private String action;
@@ -1467,7 +1466,7 @@ public class RuncContainerExecutorConfig {
            * This class is a Java representation of the seccomp arguments
            * of the OCI Runtime Specification.
            */
-          @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+          @JsonSerialize(include = JsonSerialize.Inclusion.NON_DEFAULT)
           public static class SeccompArg {
             final private int index;
             final private long value;

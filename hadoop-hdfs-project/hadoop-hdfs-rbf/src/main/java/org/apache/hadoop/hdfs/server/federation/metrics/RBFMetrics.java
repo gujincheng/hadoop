@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.federation.metrics;
 
-import static org.apache.hadoop.metrics2.impl.MsInfo.ProcessName;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
@@ -50,7 +49,6 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
-import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -81,14 +79,8 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
-import org.apache.hadoop.hdfs.web.JsonUtil;
-import org.apache.hadoop.metrics2.MetricsSystem;
-import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.metrics2.util.Metrics2Util;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
@@ -97,7 +89,7 @@ import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Implementation of the Router metrics collector.
@@ -108,16 +100,12 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   private static final Logger LOG =
       LoggerFactory.getLogger(RBFMetrics.class);
 
-  private final MetricsRegistry registry = new MetricsRegistry("RBFMetrics");
-
   /** Format for a date. */
   private static final String DATE_FORMAT = "yyyy/MM/dd HH:mm:ss";
 
   /** Prevent holding the page from load too long. */
   private final long timeOut;
 
-  /** Enable/Disable getNodeUsage. **/
-  private boolean enableGetDNUsage;
 
   /** Router interface. */
   private final Router router;
@@ -137,8 +125,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   private MountTableStore mountTableStore;
   /** Router state store. */
   private RouterStore routerStore;
-  /** The number of top token owners reported in metrics. */
-  private int topTokenRealOwners;
+
 
   public RBFMetrics(Router router) throws IOException {
     this.router = router;
@@ -180,20 +167,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     Configuration conf = router.getConfig();
     this.timeOut = conf.getTimeDuration(RBFConfigKeys.DN_REPORT_TIME_OUT,
         RBFConfigKeys.DN_REPORT_TIME_OUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
-    this.enableGetDNUsage = conf.getBoolean(RBFConfigKeys.DFS_ROUTER_ENABLE_GET_DN_USAGE_KEY,
-        RBFConfigKeys.DFS_ROUTER_ENABLE_GET_DN_USAGE_DEFAULT);
-    this.topTokenRealOwners = conf.getInt(
-        RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY,
-        RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT);
 
-    registry.tag(ProcessName, "Router");
-    MetricsSystem ms = DefaultMetricsSystem.instance();
-    ms.register(RBFMetrics.class.getName(), "RBFActivity Metrics", this);
-  }
-
-  @VisibleForTesting
-  public void setEnableGetDNUsage(boolean enableGetDNUsage) {
-    this.enableGetDNUsage = enableGetDNUsage;
   }
 
   /**
@@ -206,8 +180,6 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     if (this.federationBeanName != null) {
       MBeans.unregister(federationBeanName);
     }
-    MetricsSystem ms = DefaultMetricsSystem.instance();
-    ms.unregisterSource(RBFMetrics.class.getName());
   }
 
   @Override
@@ -302,7 +274,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
       // Dump mount table entries information into JSON
       for (MountTable entry : orderedMounts) {
-        // Summarize destinations
+        // Sumarize destinations
         Set<String> nameservices = new LinkedHashSet<>();
         Set<String> paths = new LinkedHashSet<>();
         for (RemoteLocation location : entry.getDestinations()) {
@@ -483,65 +455,53 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
-  @Metric({"NumLiveNodes", "Number of live data nodes"})
   public int getNumLiveNodes() {
     return getNameserviceAggregatedInt(
         MembershipStats::getNumOfActiveDatanodes);
   }
 
   @Override
-  @Metric({"NumDeadNodes", "Number of dead data nodes"})
   public int getNumDeadNodes() {
     return getNameserviceAggregatedInt(MembershipStats::getNumOfDeadDatanodes);
   }
 
   @Override
-  @Metric({"NumStaleNodes", "Number of stale data nodes"})
   public int getNumStaleNodes() {
     return getNameserviceAggregatedInt(
         MembershipStats::getNumOfStaleDatanodes);
   }
 
   @Override
-  @Metric({"NumDecommissioningNodes", "Number of Decommissioning data nodes"})
   public int getNumDecommissioningNodes() {
     return getNameserviceAggregatedInt(
         MembershipStats::getNumOfDecommissioningDatanodes);
   }
 
   @Override
-  @Metric({"NumDecomLiveNodes", "Number of decommissioned Live data nodes"})
   public int getNumDecomLiveNodes() {
     return getNameserviceAggregatedInt(
         MembershipStats::getNumOfDecomActiveDatanodes);
   }
 
   @Override
-  @Metric({"NumDecomDeadNodes", "Number of decommissioned dead data nodes"})
   public int getNumDecomDeadNodes() {
     return getNameserviceAggregatedInt(
         MembershipStats::getNumOfDecomDeadDatanodes);
   }
 
   @Override
-  @Metric({"NumInMaintenanceLiveDataNodes",
-      "Number of IN_MAINTENANCE live data nodes"})
   public int getNumInMaintenanceLiveDataNodes() {
     return getNameserviceAggregatedInt(
         MembershipStats::getNumOfInMaintenanceLiveDataNodes);
   }
 
   @Override
-  @Metric({"NumInMaintenanceDeadDataNodes",
-      "Number of IN_MAINTENANCE dead data nodes"})
   public int getNumInMaintenanceDeadDataNodes() {
     return getNameserviceAggregatedInt(
         MembershipStats::getNumOfInMaintenanceDeadDataNodes);
   }
 
   @Override
-  @Metric({"NumEnteringMaintenanceDataNodes",
-      "Number of ENTERING_MAINTENANCE data nodes"})
   public int getNumEnteringMaintenanceDataNodes() {
     return getNameserviceAggregatedInt(
         MembershipStats::getNumOfEnteringMaintenanceDataNodes);
@@ -549,34 +509,35 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
   @Override // NameNodeMXBean
   public String getNodeUsage() {
-    double median = 0;
-    double max = 0;
-    double min = 0;
-    double dev = 0;
+    float median = 0;
+    float max = 0;
+    float min = 0;
+    float dev = 0;
 
     final Map<String, Map<String, Object>> info = new HashMap<>();
     try {
-      DatanodeInfo[] live = null;
-      if (this.enableGetDNUsage) {
-        RouterRpcServer rpcServer = this.router.getRpcServer();
-        live = rpcServer.getDatanodeReport(DatanodeReportType.LIVE, false, timeOut);
-      } else {
-        LOG.debug("Getting node usage is disabled.");
-      }
+      RouterRpcServer rpcServer = this.router.getRpcServer();
+      DatanodeInfo[] live = rpcServer.getDatanodeReport(
+          DatanodeReportType.LIVE, false, timeOut);
 
-      if (live != null && live.length > 0) {
-        double[] usages = new double[live.length];
+      if (live.length > 0) {
+        float totalDfsUsed = 0;
+        float[] usages = new float[live.length];
         int i = 0;
         for (DatanodeInfo dn : live) {
           usages[i++] = dn.getDfsUsedPercent();
+          totalDfsUsed += dn.getDfsUsedPercent();
         }
+        totalDfsUsed /= live.length;
         Arrays.sort(usages);
         median = usages[usages.length / 2];
         max = usages[usages.length - 1];
         min = usages[0];
 
-        StandardDeviation deviation = new StandardDeviation();
-        dev = deviation.evaluate(usages);
+        for (i = 0; i < usages.length; i++) {
+          dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
+        }
+        dev = (float) Math.sqrt(dev / usages.length);
       }
     } catch (IOException e) {
       LOG.error("Cannot get the live nodes: {}", e.getMessage());
@@ -593,41 +554,34 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
-  @Metric({"NumBlocks", "Total number of blocks"})
   public long getNumBlocks() {
     return getNameserviceAggregatedLong(MembershipStats::getNumOfBlocks);
   }
 
   @Override
-  @Metric({"NumOfMissingBlocks", "Number of missing blocks"})
   public long getNumOfMissingBlocks() {
     return getNameserviceAggregatedLong(MembershipStats::getNumOfBlocksMissing);
   }
 
   @Override
-  @Metric({"NumOfBlocksPendingReplication",
-      "Number of blocks pending replication"})
   public long getNumOfBlocksPendingReplication() {
     return getNameserviceAggregatedLong(
         MembershipStats::getNumOfBlocksPendingReplication);
   }
 
   @Override
-  @Metric({"NumOfBlocksUnderReplicated", "Number of blocks under replication"})
   public long getNumOfBlocksUnderReplicated() {
     return getNameserviceAggregatedLong(
         MembershipStats::getNumOfBlocksUnderReplicated);
   }
 
   @Override
-  @Metric({"NumOfBlocksPendingDeletion", "Number of blocks pending deletion"})
   public long getNumOfBlocksPendingDeletion() {
     return getNameserviceAggregatedLong(
         MembershipStats::getNumOfBlocksPendingDeletion);
   }
 
   @Override
-  @Metric({"NumFiles", "Number of files"})
   public long getNumFiles() {
     return getNameserviceAggregatedLong(MembershipStats::getNumOfFiles);
   }
@@ -702,7 +656,6 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
-  @Metric({"CurrentTokensCount", "Number of router's current tokens"})
   public long getCurrentTokensCount() {
     RouterSecurityManager mgr =
         this.router.getRpcServer().getRouterSecurityManager();
@@ -713,71 +666,8 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
-  public String getTopTokenRealOwners() {
-    String topTokenRealOwnersString = "";
-    RouterSecurityManager mgr = this.router.getRpcServer().getRouterSecurityManager();
-    if (mgr != null && mgr.getSecretManager() != null) {
-      try {
-        List<Metrics2Util.NameValuePair> topOwners = mgr.getSecretManager()
-                .getTopTokenRealOwners(this.topTokenRealOwners);
-        topTokenRealOwnersString = JsonUtil.toJsonString(topOwners);
-      } catch (Exception e) {
-        LOG.error("Unable to fetch the top token real owners as string {}", e.getMessage());
-      }
-    }
-    return topTokenRealOwnersString;
-  }
-
-  @Override
   public boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
-  }
-
-  @Override
-  public int getCorruptFilesCount() {
-    return getNameserviceAggregatedInt(MembershipStats::getCorruptFilesCount);
-  }
-
-  @Override
-  public long getScheduledReplicationBlocks() {
-    return getNameserviceAggregatedLong(
-        MembershipStats::getScheduledReplicationBlocks);
-  }
-
-  @Override
-  public long getNumberOfMissingBlocksWithReplicationFactorOne() {
-    return getNameserviceAggregatedLong(
-        MembershipStats::getNumberOfMissingBlocksWithReplicationFactorOne);
-  }
-
-  @Override
-  public long getHighestPriorityLowRedundancyReplicatedBlocks() {
-    return getNameserviceAggregatedLong(
-        MembershipStats::getHighestPriorityLowRedundancyReplicatedBlocks);
-  }
-
-  @Override
-  public long getHighestPriorityLowRedundancyECBlocks() {
-    return getNameserviceAggregatedLong(
-        MembershipStats::getHighestPriorityLowRedundancyECBlocks);
-  }
-
-  @Override
-  public int getPendingSPSPaths() {
-    return getNameserviceAggregatedInt(
-        MembershipStats::getPendingSPSPaths);
-  }
-
-  @Override
-  @Metric({"RouterFederationRenameCount", "Number of federation rename"})
-  public int getRouterFederationRenameCount() {
-    return this.router.getRpcServer().getRouterFederationRenameCount();
-  }
-
-  @Override
-  @Metric({"SchedulerJobCount", "Number of scheduler job"})
-  public int getSchedulerJobCount() {
-    return this.router.getRpcServer().getSchedulerJobCount();
   }
 
   @Override
@@ -874,7 +764,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
   /**
    * Fetches the most active namenode memberships for all known nameservices.
-   * The fetched membership may or may not be active. Excludes expired
+   * The fetched membership may not or may not be active. Excludes expired
    * memberships.
    * @throws IOException if the query could not be performed.
    * @return List of the most active NNs from each known nameservice.
@@ -893,7 +783,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
       // Fetch the most recent namenode registration
       String nsId = nsInfo.getNameserviceId();
       List<? extends FederationNamenodeContext> nns =
-          namenodeResolver.getNamenodesForNameserviceId(nsId, false);
+          namenodeResolver.getNamenodesForNameserviceId(nsId);
       if (nns != null) {
         FederationNamenodeContext nn = nns.get(0);
         if (nn instanceof MembershipState) {

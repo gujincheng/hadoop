@@ -19,14 +19,11 @@ package org.apache.hadoop.yarn.sls;
 
 import org.apache.commons.math3.random.JDKRandomGenerator;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.codehaus.jackson.map.JsonMappingException;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.sls.synthetic.SynthJob;
 import org.apache.hadoop.yarn.sls.synthetic.SynthTraceJobProducer;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonFactoryBuilder;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -35,10 +32,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 
-import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
+import static org.codehaus.jackson.JsonParser.Feature.INTERN_FIELD_NAMES;
+import static org.codehaus.jackson.map.DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES;
 
 /**
  * Simple test class driving the {@code SynthTraceJobProducer}, and validating
@@ -58,9 +56,8 @@ public class TestSynthJobGeneration {
         + "{\"time\": 60, \"weight\": 2}," + "{\"time\": 90, \"weight\": 1}"
         + "]}";
 
-    JsonFactoryBuilder jsonFactoryBuilder = new JsonFactoryBuilder();
-    jsonFactoryBuilder.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, true);
-    ObjectMapper mapper = new ObjectMapper(jsonFactoryBuilder.build());
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(INTERN_FIELD_NAMES, true);
     mapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
     SynthTraceJobProducer.Workload wl =
         mapper.readValue(workloadJson, SynthTraceJobProducer.Workload.class);
@@ -89,7 +86,7 @@ public class TestSynthJobGeneration {
     }
 
     Assert.assertTrue(bucket0 > 0);
-    assertEquals(0, bucket1);
+    Assert.assertTrue(bucket1 == 0);
     Assert.assertTrue(bucket2 > 0);
     Assert.assertTrue(bucket3 > 0);
     Assert.assertTrue(bucket2 > bucket0);
@@ -179,9 +176,8 @@ public class TestSynthJobGeneration {
   @Test
   public void testSample() throws IOException {
 
-    JsonFactoryBuilder jsonFactoryBuilder = new JsonFactoryBuilder();
-    jsonFactoryBuilder.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, true);
-    ObjectMapper mapper = new ObjectMapper(jsonFactoryBuilder.build());
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(INTERN_FIELD_NAMES, true);
     mapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     JDKRandomGenerator rand = new JDKRandomGenerator();
@@ -239,7 +235,7 @@ public class TestSynthJobGeneration {
       mapper.readValue(invalidDistJson, SynthTraceJobProducer.Sample.class);
       Assert.fail();
     } catch (JsonMappingException e) {
-      Assert.assertTrue(e.getMessage().startsWith("Cannot construct instance of"));
+      Assert.assertTrue(e.getMessage().startsWith("Instantiation of"));
     }
   }
 
@@ -256,7 +252,7 @@ public class TestSynthJobGeneration {
     assertTrue(js.getTasks().size() > 0);
 
     for (SynthJob.SynthTask t : js.getTasks()) {
-      assertNotNull(t.getType());
+      assertTrue(t.getType() != null);
       assertTrue(t.getTime() > 0);
       assertTrue(t.getMemory() > 0);
       assertTrue(t.getVcores() > 0);

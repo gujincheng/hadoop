@@ -27,8 +27,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb
     .AddToClusterNodeLabelsRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb
     .ReplaceLabelsOnNodeRequestPBImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,8 +40,6 @@ import java.util.Set;
  */
 public class NodeLabelMirrorOp
     extends FSNodeStoreLogOp<CommonNodeLabelsManager> {
-  private static final Logger LOG = LoggerFactory.getLogger(
-          NodeLabelMirrorOp.class);
 
   public NodeLabelMirrorOp() {
     super();
@@ -70,20 +66,15 @@ public class NodeLabelMirrorOp
             .parseDelimitedFrom(is)).getNodeLabels();
     mgr.addToCluserNodeLabels(labels);
 
-    try {
-      if (mgr.isCentralizedConfiguration() && is.available() != 0) {
-        // Only load node to labels mapping while using centralized
-        // configuration
-        Map<NodeId, Set<String>> nodeToLabels =
-                new ReplaceLabelsOnNodeRequestPBImpl(
-                        YarnServerResourceManagerServiceProtos
-                                .ReplaceLabelsOnNodeRequestProto
-                                .parseDelimitedFrom(is)).getNodeToLabels();
-        mgr.replaceLabelsOnNode(nodeToLabels);
-      }
-    } catch (Exception e) {
-      LOG.error("Errors on loading node to labels mapping while using "
-              + "centralized configuration", e);
+    if (mgr.isCentralizedConfiguration()) {
+      // Only load node to labels mapping while using centralized
+      // configuration
+      Map<NodeId, Set<String>> nodeToLabels =
+          new ReplaceLabelsOnNodeRequestPBImpl(
+              YarnServerResourceManagerServiceProtos
+                  .ReplaceLabelsOnNodeRequestProto
+                  .parseDelimitedFrom(is)).getNodeToLabels();
+      mgr.replaceLabelsOnNode(nodeToLabels);
     }
   }
 

@@ -24,7 +24,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * {@link INode} with additional fields including id, name, permission,
@@ -178,7 +178,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  public final PermissionStatus getPermissionStatus(int snapshotId) {
+  final PermissionStatus getPermissionStatus(int snapshotId) {
     return new PermissionStatus(getUserName(snapshotId), getGroupName(snapshotId),
         getFsPermission(snapshotId));
   }

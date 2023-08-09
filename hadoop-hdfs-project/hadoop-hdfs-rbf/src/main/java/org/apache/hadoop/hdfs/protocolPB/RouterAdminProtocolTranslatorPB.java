@@ -22,8 +22,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntriesRequestProto;
-import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntriesResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntryRequestProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.AddMountTableEntryResponseProto;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.DisableNameserviceRequestProto;
@@ -54,8 +52,6 @@ import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RouterGenericManager;
 import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
 import org.apache.hadoop.hdfs.server.federation.router.RouterStateManager;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameserviceRequest;
@@ -80,8 +76,6 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.AddMountTableEntriesRequestPBImpl;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.AddMountTableEntriesResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.AddMountTableEntryRequestPBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.AddMountTableEntryResponsePBImpl;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb.DisableNameserviceRequestPBImpl;
@@ -155,19 +149,6 @@ public class RouterAdminProtocolTranslatorPB
       AddMountTableEntryResponseProto response =
           rpcProxy.addMountTableEntry(null, proto);
       return new AddMountTableEntryResponsePBImpl(response);
-    } catch (ServiceException e) {
-      throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
-    }
-  }
-
-  @Override
-  public AddMountTableEntriesResponse addMountTableEntries(AddMountTableEntriesRequest request)
-      throws IOException {
-    AddMountTableEntriesRequestPBImpl requestPB = (AddMountTableEntriesRequestPBImpl) request;
-    AddMountTableEntriesRequestProto proto = requestPB.getProto();
-    try {
-      AddMountTableEntriesResponseProto response = rpcProxy.addMountTableEntries(null, proto);
-      return new AddMountTableEntriesResponsePBImpl(response);
     } catch (ServiceException e) {
       throw new IOException(ProtobufHelper.getRemoteException(e).getMessage());
     }

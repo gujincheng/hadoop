@@ -64,8 +64,8 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
    * the argument <tt>value</tt>'s size is bigger than zero, the argument
    * <tt>elementType</tt> is not be used.
    * 
-   * @param value enumSet value.
-   * @param elementType elementType.
+   * @param value
+   * @param elementType
    */
   public EnumSetWritable(EnumSet<E> value, Class<E> elementType) {
     set(value, elementType);
@@ -75,7 +75,7 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
    * Construct a new EnumSetWritable. Argument <tt>value</tt> should not be null
    * or empty.
    * 
-   * @param value enumSet value.
+   * @param value
    */
   public EnumSetWritable(EnumSet<E> value) {
     this(value, null);
@@ -88,8 +88,8 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
    * null. If the argument <tt>value</tt>'s size is bigger than zero, the
    * argument <tt>elementType</tt> is not be used.
    * 
-   * @param value enumSet Value.
-   * @param elementType elementType.
+   * @param value
+   * @param elementType
    */
   public void set(EnumSet<E> value, Class<E> elementType) {
     if ((value == null || value.size() == 0)
@@ -106,10 +106,7 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
     }
   }
 
-  /**
-   * Return the value of this EnumSetWritable.
-   * @return EnumSet.
-   */
+  /** Return the value of this EnumSetWritable. */
   public EnumSet<E> get() {
     return value;
   }

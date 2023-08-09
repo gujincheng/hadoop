@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.IOException;
+import static org.junit.Assert.assertNotNull;
 
-import org.junit.jupiter.api.Test;
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.Test;
 
 public class TestJobClientGetJob {
   
@@ -43,7 +42,7 @@ public class TestJobClientGetJob {
     os.close();
     return path;
   }
-
+  
   @SuppressWarnings("deprecation")
   @Test
   public void testGetRunningJobFromJobClient() throws Exception {
@@ -55,10 +54,10 @@ public class TestJobClientGetJob {
     FileOutputFormat.setOutputPath(conf, outputDir);
     JobClient jc = new JobClient(conf);
     RunningJob runningJob = jc.submitJob(conf);
-    assertNotNull(runningJob, "Running job");
+    assertNotNull("Running job", runningJob);
     // Check that the running job can be retrieved by ID
     RunningJob newRunningJob = jc.getJob(runningJob.getID());
-    assertNotNull(newRunningJob, "New running job");
+    assertNotNull("New running job", newRunningJob);
   }
 
 }

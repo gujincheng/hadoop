@@ -52,8 +52,6 @@ public class SerializationFactory extends Configured {
    * property from <code>conf</code>, which is a comma-delimited list of
    * classnames.
    * </p>
-   *
-   * @param conf configuration.
    */
   public SerializationFactory(Configuration conf) {
     super(conf);

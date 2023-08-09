@@ -35,7 +35,6 @@ public abstract class Nfs3Base {
   public static final Logger LOG = LoggerFactory.getLogger(Nfs3Base.class);
   private final RpcProgram rpcProgram;
   private int nfsBoundPort; // Will set after server starts
-  private SimpleTcpServer tcpServer = null;
 
   public RpcProgram getRpcProgram() {
     return rpcProgram;
@@ -62,7 +61,7 @@ public abstract class Nfs3Base {
   }
 
   private void startTCPServer() {
-    tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
+    SimpleTcpServer tcpServer = new SimpleTcpServer(rpcProgram.getPort(),
         rpcProgram, 0);
     rpcProgram.startDaemons();
     try {
@@ -85,10 +84,6 @@ public abstract class Nfs3Base {
       nfsBoundPort = 0;
     }
     rpcProgram.stopDaemons();
-    if (tcpServer != null) {
-      tcpServer.shutdown();
-      tcpServer = null;
-    }
   }
   /**
    * Priority of the nfsd shutdown hook.

@@ -25,7 +25,6 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +34,8 @@ import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.junit.After;
 import org.junit.Test;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * This test ensures the appropriate response from the system when 
@@ -153,7 +154,7 @@ public class TestDFSFinalize {
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
 
       log("Finalize NN & BP with existing previous dir", numDirs);
-      String bpid = UpgradeUtilities.getCurrentBlockPoolID(null);
+      String bpid = UpgradeUtilities.getCurrentBlockPoolID(cluster);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
       UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");

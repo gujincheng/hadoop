@@ -25,11 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -45,7 +41,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Dispatches {@link Event}s in a separate thread. Currently only single thread
@@ -96,8 +92,6 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       EventTypeMetrics> eventTypeMetricsMap;
 
   private Clock clock = new MonotonicClock();
-
-  private ThreadPoolExecutor printEventDetailsExecutor;
 
   /**
    * The thread name for dispatcher.
@@ -185,28 +179,6 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
                     YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD,
             YarnConfiguration.
                     DEFAULT_YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD);
-
-    ThreadFactory threadFactory = new ThreadFactoryBuilder()
-        .setNameFormat("PrintEventDetailsThread #%d")
-        .build();
-    // Thread pool for async print event details,
-    // to prevent wasting too much time for RM.
-    int numCorePoolSizeThreads = getConfig().getInt(
-        YarnConfiguration.YARN_DISPATCHER_PRINT_THREAD_POOL_CORE_POOL_SIZE,
-        YarnConfiguration.DEFAULT_YARN_DISPATCHER_PRINT_THREAD_POOL_CORE_POOL_SIZE);
-
-    int numMaximumPoolSizeThreads = getConfig().getInt(
-        YarnConfiguration.YARN_DISPATCHER_PRINT_THREAD_POOL_MAXIMUM_POOL_SIZE,
-        YarnConfiguration.DEFAULT_YARN_DISPATCHER_PRINT_THREAD_POOL_MAXIMUM_POOL_SIZE);
-
-    long keepAliveTime =
-         conf.getTimeDuration(YarnConfiguration.YARN_DISPATCHER_PRINT_THREAD_POOL_KEEP_ALIVE_TIME,
-         YarnConfiguration.DEFAULT_YARN_DISPATCHER_PRINT_THREAD_POOL_KEEP_ALIVE_TIME,
-         TimeUnit.SECONDS);
-
-    printEventDetailsExecutor = new ThreadPoolExecutor(
-        numCorePoolSizeThreads, numMaximumPoolSizeThreads, keepAliveTime, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<>(), threadFactory);
   }
 
   @Override
@@ -250,7 +222,6 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
         LOG.warn("Interrupted Exception while stopping", ie);
       }
     }
-    printEventDetailsExecutor.shutdownNow();
 
     // stop all the components
     super.serviceStop();
@@ -348,7 +319,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       if (qSize != 0 && qSize % detailsInterval == 0
               && lastEventDetailsQueueSizeLogged != qSize) {
         lastEventDetailsQueueSizeLogged = qSize;
-        printEventDetailsExecutor.submit(this::printEventQueueDetails);
+        printEventQueueDetails();
         printTrigger = true;
       }
       int remCapacity = eventQueue.remainingCapacity();
@@ -421,9 +392,5 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   public void addMetrics(EventTypeMetrics metrics,
       Class<? extends Enum> eventClass) {
     eventTypeMetricsMap.put(eventClass, metrics);
-  }
-
-  public int getEventQueueSize() {
-    return eventQueue.size();
   }
 }

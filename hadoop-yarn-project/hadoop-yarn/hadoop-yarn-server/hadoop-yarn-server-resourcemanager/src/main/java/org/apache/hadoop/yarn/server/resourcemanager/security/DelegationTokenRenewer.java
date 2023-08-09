@@ -73,7 +73,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 /**
  * Service to renew application delegation tokens.
@@ -88,8 +88,6 @@ public class DelegationTokenRenewer extends AbstractService {
   public static final Text HDFS_DELEGATION_KIND =
       new Text("HDFS_DELEGATION_TOKEN");
   public static final String SCHEME = "hdfs";
-
-  private volatile int lastEventQueueSizeLogged = 0;
 
   // global single timer (daemon)
   private Timer renewalTimer;
@@ -123,8 +121,8 @@ public class DelegationTokenRenewer extends AbstractService {
   private long tokenRenewerThreadTimeout;
   private long tokenRenewerThreadRetryInterval;
   private int tokenRenewerThreadRetryMaxAttempts;
-  private final LinkedBlockingQueue<DelegationTokenRenewerFuture> futures =
-      new LinkedBlockingQueue<>();
+  private final Map<DelegationTokenRenewerEvent, Future<?>> futures =
+      new ConcurrentHashMap<>();
   private boolean delegationTokenRenewerPoolTrackerFlag = true;
 
   // this config is supposedly not used by end-users.
@@ -227,16 +225,9 @@ public class DelegationTokenRenewer extends AbstractService {
       if (isServiceStarted) {
         Future<?> future =
             renewerService.submit(new DelegationTokenRenewerRunnable(evt));
-        futures.add(new DelegationTokenRenewerFuture(evt, future));
+        futures.put(evt, future);
       } else {
         pendingEventQueue.add(evt);
-        int qSize = pendingEventQueue.size();
-        if (qSize != 0 && qSize % 1000 == 0
-            && lastEventQueueSizeLogged != qSize) {
-          lastEventQueueSizeLogged = qSize;
-          LOG.info("Size of pending " +
-              "DelegationTokenRenewerEvent queue is " + qSize);
-        }
       }
     } finally {
       serviceStateLock.readLock().unlock();
@@ -632,9 +623,7 @@ public class DelegationTokenRenewer extends AbstractService {
   }
 
   /**
-   * set task to renew the token.
-   * @param token DelegationTokenToRenew.
-   * @throws IOException if an IO error occurred.
+   * set task to renew the token
    */
   @VisibleForTesting
   protected void setTimerForTokenRenewal(DelegationTokenToRenew token)
@@ -998,35 +987,33 @@ public class DelegationTokenRenewer extends AbstractService {
     @Override
     public void run() {
       while (true) {
-        DelegationTokenRenewerFuture dtrf;
-        try {
-          dtrf = futures.take();
-        } catch (InterruptedException e) {
-          LOG.debug("DelegationTokenRenewer pool tracker interrupted");
-          return;
-        }
-        DelegationTokenRenewerEvent evt = dtrf.getEvt();
-        Future<?> future = dtrf.getFuture();
-        try {
-          future.get(tokenRenewerThreadTimeout, TimeUnit.MILLISECONDS);
-        } catch (TimeoutException e) {
-          // Cancel thread and retry the same event in case of timeout.
-          if (!future.isDone() && !future.isCancelled()) {
-            future.cancel(true);
-            if (evt.getAttempt() < tokenRenewerThreadRetryMaxAttempts) {
-              renewalTimer.schedule(
-                  getTimerTask((AbstractDelegationTokenRenewerAppEvent) evt),
-                  tokenRenewerThreadRetryInterval);
-            } else {
-              LOG.info(
-                  "Exhausted max retry attempts {} in token renewer "
-                      + "thread for {}",
-                  tokenRenewerThreadRetryMaxAttempts, evt.getApplicationId());
+        for (Map.Entry<DelegationTokenRenewerEvent, Future<?>> entry : futures
+            .entrySet()) {
+          DelegationTokenRenewerEvent evt = entry.getKey();
+          Future<?> future = entry.getValue();
+          try {
+            future.get(tokenRenewerThreadTimeout, TimeUnit.MILLISECONDS);
+          } catch (TimeoutException e) {
+
+            // Cancel thread and retry the same event in case of timeout
+            if (future != null && !future.isDone() && !future.isCancelled()) {
+              future.cancel(true);
+              futures.remove(evt);
+              if (evt.getAttempt() < tokenRenewerThreadRetryMaxAttempts) {
+                renewalTimer.schedule(
+                    getTimerTask((AbstractDelegationTokenRenewerAppEvent) evt),
+                    tokenRenewerThreadRetryInterval);
+              } else {
+                LOG.info(
+                    "Exhausted max retry attempts {} in token renewer "
+                        + "thread for {}",
+                    tokenRenewerThreadRetryMaxAttempts, evt.getApplicationId());
+              }
             }
+          } catch (Exception e) {
+            LOG.info("Problem in submitting renew tasks in token renewer "
+                + "thread.", e);
           }
-        } catch (Exception e) {
-          LOG.info("Problem in submitting renew tasks in token renewer "
-              + "thread.", e);
         }
       }
     }
@@ -1191,32 +1178,6 @@ public class DelegationTokenRenewer extends AbstractService {
 
     public void setAttempt(int attempt) {
       this.attempt = attempt;
-    }
-  }
-
-  private static class DelegationTokenRenewerFuture {
-    private DelegationTokenRenewerEvent evt;
-    private Future<?> future;
-    DelegationTokenRenewerFuture(DelegationTokenRenewerEvent evt,
-        Future<?> future) {
-      this.future = future;
-      this.evt = evt;
-    }
-
-    public DelegationTokenRenewerEvent getEvt() {
-      return evt;
-    }
-
-    public void setEvt(DelegationTokenRenewerEvent evt) {
-      this.evt = evt;
-    }
-
-    public Future<?> getFuture() {
-      return future;
-    }
-
-    public void setFuture(Future<?> future) {
-      this.future = future;
     }
   }
 

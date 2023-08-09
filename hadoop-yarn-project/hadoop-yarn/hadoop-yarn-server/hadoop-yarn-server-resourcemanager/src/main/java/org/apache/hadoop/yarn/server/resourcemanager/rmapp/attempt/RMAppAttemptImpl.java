@@ -116,7 +116,7 @@ import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BoundedAppender;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
@@ -2220,22 +2220,13 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public RMAppAttemptState getPreviousState() {
-    this.readLock.lock();
-
-    try {
-      return this.stateMachine.getPreviousState();
-    } finally {
-      this.readLock.unlock();
-    }
-  }
-
-  @Override
   public YarnApplicationAttemptState createApplicationAttemptState() {
-    return RMServerUtils.convertRmAppAttemptStateToYarnApplicationAttemptState(
-        getState(),
-        stateBeforeFinalSaving
-    );
+    RMAppAttemptState state = getState();
+    // If AppAttempt is in FINAL_SAVING state, return its previous state.
+    if (state.equals(RMAppAttemptState.FINAL_SAVING)) {
+      state = stateBeforeFinalSaving;
+    }
+    return RMServerUtils.createApplicationAttemptState(state);
   }
 
   private void launchAttempt(){

@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -51,7 +50,7 @@ import org.mockito.stubbing.Answer;
 public class TestFind {
 
   @Rule
-  public Timeout timeout = new Timeout(10000, TimeUnit.MILLISECONDS);
+  public Timeout timeout = new Timeout(10000);
 
   private static FileSystem mockFs;
   private static Configuration conf;

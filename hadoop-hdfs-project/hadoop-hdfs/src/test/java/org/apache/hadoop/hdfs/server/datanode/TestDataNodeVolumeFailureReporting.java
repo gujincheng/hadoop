@@ -721,10 +721,7 @@ public class TestDataNodeVolumeFailureReporting {
     String[] absolutePaths = new String[locations.length];
     for (int count = 0; count < locations.length; count++) {
       try {
-        String location = locations[count];
-        location = location.contains("]")
-            ? location.substring(location.indexOf("]") + 1) : location;
-        absolutePaths[count] = new File(new URI(location))
+        absolutePaths[count] = new File(new URI(locations[count]))
             .getAbsolutePath();
       } catch (URISyntaxException e) {
         //if the provided location is not an URI,

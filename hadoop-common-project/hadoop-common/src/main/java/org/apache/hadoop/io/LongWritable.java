@@ -36,16 +36,10 @@ public class LongWritable implements WritableComparable<LongWritable> {
 
   public LongWritable(long value) { set(value); }
 
-  /**
-   * Set the value of this LongWritable.
-   * @param value value.
-   */
+  /** Set the value of this LongWritable. */
   public void set(long value) { this.value = value; }
 
-  /**
-   * Return the value of this LongWritable.
-   * @return value of this LongWritable.
-   */
+  /** Return the value of this LongWritable. */
   public long get() { return value; }
 
   @Override

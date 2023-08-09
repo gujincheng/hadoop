@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -67,22 +67,6 @@ public class DataNodeFaultInjector {
   public void delaySendingAckToUpstream(final String upstreamAddr)
       throws IOException {
   }
-
-  /**
-   * Used as a hook to delay sending the response of the last packet.
-   */
-  public void delayAckLastPacket() throws IOException {
-  }
-
-  /**
-   * Used as a hook to delay writing a packet to disk.
-   */
-  public void delayWriteToDisk() {}
-
-  /**
-   * Used as a hook to delay writing a packet to os cache.
-   */
-  public void delayWriteToOsCache() {}
 
   /**
    * Used as a hook to intercept the latency of sending ack.
@@ -155,11 +139,4 @@ public class DataNodeFaultInjector {
    * into an erasure coding reconstruction.
    */
   public void badDecoding(ByteBuffer[] outputs) {}
-
-  public void markSlow(String dnAddr, int[] replies) {}
-
-  /**
-   * Just delay delete replica a while.
-   */
-  public void delayDeleteReplica() {}
 }

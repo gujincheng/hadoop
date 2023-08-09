@@ -18,19 +18,17 @@
 
 package org.apache.hadoop.yarn.util;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.ScriptBasedMapping;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class TestRackResolverScriptBasedMapping {
 
   @Test
-  void testScriptName() {
+  public void testScriptName() {
     Configuration conf = new Configuration();
     conf
         .setClass(
@@ -40,7 +38,7 @@ public class TestRackResolverScriptBasedMapping {
     conf.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY,
         "testScript");
     RackResolver.init(conf);
-    assertEquals(RackResolver.getDnsToSwitchMapping().toString(),
+    Assert.assertEquals(RackResolver.getDnsToSwitchMapping().toString(),
         "script-based mapping with script testScript");
   }
 }

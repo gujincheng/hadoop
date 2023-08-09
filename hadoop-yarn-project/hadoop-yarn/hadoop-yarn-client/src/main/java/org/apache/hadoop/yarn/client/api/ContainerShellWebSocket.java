@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.client.api;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -62,23 +62,24 @@ public class ContainerShellWebSocket {
       session.getRemote().flush();
       sttySet = true;
     }
-    terminal.output().write(message.getBytes(StandardCharsets.UTF_8));
+    terminal.output().write(message.getBytes(Charset.forName("UTF-8")));
     terminal.output().flush();
   }
 
   @OnWebSocketConnect
   public void onConnect(Session s) {
     initTerminal(s);
-    LOG.info("{} connected!", s.getRemoteAddress().getHostString());
+    LOG.info(s.getRemoteAddress().getHostString() + " connected!");
   }
 
   @OnWebSocketClose
   public void onClose(Session session, int status, String reason) {
     if (status==1000) {
-      LOG.info("{} closed, status: {}", session.getRemoteAddress().getHostString(), status);
+      LOG.info(session.getRemoteAddress().getHostString() +
+          " closed, status: " + status);
     } else {
-      LOG.warn("{} closed, status:" +
-              " {} Reason: {}.", session.getRemoteAddress().getHostString(), status, reason);
+      LOG.warn(session.getRemoteAddress().getHostString() +
+          " closed, status: " + status + " Reason: " + reason);
     }
   }
 

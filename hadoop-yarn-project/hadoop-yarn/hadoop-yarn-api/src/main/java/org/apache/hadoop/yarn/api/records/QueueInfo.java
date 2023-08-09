@@ -54,17 +54,14 @@ public abstract class QueueInfo {
   
   @Private
   @Unstable
-  public static QueueInfo newInstance(String queueName,
-      String queuePath, float capacity,
+  public static QueueInfo newInstance(String queueName, float capacity,
       float maximumCapacity, float currentCapacity,
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
       String defaultNodeLabelExpression, QueueStatistics queueStatistics,
-      boolean preemptionDisabled, float weight,
-      int maxParallelApps) {
+      boolean preemptionDisabled) {
     QueueInfo queueInfo = Records.newRecord(QueueInfo.class);
     queueInfo.setQueueName(queueName);
-    queueInfo.setQueuePath(queuePath);
     queueInfo.setCapacity(capacity);
     queueInfo.setMaximumCapacity(maximumCapacity);
     queueInfo.setCurrentCapacity(currentCapacity);
@@ -75,48 +72,44 @@ public abstract class QueueInfo {
     queueInfo.setDefaultNodeLabelExpression(defaultNodeLabelExpression);
     queueInfo.setQueueStatistics(queueStatistics);
     queueInfo.setPreemptionDisabled(preemptionDisabled);
-    queueInfo.setWeight(weight);
-    queueInfo.setMaxParallelApps(maxParallelApps);
     return queueInfo;
   }
 
   @Private
   @Unstable
-  public static QueueInfo newInstance(String queueName,
-      String queuePath, float capacity,
+  public static QueueInfo newInstance(String queueName, float capacity,
       float maximumCapacity, float currentCapacity,
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
       String defaultNodeLabelExpression, QueueStatistics queueStatistics,
-      boolean preemptionDisabled, float weight, int maxParallelApps,
+      boolean preemptionDisabled,
       Map<String, QueueConfigurations> queueConfigurations) {
-    QueueInfo queueInfo = QueueInfo.newInstance(queueName, queuePath, capacity,
+    QueueInfo queueInfo = QueueInfo.newInstance(queueName, capacity,
         maximumCapacity, currentCapacity,
         childQueues, applications,
         queueState, accessibleNodeLabels,
         defaultNodeLabelExpression, queueStatistics,
-        preemptionDisabled, weight, maxParallelApps);
+        preemptionDisabled);
     queueInfo.setQueueConfigurations(queueConfigurations);
     return queueInfo;
   }
 
   @Private
   @Unstable
-  public static QueueInfo newInstance(String queueName,
-      String queuePath, float capacity,
+  public static QueueInfo newInstance(String queueName, float capacity,
       float maximumCapacity, float currentCapacity,
       List<QueueInfo> childQueues, List<ApplicationReport> applications,
       QueueState queueState, Set<String> accessibleNodeLabels,
       String defaultNodeLabelExpression, QueueStatistics queueStatistics,
-      boolean preemptionDisabled, float weight, int maxParallelApps,
+      boolean preemptionDisabled,
       Map<String, QueueConfigurations> queueConfigurations,
       boolean intraQueuePreemptionDisabled) {
-    QueueInfo queueInfo = QueueInfo.newInstance(queueName, queuePath, capacity,
+    QueueInfo queueInfo = QueueInfo.newInstance(queueName, capacity,
         maximumCapacity, currentCapacity,
         childQueues, applications,
         queueState, accessibleNodeLabels,
         defaultNodeLabelExpression, queueStatistics,
-        preemptionDisabled, weight, maxParallelApps, queueConfigurations);
+        preemptionDisabled, queueConfigurations);
     queueInfo.setIntraQueuePreemptionDisabled(intraQueuePreemptionDisabled);
     return queueInfo;
   }
@@ -132,18 +125,6 @@ public abstract class QueueInfo {
   @Private
   @Unstable
   public abstract void setQueueName(String queueName);
-
-  /**
-   * Get the <em>path</em> of the queue.
-   * @return <em>path</em> of the queue
-   */
-  @Public
-  @Stable
-  public abstract String getQueuePath();
-
-  @Private
-  @Unstable
-  public abstract void setQueuePath(String queuePath);
   
   /**
    * Get the <em>configured capacity</em> of the queue.
@@ -156,30 +137,6 @@ public abstract class QueueInfo {
   @Private
   @Unstable
   public abstract void setCapacity(float capacity);
-
-  /**
-   * Get the <em>configured weight</em> of the queue.
-   * @return <em>configured weight</em> of the queue
-   */
-  @Public
-  @Stable
-  public abstract float getWeight();
-
-  @Private
-  @Unstable
-  public abstract void setWeight(float weight);
-
-  /**
-   * Get the <em>configured max parallel apps</em> of the queue.
-   * @return <em>configured max parallel apps</em> of the queue
-   */
-  @Public
-  @Stable
-  public abstract int getMaxParallelApps();
-
-  @Private
-  @Unstable
-  public abstract void setMaxParallelApps(int maxParallelApps);
   
   /**
    * Get the <em>maximum capacity</em> of the queue.
@@ -251,7 +208,6 @@ public abstract class QueueInfo {
   
   /**
    * Set the <code>accessible node labels</code> of the queue.
-   * @param labels node label expression of the queue.
    */
   @Private
   @Unstable

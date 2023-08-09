@@ -97,9 +97,7 @@ import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Extends the {@code AbstractRequestInterceptorClient} class and provides an
@@ -109,26 +107,25 @@ import org.slf4j.LoggerFactory;
  */
 public class DefaultClientRequestInterceptor
     extends AbstractClientRequestInterceptor {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(DefaultClientRequestInterceptor.class);
   private ApplicationClientProtocol clientRMProxy;
 
   @Override
   public void init(String userName) {
     super.init(userName);
+
+    final Configuration conf = this.getConf();
     try {
-      final Configuration conf = this.getConf();
-      clientRMProxy = user.doAs(
-          (PrivilegedExceptionAction<ApplicationClientProtocol>) () ->
-               ClientRMProxy.createRMProxy(conf, ApplicationClientProtocol.class));
+      clientRMProxy =
+          user.doAs(new PrivilegedExceptionAction<ApplicationClientProtocol>() {
+            @Override
+            public ApplicationClientProtocol run() throws Exception {
+              return ClientRMProxy.createRMProxy(conf,
+                  ApplicationClientProtocol.class);
+            }
+          });
     } catch (Exception e) {
-      StringBuilder message = new StringBuilder();
-      message.append("Error while creating Router RMClient Service");
-      if (user != null) {
-        message.append(", user: " + user);
-      }
-      LOG.error(message.toString(), e);
-      throw new YarnRuntimeException(message.toString(), e);
+      throw new YarnRuntimeException(
+          "Unable to create the interface to reach the YarnRM", e);
     }
   }
 
@@ -358,5 +355,6 @@ public class DefaultClientRequestInterceptor
   @VisibleForTesting
   public void setRMClient(ApplicationClientProtocol clientRM) {
     this.clientRMProxy = clientRM;
+
   }
 }

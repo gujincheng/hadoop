@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -493,9 +493,7 @@ final class BlockChecksumHelper {
               checksumBlock(block, idx, liveBlkInfo.getToken(),
                   liveBlkInfo.getDn());
             } catch (IOException ioe) {
-              String msg = String.format("Exception while reading checksum for block %s at index " +
-                  "%d in blockGroup %s", block, idx, blockGroup);
-              LOG.warn(msg, ioe);
+              LOG.warn("Exception while reading checksum", ioe);
               // reconstruct block and calculate checksum for the failed node
               recalculateChecksum(idx, block.getNumBytes());
             }

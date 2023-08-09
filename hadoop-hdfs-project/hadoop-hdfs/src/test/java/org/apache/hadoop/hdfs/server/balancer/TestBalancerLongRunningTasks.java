@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
@@ -42,7 +41,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithUpg
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase;
 import org.apache.hadoop.io.IOUtils;
@@ -65,7 +63,6 @@ import java.util.Set;
 
 import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BLOCK_PINNING_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC;
@@ -262,7 +259,7 @@ public class TestBalancerLongRunningTasks {
     long[][] storageCapacities = new long[][]{{ramDiskStorageLimit,
             diskStorageLimit}};
     cluster.startDataNodes(conf, replicationFactor, storageTypes, true, null,
-        null, null, storageCapacities, null, false, false, false, null, null, null);
+        null, null, storageCapacities, null, false, false, false, null);
 
     cluster.triggerHeartbeats();
     Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
@@ -554,122 +551,6 @@ public class TestBalancerLongRunningTasks {
     Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     int r = Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);
     assertEquals(ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
-  }
-
-  @Test(timeout = 60000)
-  public void testBalancerWithSortTopNodes() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
-    initConf(conf);
-    conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 30000);
-
-    final long capacity = 1000L;
-    final int diffBetweenNodes = 50;
-
-    // Set up the datanodes with two groups:
-    // 5 over-utilized nodes with 80%, 85%, 90%, 95%, 100% usage
-    // 2 under-utilizaed nodes with 0%, 5% usage
-    // With sortTopNodes option, 100% and 95% used ones will be chosen.
-    final int numOfOverUtilizedDn = 5;
-    final int numOfUnderUtilizedDn = 2;
-    final int totalNumOfDn = numOfOverUtilizedDn + numOfUnderUtilizedDn;
-    final long[] capacityArray = new long[totalNumOfDn];
-    Arrays.fill(capacityArray, capacity);
-
-    cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(totalNumOfDn)
-        .simulatedCapacities(capacityArray)
-        .build();
-
-    cluster.setDataNodesDead();
-
-    List<DataNode> dataNodes = cluster.getDataNodes();
-
-    // Create top used nodes
-    for (int i = 0; i < numOfOverUtilizedDn; i++) {
-      // Bring one node alive
-      DataNodeTestUtils.triggerHeartbeat(dataNodes.get(i));
-      DataNodeTestUtils.triggerBlockReport(dataNodes.get(i));
-      // Create nodes with: 80%, 85%, 90%, 95%, 100%.
-      int capacityForThisDatanode = (int) capacity
-          - diffBetweenNodes * (numOfOverUtilizedDn - i - 1);
-      TestBalancer.createFile(cluster, new Path("test_big" + i),
-          capacityForThisDatanode, (short) 1, 0);
-      cluster.setDataNodesDead();
-    }
-
-    // Create under utilized nodes
-    for (int i = numOfUnderUtilizedDn - 1; i >= 0; i--) {
-      int index = i + numOfOverUtilizedDn;
-      // Bring one node alive
-      DataNodeTestUtils.triggerHeartbeat(dataNodes.get(index));
-      DataNodeTestUtils.triggerBlockReport(dataNodes.get(index));
-      // Create nodes with: 5%, 0%
-      int capacityForThisDatanode = diffBetweenNodes * i;
-      TestBalancer.createFile(cluster,
-          new Path("test_small" + i),
-          capacityForThisDatanode, (short) 1, 0);
-      cluster.setDataNodesDead();
-    }
-
-    // Bring all nodes alive
-    cluster.triggerHeartbeats();
-    cluster.triggerBlockReports();
-    cluster.waitFirstBRCompleted(0, 6000);
-
-    final BalancerParameters p = Balancer.Cli.parse(new String[]{
-        "-policy", BalancingPolicy.Node.INSTANCE.getName(),
-        "-threshold", "1",
-        "-sortTopNodes"
-    });
-
-    client = NameNodeProxies.createProxy(conf,
-        cluster.getFileSystem(0).getUri(),
-        ClientProtocol.class).getProxy();
-
-    // Set max-size-to-move to small number
-    // so only top two nodes will be chosen in one iteration.
-    conf.setLong(DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY, 99L);
-
-    final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
-
-    List<NameNodeConnector> connectors = NameNodeConnector
-        .newNameNodeConnectors(namenodes,
-            Balancer.class.getSimpleName(), Balancer.BALANCER_ID_PATH, conf,
-            BalancerParameters.DEFAULT.getMaxIdleIteration());
-    final Balancer b = new Balancer(connectors.get(0), p, conf);
-    Balancer.Result balancerResult = b.runOneIteration();
-
-    cluster.triggerDeletionReports();
-    cluster.triggerBlockReports();
-    cluster.triggerHeartbeats();
-
-    DatanodeInfo[] datanodeReport = client
-        .getDatanodeReport(HdfsConstants.DatanodeReportType.ALL);
-
-    long maxUsage = 0;
-    for (int i = 0; i < totalNumOfDn; i++) {
-      maxUsage = Math.max(maxUsage, datanodeReport[i].getDfsUsed());
-    }
-
-    // The 95% usage DN will have 9 blocks of 100B and 1 block of 50B - all for the same file.
-    // The HDFS balancer will choose a block to move from this node randomly. More likely it will
-    // be 100B block. Since 100B is greater than DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY which is 99L,
-    // it will stop here. Total bytes moved from this 95% DN will be 1 block of size 100B.
-    // However, chances are the first block selected to be moved from this 95% DN is the 50B block.
-    // After this block is moved, the total moved size so far would be 50B which is smaller than
-    // DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY (99L), hence it will try to move another block.
-    // The second block will always be of size 100B. So total bytes moved from this 95% DN will be
-    // 2 blocks of size (100B + 50B) 150B.
-    // Hence, overall total blocks moved by HDFS balancer would be either of these 2 options:
-    // a) 2 blocks of total size (100B + 100B)
-    // b) 3 blocks of total size (50B + 100B + 100B)
-    assertTrue("BalancerResult is not as expected. " + balancerResult,
-        (balancerResult.getBytesAlreadyMoved() == 200
-            && balancerResult.getBlocksMoved() == 2)
-            || (balancerResult.getBytesAlreadyMoved() == 250
-            && balancerResult.getBlocksMoved() == 3));
-    // 100% and 95% used nodes will be balanced, so top used will be 900
-    assertEquals(900, maxUsage);
   }
 
   @Test(timeout = 100000)

@@ -77,33 +77,21 @@ public class OutputBuffer extends FilterOutputStream {
     this.buffer = buffer;
   }
 
-  /**
-   * Returns the current contents of the buffer.
+  /** Returns the current contents of the buffer.
    *  Data is only valid to {@link #getLength()}.
-   *
-   * @return the current contents of the buffer.
    */
   public byte[] getData() { return buffer.getData(); }
 
-  /**
-   * Returns the length of the valid data currently in the buffer.
-   * @return the length of the valid data
-   *          currently in the buffer.
-   */
+  /** Returns the length of the valid data currently in the buffer. */
   public int getLength() { return buffer.getLength(); }
 
-  /** @return Resets the buffer to empty. */
+  /** Resets the buffer to empty. */
   public OutputBuffer reset() {
     buffer.reset();
     return this;
   }
 
-  /**
-   * Writes bytes from a InputStream directly into the buffer.
-   * @param in input in.
-   * @param length input length.
-   * @throws IOException raised on errors performing I/O.
-   */
+  /** Writes bytes from a InputStream directly into the buffer. */
   public void write(InputStream in, int length) throws IOException {
     buffer.write(in, length);
   }

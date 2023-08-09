@@ -17,11 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * Test for HBaseTimelineStorageUtils.convertApplicationIdToString(),
@@ -31,11 +29,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 public class TestCustomApplicationIdConversion {
   @Test
-  void testConvertAplicationIdToString() {
+  public void testConvertAplicationIdToString() {
     ApplicationId applicationId = ApplicationId.newInstance(0, 1);
     String applicationIdStr =
         HBaseTimelineSchemaUtils.convertApplicationIdToString(applicationId);
-    assertEquals(applicationId,
+    Assert.assertEquals(applicationId,
         ApplicationId.fromString(applicationIdStr));
   }
 }

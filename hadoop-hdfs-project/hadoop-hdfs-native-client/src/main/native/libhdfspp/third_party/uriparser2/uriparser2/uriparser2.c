@@ -71,11 +71,9 @@ static const char *copy_path(const UriPathSegmentA *ps, char **buffer) {
 static int parse_int(const char *first, const char *after_last) {
 	const int size = after_last - first;
 	if (size) {
-                char* buffer = (char*) malloc(size + 1);
+		char buffer[size + 1];
 		memcpyz(buffer, first, size);
-                const int value = atoi(buffer);
-                free(buffer);
-                return value;
+		return atoi(buffer);
 	}
 	return 0;
 }

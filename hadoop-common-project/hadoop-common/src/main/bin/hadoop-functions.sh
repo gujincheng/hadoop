@@ -213,7 +213,7 @@ function hadoop_privilege_check
   [[ "${EUID}" = 0 ]]
 }
 
-## @description  Execute a command via sudo when running as root
+## @description  Execute a command via su when running as root
 ## @description  if the given user is found or exit with
 ## @description  failure if not.
 ## @description  otherwise just run it.  (This is intended to
@@ -224,14 +224,14 @@ function hadoop_privilege_check
 ## @param        user
 ## @param        commandstring
 ## @return       exitstatus
-function hadoop_sudo
+function hadoop_su
 {
   declare user=$1
   shift
 
   if hadoop_privilege_check; then
     if hadoop_verify_user_resolves user; then
-       sudo -u "${user}" -- "$@"
+       su -l "${user}" -- "$@"
     else
       hadoop_error "ERROR: Refusing to run as root: ${user} account is not found. Aborting."
       return 1
@@ -241,7 +241,7 @@ function hadoop_sudo
   fi
 }
 
-## @description  Execute a command via sudo when running as root
+## @description  Execute a command via su when running as root
 ## @description  with extra support for commands that might
 ## @description  legitimately start as root (e.g., datanode)
 ## @description  (This is intended to
@@ -259,7 +259,7 @@ function hadoop_uservar_su
   #
   # if $EUID != 0, then exec
   # if $EUID =0 then
-  #    if hdfs_subcmd_user is defined, call hadoop_sudo to exec
+  #    if hdfs_subcmd_user is defined, call hadoop_su to exec
   #    if hdfs_subcmd_user is not defined, error
   #
   # For secure daemons, this means both the secure and insecure env vars need to be
@@ -283,7 +283,7 @@ function hadoop_uservar_su
     svar=$(hadoop_build_custom_subcmd_var "${program}" "${command}" SECURE_USER)
 
     if [[ -n "${!uvar}" ]]; then
-      hadoop_sudo "${!uvar}" "$@"
+      hadoop_su "${!uvar}" "$@"
     elif [[ -n "${!svar}" ]]; then
       ## if we are here, then SECURE_USER with no USER defined
       ## we are already privileged, so just run the command and hope
@@ -2046,8 +2046,7 @@ function hadoop_start_secure_daemon_wrapper
     hadoop_error "ERROR: Cannot disconnect ${daemonname} process $!"
   fi
   # capture the ulimit output
-  #shellcheck disable=SC2024
-  sudo -u "${HADOOP_SECURE_USER}" bash -c "ulimit -a" >> "${jsvcoutfile}" 2>&1
+  su "${HADOOP_SECURE_USER}" -c 'bash -c "ulimit -a"' >> "${jsvcoutfile}" 2>&1
   #shellcheck disable=SC2086
   if ! ps -p $! >/dev/null 2>&1; then
     return 1
@@ -2192,13 +2191,6 @@ function hadoop_daemon_handler
   case ${daemonmode} in
     status)
       hadoop_status_daemon "${daemon_pidfile}"
-      if [[ $? == 0 ]]; then
-        echo "${daemonname} is running as process $(cat "${daemon_pidfile}")."
-      elif [[ $? == 1 ]]; then
-        echo "${daemonname} is stopped."
-      else
-        hadoop_error "hadoop_status_daemon error."
-      fi
       exit $?
     ;;
 

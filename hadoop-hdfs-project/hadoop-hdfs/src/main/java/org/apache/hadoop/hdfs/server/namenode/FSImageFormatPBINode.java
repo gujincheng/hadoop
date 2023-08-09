@@ -23,9 +23,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -72,7 +72,7 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
@@ -227,7 +227,8 @@ public final class FSImageFormatPBINode {
       LOG.info("Loading the INodeDirectory section in parallel with {} sub-" +
               "sections", sections.size());
       CountDownLatch latch = new CountDownLatch(sections.size());
-      final List<IOException> exceptions = Collections.synchronizedList(new ArrayList<>());
+      final CopyOnWriteArrayList<IOException> exceptions =
+          new CopyOnWriteArrayList<>();
       for (FileSummary.Section s : sections) {
         service.submit(() -> {
           InputStream ins = null;
@@ -236,7 +237,8 @@ public final class FSImageFormatPBINode {
                 compressionCodec);
             loadINodeDirectorySection(ins);
           } catch (Exception e) {
-            LOG.error("An exception occurred loading INodeDirectories in parallel", e);
+            LOG.error("An exception occurred loading INodeDirectories in " +
+                "parallel", e);
             exceptions.add(new IOException(e));
           } finally {
             latch.countDown();
@@ -422,7 +424,8 @@ public final class FSImageFormatPBINode {
       long expectedInodes = 0;
       CountDownLatch latch = new CountDownLatch(sections.size());
       AtomicInteger totalLoaded = new AtomicInteger(0);
-      final List<IOException> exceptions = Collections.synchronizedList(new ArrayList<>());
+      final CopyOnWriteArrayList<IOException> exceptions =
+          new CopyOnWriteArrayList<>();
 
       for (int i=0; i < sections.size(); i++) {
         FileSummary.Section s = sections.get(i);

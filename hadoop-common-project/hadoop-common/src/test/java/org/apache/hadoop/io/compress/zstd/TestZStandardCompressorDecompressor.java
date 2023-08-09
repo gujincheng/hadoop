@@ -16,10 +16,10 @@
 package org.apache.hadoop.io.compress.zstd;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
@@ -198,16 +198,18 @@ public class TestZStandardCompressorDecompressor {
   @Test
   public void testCompressorDecompressorLogicWithCompressionStreams()
       throws Exception {
+    DataOutputStream deflateOut = null;
     DataInputStream inflateIn = null;
     int byteSize = 1024 * 100;
     byte[] bytes = generate(byteSize);
     int bufferSize = IO_FILE_BUFFER_SIZE_DEFAULT;
-    DataOutputBuffer compressedDataBuffer = new DataOutputBuffer();
-    CompressionOutputStream deflateFilter =
-        new CompressorStream(compressedDataBuffer, new ZStandardCompressor(),
-            bufferSize);
-    try (DataOutputStream deflateOut =
-             new DataOutputStream(new BufferedOutputStream(deflateFilter))) {
+    try {
+      DataOutputBuffer compressedDataBuffer = new DataOutputBuffer();
+      CompressionOutputStream deflateFilter =
+          new CompressorStream(compressedDataBuffer, new ZStandardCompressor(),
+              bufferSize);
+      deflateOut =
+          new DataOutputStream(new BufferedOutputStream(deflateFilter));
       deflateOut.write(bytes, 0, bytes.length);
       deflateOut.flush();
       deflateFilter.finish();
@@ -227,7 +229,8 @@ public class TestZStandardCompressorDecompressor {
       assertArrayEquals("original array not equals compress/decompressed array",
           result, bytes);
     } finally {
-      IOUtils.closeStream(inflateIn);
+      IOUtils.closeQuietly(deflateOut);
+      IOUtils.closeQuietly(inflateIn);
     }
   }
 
@@ -285,8 +288,8 @@ public class TestZStandardCompressorDecompressor {
               "original array not equals compress/decompressed array", bytes,
               result);
     } finally {
-      IOUtils.closeStream(deflateOut);
-      IOUtils.closeStream(inflateIn);
+      IOUtils.closeQuietly(deflateOut);
+      IOUtils.closeQuietly(inflateIn);
     }
   }
 
@@ -414,15 +417,18 @@ public class TestZStandardCompressorDecompressor {
             codec.createDecompressor());
 
     byte[] toDecompress = new byte[100];
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
     byte[] decompressedResult;
     int totalFileSize = 0;
-    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-      int result = toDecompress.length;
+    int result = toDecompress.length;
+    try {
       while ((result = inputStream.read(toDecompress, 0, result)) != -1) {
         baos.write(toDecompress, 0, result);
         totalFileSize += result;
       }
       decompressedResult = baos.toByteArray();
+    } finally {
+      IOUtils.closeQuietly(baos);
     }
 
     assertEquals(decompressedResult.length, totalFileSize);
@@ -488,16 +494,20 @@ public class TestZStandardCompressorDecompressor {
     ZStandardCodec codec = new ZStandardCodec();
     codec.setConf(CONFIGURATION);
     Decompressor decompressor = codec.createDecompressor();
+    CompressionInputStream cis =
+        codec.createInputStream(inputStream, decompressor);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
     byte[] resultOfDecompression;
-    try (CompressionInputStream cis =
-             codec.createInputStream(inputStream, decompressor);
-         ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+    try {
       byte[] buffer = new byte[100];
       int n;
       while ((n = cis.read(buffer, 0, buffer.length)) != -1) {
         baos.write(buffer, 0, n);
       }
       resultOfDecompression = baos.toByteArray();
+    } finally {
+      IOUtils.closeQuietly(baos);
+      IOUtils.closeQuietly(cis);
     }
 
     byte[] expected = FileUtils.readFileToByteArray(uncompressedFile);

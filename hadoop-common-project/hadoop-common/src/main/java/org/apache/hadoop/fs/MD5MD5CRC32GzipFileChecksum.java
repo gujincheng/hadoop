@@ -28,13 +28,7 @@ public class MD5MD5CRC32GzipFileChecksum extends MD5MD5CRC32FileChecksum {
     this(0, 0, null);
   }
 
-  /**
-   * Create a MD5FileChecksum.
-   *
-   * @param bytesPerCRC bytesPerCRC.
-   * @param crcPerBlock crcPerBlock.
-   * @param md5 md5.
-   */
+  /** Create a MD5FileChecksum */
   public MD5MD5CRC32GzipFileChecksum(int bytesPerCRC, long crcPerBlock, MD5Hash md5) {
     super(bytesPerCRC, crcPerBlock, md5);
   }

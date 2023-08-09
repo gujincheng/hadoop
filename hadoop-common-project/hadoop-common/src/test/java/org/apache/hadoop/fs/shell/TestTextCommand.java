@@ -25,14 +25,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
@@ -48,19 +49,22 @@ public class TestTextCommand {
   private static final String TEXT_FILENAME =
     new File(TEST_ROOT_DIR, "testtextfile.txt").toURI().getPath();
 
-  private static final String SEPARATOR = System.getProperty("line.separator");
-
   /**
    * Tests whether binary Avro data files are displayed correctly.
    */
   @Test (timeout = 30000)
   public void testDisplayForAvroFiles() throws Exception {
     String expectedOutput =
-        "{\"station\":\"011990-99999\",\"time\":-619524000000,\"temp\":0}" + SEPARATOR
-        + "{\"station\":\"011990-99999\",\"time\":-619506000000,\"temp\":22}" + SEPARATOR
-        + "{\"station\":\"011990-99999\",\"time\":-619484400000,\"temp\":-11}" + SEPARATOR
-        + "{\"station\":\"012650-99999\",\"time\":-655531200000,\"temp\":111}" + SEPARATOR
-        + "{\"station\":\"012650-99999\",\"time\":-655509600000,\"temp\":78}" + SEPARATOR;
+      "{\"station\":\"011990-99999\",\"time\":-619524000000,\"temp\":0}" +
+      System.getProperty("line.separator") +
+      "{\"station\":\"011990-99999\",\"time\":-619506000000,\"temp\":22}" +
+      System.getProperty("line.separator") +
+      "{\"station\":\"011990-99999\",\"time\":-619484400000,\"temp\":-11}" +
+      System.getProperty("line.separator") +
+      "{\"station\":\"012650-99999\",\"time\":-655531200000,\"temp\":111}" +
+      System.getProperty("line.separator") +
+      "{\"station\":\"012650-99999\",\"time\":-655509600000,\"temp\":78}" +
+      System.getProperty("line.separator");
 
     String output = readUsingTextCommand(AVRO_FILENAME,
                                          generateWeatherAvroBinaryData());
@@ -103,16 +107,11 @@ public class TestTextCommand {
           throws Exception {
     createFile(fileName, fileContents);
 
-    Configuration conf = new Configuration();
-    URI localPath = new URI(fileName);
-    return readUsingTextCommand(localPath, conf);
-  }
-  // Read a file using Display.Text class.
-  private String readUsingTextCommand(URI uri, Configuration conf)
-      throws Exception {
     // Prepare and call the Text command's protected getInputStream method
     // using reflection.
-    PathData pathData = new PathData(uri, conf);
+    Configuration conf = new Configuration();
+    URI localPath = new URI(fileName);
+    PathData pathData = new PathData(localPath, conf);
     Display.Text text = new Display.Text() {
       @Override
       public InputStream getInputStream(PathData item) throws IOException {
@@ -120,13 +119,13 @@ public class TestTextCommand {
       }
     };
     text.setConf(conf);
-    InputStream stream = text.getInputStream(pathData);
+    InputStream stream = (InputStream) text.getInputStream(pathData);
     return inputStreamToString(stream);
   }
 
   private String inputStreamToString(InputStream stream) throws IOException {
     StringWriter writer = new StringWriter();
-    IOUtils.copy(stream, writer, StandardCharsets.UTF_8);
+    IOUtils.copy(stream, writer, Charset.defaultCharset());
     return writer.toString();
   }
 
@@ -235,22 +234,6 @@ public class TestTextCommand {
     };
 
     return contents;
-  }
-
-  @Test
-  public void testDisplayForNonWritableSequenceFile() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
-    Path path = new Path(String.valueOf(TEST_ROOT_DIR), "NonWritableSequenceFile");
-    SequenceFile.Writer writer = SequenceFile.createWriter(conf, SequenceFile.Writer.file(path),
-        SequenceFile.Writer.keyClass(String.class), SequenceFile.Writer.valueClass(String.class));
-    writer.append("Key1", "Value1");
-    writer.append("Key2", "Value2");
-    writer.close();
-    String expected = "Key1\tValue1" + SEPARATOR + "Key2\tValue2" + SEPARATOR;
-    URI uri = path.toUri();
-    System.out.println(expected);
-    assertEquals(expected, readUsingTextCommand(uri, conf));
   }
 }
 

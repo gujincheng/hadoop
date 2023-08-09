@@ -95,7 +95,7 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
     PlanQueue planQueue = (PlanQueue)queue;
     try {
       ReservationQueue resQueue =
-          new ReservationQueue(cs.getQueueContext(), currResId, planQueue);
+          new ReservationQueue(cs, currResId, planQueue);
       cs.addQueue(resQueue);
     } catch (SchedulerDynamicEditException e) {
       LOG.warn(
@@ -115,7 +115,7 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
     if (cs.getQueue(defReservationId) == null) {
       try {
         ReservationQueue defQueue =
-            new ReservationQueue(cs.getQueueContext(), defReservationId, planQueue);
+            new ReservationQueue(cs, defReservationId, planQueue);
         cs.addQueue(defQueue);
       } catch (SchedulerDynamicEditException e) {
         LOG.warn(

@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.time.Duration;
 
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
+import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentationImpl;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -33,7 +35,6 @@ import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
@@ -47,6 +48,9 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTr
  * still be instantiated without one bound to any filesystem.
  */
 public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
+
+  public static final MetastoreInstrumentation
+      METASTORE_INSTRUMENTATION = new MetastoreInstrumentationImpl();
 
   public static final S3AInputStreamStatistics
       EMPTY_INPUT_STREAM_STATISTICS = new EmptyInputStreamStatistics();
@@ -64,6 +68,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
   public static final StatisticsFromAwsSdk
       EMPTY_STATISTICS_FROM_AWS_SDK = new EmptyStatisticsFromAwsSdk();
+
+  @Override
+  public MetastoreInstrumentation getS3GuardInstrumentation() {
+    return METASTORE_INSTRUMENTATION;
+  }
 
   @Override
   public S3AInputStreamStatistics newInputStreamStatistics() {
@@ -138,7 +147,6 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     public DurationTracker trackDuration(String key, long count) {
       return stubDurationTracker();
     }
-
   }
 
   /**
@@ -196,17 +204,6 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void readVectoredOperationStarted(int numIncomingRanges,
-                                             int numCombinedRanges) {
-
-    }
-
-    @Override
-    public void readVectoredBytesDiscarded(int discarded) {
-
-    }
-
-    @Override
     public void close() {
 
     }
@@ -218,41 +215,6 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public void unbuffered() {
-
-    }
-
-    @Override
-    public DurationTracker prefetchOperationStarted() {
-      return stubDurationTracker();
-    }
-
-    @Override
-    public void prefetchOperationCompleted() {
-
-    }
-
-    @Override
-    public void blockAddedToFileCache() {
-
-    }
-
-    @Override
-    public void blockRemovedFromFileCache() {
-
-    }
-
-    @Override
-    public void executorAcquired(Duration timeInQueue) {
-
-    }
-
-    @Override
-    public void memoryAllocated(int size) {
-
-    }
-
-    @Override
-    public void memoryFreed(int size) {
 
     }
 
@@ -385,11 +347,6 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
       return stubDurationTracker();
     }
 
-    @Override
-    public DurationTracker initiateInnerStreamClose(final boolean abort) {
-      return stubDurationTracker();
-    }
-
   }
 
   /**
@@ -430,11 +387,6 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     @Override
     public void jobCompleted(final boolean success) {
     }
-
-    @Override
-    public IOStatisticsStore getIOStatistics() {
-      return null;
-    }
   }
 
   private static final class EmptyBlockOutputStreamStatistics
@@ -442,22 +394,22 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
       implements BlockOutputStreamStatistics {
 
     @Override
-    public void blockUploadQueued(final long blockSize) {
+    public void blockUploadQueued(final int blockSize) {
     }
 
     @Override
     public void blockUploadStarted(final Duration timeInQueue,
-        final long blockSize) {
+        final int blockSize) {
     }
 
     @Override
     public void blockUploadCompleted(final Duration timeSinceUploadStarted,
-        final long blockSize) {
+        final int blockSize) {
     }
 
     @Override
     public void blockUploadFailed(final Duration timeSinceUploadStarted,
-        final long blockSize) {
+        final int blockSize) {
     }
 
     @Override

@@ -18,41 +18,39 @@
 
 package org.apache.hadoop.yarn;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
 
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateResponsePBImpl;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.Test;
 
 public class TestRecordFactory {
-
+  
   @Test
-  void testPbRecordFactory() {
+  public void testPbRecordFactory() {
     RecordFactory pbRecordFactory = RecordFactoryPBImpl.get();
-
+    
     try {
       AllocateResponse response =
           pbRecordFactory.newRecordInstance(AllocateResponse.class);
-      assertEquals(AllocateResponsePBImpl.class, response.getClass());
+      Assert.assertEquals(AllocateResponsePBImpl.class, response.getClass());
     } catch (YarnRuntimeException e) {
       e.printStackTrace();
-      fail("Failed to crete record");
+      Assert.fail("Failed to crete record");
     }
-
+    
     try {
       AllocateRequest response =
           pbRecordFactory.newRecordInstance(AllocateRequest.class);
-      assertEquals(AllocateRequestPBImpl.class, response.getClass());
+      Assert.assertEquals(AllocateRequestPBImpl.class, response.getClass());
     } catch (YarnRuntimeException e) {
       e.printStackTrace();
-      fail("Failed to crete record");
+      Assert.fail("Failed to crete record");
     }
   }
 

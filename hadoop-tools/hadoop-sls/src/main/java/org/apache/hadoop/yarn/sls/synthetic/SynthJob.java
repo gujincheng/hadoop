@@ -184,9 +184,9 @@ public class SynthJob implements JobStory {
       int num = task.count.getInt();
       String taskType = task.type;
       long memory = task.max_memory.getLong();
-      memory = Math.max(memory, MIN_MEMORY);
+      memory = memory < MIN_MEMORY ? MIN_MEMORY: memory;
       long vcores = task.max_vcores.getLong();
-      vcores = Math.max(vcores, MIN_VCORES);
+      vcores = vcores < MIN_VCORES ? MIN_VCORES  : vcores;
       int priority = task.priority;
       ExecutionType executionType = task.executionType == null
           ? ExecutionType.GUARANTEED

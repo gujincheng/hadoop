@@ -34,7 +34,7 @@ public class RouterController extends Controller {
 
   @Override
   public void index() {
-    setTitle("About the YARN Router");
+    setTitle("Router");
     render(AboutPage.class);
   }
 
@@ -44,6 +44,7 @@ public class RouterController extends Controller {
   }
 
   public void federation() {
+    setTitle("Federation");
     render(FederationPage.class);
   }
 
@@ -55,10 +56,5 @@ public class RouterController extends Controller {
   public void nodes() {
     setTitle("Nodes");
     render(NodesPage.class);
-  }
-
-  public void nodeLabels() {
-    setTitle("Node Labels");
-    render(NodeLabelsPage.class);
   }
 }

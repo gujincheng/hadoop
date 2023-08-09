@@ -162,10 +162,9 @@ Name               | Description
 /logs              | Display log files
 /stacks            | Display JVM stacks
 /static/index.html | The static home page
-/prof              | Async Profiler endpoint
 
 To control the access to servlet `/conf`, `/jmx`, `/logLevel`, `/logs`,
-`/stacks` and `/prof`, configure the following properties in `httpfs-site.xml`:
+and `/stacks`, configure the following properties in `httpfs-site.xml`:
 
 ```xml
   <property>
@@ -179,7 +178,7 @@ To control the access to servlet `/conf`, `/jmx`, `/logLevel`, `/logs`,
     <value>true</value>
     <description>
       Indicates if administrator ACLs are required to access
-      instrumentation servlets (JMX, METRICS, CONF, STACKS, PROF).
+      instrumentation servlets (JMX, METRICS, CONF, STACKS).
     </description>
   </property>
 

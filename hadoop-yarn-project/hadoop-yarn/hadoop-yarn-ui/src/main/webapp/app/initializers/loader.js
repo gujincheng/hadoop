@@ -62,10 +62,6 @@ function getYarnHttpProtocolScheme(rmhost, application) {
   return getConfigFromYarn(rmhost, application, 'yarn.http.policy');
 }
 
-function getYarnTimelineEnabled(rmhost, application) {
-  return getConfigFromYarn(rmhost, application, 'yarn.timeline-service.enabled');
-}
-
 function getTimeLineURL(rmhost, isHttpsSchemeEnabled) {
   var url = window.location.protocol + '//' +
     (ENV.hosts.localBaseAddress? ENV.hosts.localBaseAddress + '/' : '') + rmhost;
@@ -195,10 +191,6 @@ function updateConfigs(application) {
   var nodeManagerPort = getNodeManagerPort(rmhost, application);
   Ember.Logger.log("NodeMananger port: " + nodeManagerPort);
   ENV.nodeManagerPort = nodeManagerPort;
-
-  var timelineServiceEnabled = getYarnTimelineEnabled(rmhost, application);
-  Ember.Logger.log("Timeline Service enabled: " + timelineServiceEnabled);
-  ENV.timelineServiceEnabled = (timelineServiceEnabled.toLowerCase() === 'true');
 
   if (!ENV.hosts.jhsAddress) {
     var jhsAddress = getJHSURL(rmhost, application, isHttpsSchemeEnabled);

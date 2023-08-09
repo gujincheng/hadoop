@@ -38,7 +38,7 @@ public abstract class GetGroupsBase extends Configured implements Tool {
   
   /**
    * Create an instance of this tool using the given configuration.
-   * @param conf configuration.
+   * @param conf
    */
   protected GetGroupsBase(Configuration conf) {
     this(conf, System.out);
@@ -84,7 +84,7 @@ public abstract class GetGroupsBase extends Configured implements Tool {
    * 
    * @param conf The configuration to use.
    * @return The address where the service is listening.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   protected abstract InetSocketAddress getProtocolAddress(Configuration conf)
       throws IOException;
@@ -92,7 +92,7 @@ public abstract class GetGroupsBase extends Configured implements Tool {
   /**
    * Get a client of the {@link GetUserMappingsProtocol}.
    * @return A {@link GetUserMappingsProtocol} client proxy.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   protected GetUserMappingsProtocol getUgmProtocol() throws IOException {
     GetUserMappingsProtocol userGroupMappingProtocol =

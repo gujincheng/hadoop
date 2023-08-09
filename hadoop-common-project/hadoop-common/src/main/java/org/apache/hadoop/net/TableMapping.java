@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,7 +130,7 @@ public class TableMapping extends CachedDNSToSwitchMapping {
         if (map == null) {
           LOG.warn("Failed to read topology table. " +
             NetworkTopology.DEFAULT_RACK + " will be used for all nodes.");
-          map = Collections.emptyMap();
+          map = new HashMap<String, String>();
         }
       }
       List<String> results = new ArrayList<String>(names.size());

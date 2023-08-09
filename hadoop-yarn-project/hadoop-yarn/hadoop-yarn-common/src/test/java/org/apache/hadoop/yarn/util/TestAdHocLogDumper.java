@@ -18,24 +18,23 @@
 
 package org.apache.hadoop.yarn.util;
 
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.util.Time;
+import org.apache.log4j.Appender;
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Priority;
+import org.apache.log4j.LogManager;
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.io.File;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.util.Time;
-import org.apache.log4j.Appender;
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Priority;
-
 import static org.apache.hadoop.util.GenericsUtil.isLog4jLogger;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestAdHocLogDumper {
 
@@ -43,14 +42,14 @@ public class TestAdHocLogDumper {
       LoggerFactory.getLogger(TestAdHocLogDumper.class);
 
   @Test
-  void testDumpingSchedulerLogs() throws Exception {
+  public void testDumpingSchedulerLogs() throws Exception {
 
     Map<Appender, Priority> levels = new HashMap<>();
     String logFilename = "test.log";
     Logger logger = LoggerFactory.getLogger(TestAdHocLogDumper.class);
     if (isLog4jLogger(this.getClass())) {
-      for (Enumeration appenders =
-           LogManager.getRootLogger().getAllAppenders(); appenders.hasMoreElements();) {
+      for (Enumeration appenders = LogManager.getRootLogger().
+          getAllAppenders(); appenders.hasMoreElements();) {
         Object obj = appenders.nextElement();
         if (obj instanceof AppenderSkeleton) {
           AppenderSkeleton appender = (AppenderSkeleton) obj;
@@ -65,11 +64,11 @@ public class TestAdHocLogDumper {
     LOG.debug("test message 1");
     LOG.info("test message 2");
     File logFile = new File(logFilename);
-    assertTrue(logFile.exists());
+    Assert.assertTrue(logFile.exists());
     Thread.sleep(2000);
     long lastWrite = logFile.lastModified();
-    assertTrue(lastWrite < Time.now());
-    assertTrue(logFile.length() != 0);
+    Assert.assertTrue(lastWrite < Time.now());
+    Assert.assertTrue(logFile.length() != 0);
 
     // make sure levels are set back to their original values
     if (isLog4jLogger(this.getClass())) {
@@ -78,12 +77,12 @@ public class TestAdHocLogDumper {
         Object obj = appenders.nextElement();
         if (obj instanceof AppenderSkeleton) {
           AppenderSkeleton appender = (AppenderSkeleton) obj;
-          assertEquals(levels.get(appender), appender.getThreshold());
+          Assert.assertEquals(levels.get(appender), appender.getThreshold());
         }
       }
     }
     boolean del = logFile.delete();
-    if (!del) {
+    if(!del) {
       LOG.info("Couldn't clean up after test");
     }
   }

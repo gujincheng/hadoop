@@ -29,6 +29,7 @@ import com.microsoft.azure.storage.blob.BlobRequestOptions;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlockBlobWrapper;
 
 /**
@@ -63,7 +64,8 @@ final class BlockBlobInputStream extends FSInputStream {
    * @param opContext the blob operation context.
    * @throws IOException IO failure
    */
-  BlockBlobInputStream(CloudBlockBlobWrapper blob, BlobRequestOptions options,
+  BlockBlobInputStream(CloudBlockBlobWrapper blob,
+      BlobRequestOptions options,
       OperationContext opContext, boolean bufferedPreadDisabled)
       throws IOException {
     this.blob = blob;

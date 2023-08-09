@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.util;
 
-import org.slf4j.Logger;
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -42,11 +42,11 @@ public enum SignalLogger {
    * Our signal handler.
    */
   private static class Handler implements SignalHandler {
-    final private Logger log;
+    final private LogAdapter LOG;
     final private SignalHandler prevHandler;
 
-    Handler(String name, Logger log) {
-      this.log = log;
+    Handler(String name, LogAdapter LOG) {
+      this.LOG = LOG;
       prevHandler = Signal.handle(new Signal(name), this);
     }
 
@@ -57,7 +57,7 @@ public enum SignalLogger {
      */
     @Override
     public void handle(Signal signal) {
-      log.error("RECEIVED SIGNAL " + signal.getNumber() +
+      LOG.error("RECEIVED SIGNAL " + signal.getNumber() +
           ": SIG" + signal.getName());
       prevHandler.handle(signal);
     }
@@ -66,9 +66,13 @@ public enum SignalLogger {
   /**
    * Register some signal handlers.
    *
-   * @param log The log4j logfile to use in the signal handlers.
+   * @param LOG        The log4j logfile to use in the signal handlers.
    */
-  public void register(final Logger log) {
+  public void register(final Log LOG) {
+    register(LogAdapter.create(LOG));
+  }
+
+  void register(final LogAdapter LOG) {
     if (registered) {
       throw new IllegalStateException("Can't re-install the signal handlers.");
     }
@@ -79,15 +83,15 @@ public enum SignalLogger {
     String separator = "";
     for (String signalName : SIGNALS) {
       try {
-        new Handler(signalName, log);
+        new Handler(signalName, LOG);
         bld.append(separator)
             .append(signalName);
         separator = ", ";
       } catch (Exception e) {
-        log.debug("Error: ", e);
+        LOG.debug(e);
       }
     }
     bld.append("]");
-    log.info(bld.toString());
+    LOG.info(bld.toString());
   }
 }

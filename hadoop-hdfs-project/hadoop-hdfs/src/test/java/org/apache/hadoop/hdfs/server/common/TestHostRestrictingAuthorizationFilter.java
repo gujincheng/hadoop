@@ -244,13 +244,14 @@ public class TestHostRestrictingAuthorizationFilter {
   }
 
   /**
-   * A request that don't access WebHDFS API should pass through.
+   * Test acceptable behavior to malformed requests
+   * Case: the request URI does not start with "/webhdfs/v1"
    */
   @Test
-  public void testNotWebhdfsAPIRequest() throws Exception {
+  public void testInvalidURI() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     Mockito.when(request.getMethod()).thenReturn("GET");
-    Mockito.when(request.getRequestURI()).thenReturn("/conf");
+    Mockito.when(request.getRequestURI()).thenReturn("/InvalidURI");
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
     Filter filter = new HostRestrictingAuthorizationFilter();
@@ -259,7 +260,11 @@ public class TestHostRestrictingAuthorizationFilter {
     FilterConfig fc = new DummyFilterConfig(configs);
 
     filter.init(fc);
-    filter.doFilter(request, response, (servletRequest, servletResponse) -> {});
+    filter.doFilter(request, response,
+        (servletRequest, servletResponse) -> {});
+    Mockito.verify(response, Mockito.times(1))
+        .sendError(Mockito.eq(HttpServletResponse.SC_NOT_FOUND),
+                   Mockito.anyString());
     filter.destroy();
   }
 

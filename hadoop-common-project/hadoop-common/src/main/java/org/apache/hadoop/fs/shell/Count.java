@@ -89,7 +89,7 @@ public class Count extends FsCommand {
           "Otherwise, it displays the quota and usage for all the storage \n" +
           "types that support quota. The list of possible storage " +
           "types(case insensitive):\n" +
-          "ram_disk, ssd, disk, archive and nvdimm.\n" +
+          "ram_disk, ssd, disk and archive.\n" +
           "It can also pass the value '', 'all' or 'ALL' to specify all " +
           "the storage types.\n" +
           "The -" + OPTION_QUOTA_AND_USAGE + " option shows the quota and \n" +
@@ -166,8 +166,8 @@ public class Count extends FsCommand {
           headString.append(ContentSummary.getHeader(showQuotas));
         }
       }
-      if (displayECPolicy) {
-        headString.append(ContentSummary.getErasureCodingPolicyHeader());
+      if(displayECPolicy){
+        headString.append("ERASURECODING_POLICY ");
       }
       if (showSnapshot) {
         headString.append(ContentSummary.getSnapshotHeader());
@@ -204,9 +204,13 @@ public class Count extends FsCommand {
       outputString.append(summary.toString(
           showQuotas, isHumanReadable(), excludeSnapshots));
     }
-    if (displayECPolicy) {
+    if(displayECPolicy){
       ContentSummary summary = src.fs.getContentSummary(src.path);
-      outputString.append(summary.toErasureCodingPolicy());
+      if(!summary.getErasureCodingPolicy().equals("Replicated")){
+        outputString.append("EC:");
+      }
+      outputString.append(summary.getErasureCodingPolicy())
+          .append(" ");
     }
     if (showSnapshot) {
       ContentSummary summary = src.fs.getContentSummary(src.path);

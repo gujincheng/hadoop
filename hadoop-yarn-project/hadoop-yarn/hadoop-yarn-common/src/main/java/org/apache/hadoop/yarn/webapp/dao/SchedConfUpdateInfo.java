@@ -44,9 +44,6 @@ public class SchedConfUpdateInfo {
   @XmlElement(name = "update-queue")
   private ArrayList<QueueConfigInfo> updateQueueInfo = new ArrayList<>();
 
-  @XmlElement(name = "subClusterId")
-  private String subClusterId = "";
-
   private HashMap<String, String> global = new HashMap<>();
 
   public SchedConfUpdateInfo() {
@@ -84,13 +81,5 @@ public class SchedConfUpdateInfo {
 
   public void setGlobalParams(HashMap<String, String> globalInfo) {
     this.global = globalInfo;
-  }
-
-  public String getSubClusterId() {
-    return subClusterId;
-  }
-
-  public void setSubClusterId(String subClusterId) {
-    this.subClusterId = subClusterId;
   }
 }

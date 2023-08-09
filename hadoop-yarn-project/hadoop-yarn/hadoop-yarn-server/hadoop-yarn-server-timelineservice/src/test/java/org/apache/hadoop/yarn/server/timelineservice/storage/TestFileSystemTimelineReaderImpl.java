@@ -30,11 +30,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.io.FileUtils;
@@ -58,9 +53,11 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyVa
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyValuesFilter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class TestFileSystemTimelineReaderImpl {
 
@@ -68,7 +65,7 @@ public class TestFileSystemTimelineReaderImpl {
       TestFileSystemTimelineReaderImpl.class.getSimpleName()).getAbsolutePath();
   private FileSystemTimelineReaderImpl reader;
 
-  @BeforeAll
+  @BeforeClass
   public static void setup() throws Exception {
     initializeDataDirectory(ROOT_DIR);
   }
@@ -77,7 +74,7 @@ public class TestFileSystemTimelineReaderImpl {
     loadEntityData(rootDir);
     // Create app flow mapping file.
     CSVFormat format =
-        CSVFormat.Builder.create().setHeader("APP", "USER", "FLOW", "FLOWRUN").build();
+        CSVFormat.DEFAULT.withHeader("APP", "USER", "FLOW", "FLOWRUN");
     String appFlowMappingFile = rootDir + File.separator + "entities" +
         File.separator + "cluster1" + File.separator +
         FileSystemTimelineReaderImpl.APP_FLOW_MAPPING_FILE;
@@ -92,12 +89,12 @@ public class TestFileSystemTimelineReaderImpl {
     (new File(rootDir)).deleteOnExit();
   }
 
-  @AfterAll
+  @AfterClass
   public static void tearDown() throws Exception {
     FileUtils.deleteDirectory(new File(ROOT_DIR));
   }
 
-  @BeforeEach
+  @Before
   public void init() throws Exception {
     reader = new FileSystemTimelineReaderImpl();
     Configuration conf = new YarnConfiguration();
@@ -316,141 +313,141 @@ public class TestFileSystemTimelineReaderImpl {
   }
 
   @Test
-  void testGetEntityDefaultView() throws Exception {
+  public void testGetEntityDefaultView() throws Exception {
     // If no fields are specified, entity is returned with default view i.e.
     // only the id, type and created time.
     TimelineEntity result = reader.getEntity(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", "id_1"),
+        "app", "id_1"),
         new TimelineDataToRetrieve(null, null, null, null, null, null));
-    assertEquals(
+    Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
-    assertEquals((Long) 1425016502000L, result.getCreatedTime());
-    assertEquals(0, result.getConfigs().size());
-    assertEquals(0, result.getMetrics().size());
+    Assert.assertEquals((Long)1425016502000L, result.getCreatedTime());
+    Assert.assertEquals(0, result.getConfigs().size());
+    Assert.assertEquals(0, result.getMetrics().size());
   }
 
   @Test
-  void testGetEntityByClusterAndApp() throws Exception {
+  public void testGetEntityByClusterAndApp() throws Exception {
     // Cluster and AppId should be enough to get an entity.
     TimelineEntity result = reader.getEntity(
         new TimelineReaderContext("cluster1", null, null, null, "app1", "app",
-            "id_1"),
+        "id_1"),
         new TimelineDataToRetrieve(null, null, null, null, null, null));
-    assertEquals(
+    Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
-    assertEquals((Long) 1425016502000L, result.getCreatedTime());
-    assertEquals(0, result.getConfigs().size());
-    assertEquals(0, result.getMetrics().size());
+    Assert.assertEquals((Long)1425016502000L, result.getCreatedTime());
+    Assert.assertEquals(0, result.getConfigs().size());
+    Assert.assertEquals(0, result.getMetrics().size());
   }
 
   /** This test checks whether we can handle commas in app flow mapping csv. */
   @Test
-  void testAppFlowMappingCsv() throws Exception {
+  public void testAppFlowMappingCsv() throws Exception {
     // Test getting an entity by cluster and app where flow entry
     // in app flow mapping csv has commas.
     TimelineEntity result = reader.getEntity(
         new TimelineReaderContext("cluster1", null, null, null, "app2",
-            "app", "id_5"),
+        "app", "id_5"),
         new TimelineDataToRetrieve(null, null, null, null, null, null));
-    assertEquals(
+    Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_5")).toString(),
         result.getIdentifier().toString());
-    assertEquals((Long) 1425016502050L, result.getCreatedTime());
+    Assert.assertEquals((Long)1425016502050L, result.getCreatedTime());
   }
 
   @Test
-  void testGetEntityCustomFields() throws Exception {
+  public void testGetEntityCustomFields() throws Exception {
     // Specified fields in addition to default view will be returned.
     TimelineEntity result = reader.getEntity(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", "id_1"),
+        "app", "id_1"),
         new TimelineDataToRetrieve(null, null,
-            EnumSet.of(Field.INFO, Field.CONFIGS, Field.METRICS), null, null,
-            null));
-    assertEquals(
+        EnumSet.of(Field.INFO, Field.CONFIGS, Field.METRICS), null, null,
+        null));
+    Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
-    assertEquals((Long) 1425016502000L, result.getCreatedTime());
-    assertEquals(3, result.getConfigs().size());
-    assertEquals(3, result.getMetrics().size());
-    assertEquals(2, result.getInfo().size());
+    Assert.assertEquals((Long)1425016502000L, result.getCreatedTime());
+    Assert.assertEquals(3, result.getConfigs().size());
+    Assert.assertEquals(3, result.getMetrics().size());
+    Assert.assertEquals(2, result.getInfo().size());
     // No events will be returned
-    assertEquals(0, result.getEvents().size());
+    Assert.assertEquals(0, result.getEvents().size());
   }
 
   @Test
-  void testGetEntityAllFields() throws Exception {
+  public void testGetEntityAllFields() throws Exception {
     // All fields of TimelineEntity will be returned.
     TimelineEntity result = reader.getEntity(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", "id_1"),
+        "app", "id_1"),
         new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null,
-            null, null));
-    assertEquals(
+        null, null));
+    Assert.assertEquals(
         (new TimelineEntity.Identifier("app", "id_1")).toString(),
         result.getIdentifier().toString());
-    assertEquals((Long) 1425016502000L, result.getCreatedTime());
-    assertEquals(3, result.getConfigs().size());
-    assertEquals(3, result.getMetrics().size());
+    Assert.assertEquals((Long)1425016502000L, result.getCreatedTime());
+    Assert.assertEquals(3, result.getConfigs().size());
+    Assert.assertEquals(3, result.getMetrics().size());
     // All fields including events will be returned.
-    assertEquals(2, result.getEvents().size());
+    Assert.assertEquals(2, result.getEvents().size());
   }
 
   @Test
-  void testGetAllEntities() throws Exception {
+  public void testGetAllEntities() throws Exception {
     Set<TimelineEntity> result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null), new TimelineEntityFilters.Builder().build(),
+        "app", null), new TimelineEntityFilters.Builder().build(),
         new TimelineDataToRetrieve(null, null, EnumSet.of(Field.ALL), null,
-            null, null));
+        null, null));
     // All 4 entities will be returned
-    assertEquals(4, result.size());
+    Assert.assertEquals(4, result.size());
   }
 
   @Test
-  void testGetEntitiesWithLimit() throws Exception {
+  public void testGetEntitiesWithLimit() throws Exception {
     Set<TimelineEntity> result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().entityLimit(2L).build(),
         new TimelineDataToRetrieve());
-    assertEquals(2, result.size());
+    Assert.assertEquals(2, result.size());
     // Needs to be rewritten once hashcode and equals for
     // TimelineEntity is implemented
     // Entities with id_1 and id_4 should be returned,
     // based on created time, descending.
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1") && !entity.getId().equals("id_4")) {
-        fail("Entity not sorted by created time");
+        Assert.fail("Entity not sorted by created time");
       }
     }
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().entityLimit(3L).build(),
         new TimelineDataToRetrieve());
     // Even though 2 entities out of 4 have same created time, one entity
     // is left out due to limit
-    assertEquals(3, result.size());
+    Assert.assertEquals(3, result.size());
   }
 
   @Test
-  void testGetEntitiesByTimeWindows() throws Exception {
+  public void testGetEntitiesByTimeWindows() throws Exception {
     // Get entities based on created time start and end time range.
     Set<TimelineEntity> result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().createdTimeBegin(1425016502030L)
             .createTimeEnd(1425016502060L).build(),
         new TimelineDataToRetrieve());
-    assertEquals(1, result.size());
+    Assert.assertEquals(1, result.size());
     // Only one entity with ID id_4 should be returned.
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_4")) {
-        fail("Incorrect filtering based on created time range");
+        Assert.fail("Incorrect filtering based on created time range");
       }
     }
 
@@ -461,44 +458,44 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineEntityFilters.Builder().createTimeEnd(1425016502010L)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(3, result.size());
+    Assert.assertEquals(3, result.size());
     for (TimelineEntity entity : result) {
       if (entity.getId().equals("id_4")) {
-        fail("Incorrect filtering based on created time range");
+        Assert.fail("Incorrect filtering based on created time range");
       }
     }
 
     // Get entities if only created time start is specified.
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().createdTimeBegin(1425016502010L)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(1, result.size());
+    Assert.assertEquals(1, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_4")) {
-        fail("Incorrect filtering based on created time range");
+        Assert.fail("Incorrect filtering based on created time range");
       }
     }
   }
 
   @Test
-  void testGetFilteredEntities() throws Exception {
+  public void testGetFilteredEntities() throws Exception {
     // Get entities based on info filters.
     TimelineFilterList infoFilterList = new TimelineFilterList();
     infoFilterList.addFilter(
         new TimelineKeyValueFilter(TimelineCompareOp.EQUAL, "info2", 3.5));
     Set<TimelineEntity> result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().infoFilters(infoFilterList).build(),
         new TimelineDataToRetrieve());
-    assertEquals(1, result.size());
+    Assert.assertEquals(1, result.size());
     // Only one entity with ID id_3 should be returned.
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_3")) {
-        fail("Incorrect filtering based on info filters");
+        Assert.fail("Incorrect filtering based on info filters");
       }
     }
 
@@ -510,14 +507,14 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineKeyValueFilter(TimelineCompareOp.EQUAL, "config_3", "abc"));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().configFilters(confFilterList)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(1, result.size());
+    Assert.assertEquals(1, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_3")) {
-        fail("Incorrect filtering based on config filters");
+        Assert.fail("Incorrect filtering based on config filters");
       }
     }
 
@@ -529,13 +526,13 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineExistsFilter(TimelineCompareOp.EQUAL, "event_4"));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().eventFilters(eventFilters).build(),
         new TimelineDataToRetrieve());
-    assertEquals(1, result.size());
+    Assert.assertEquals(1, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_3")) {
-        fail("Incorrect filtering based on event filters");
+        Assert.fail("Incorrect filtering based on event filters");
       }
     }
 
@@ -545,15 +542,15 @@ public class TestFileSystemTimelineReaderImpl {
         TimelineCompareOp.GREATER_OR_EQUAL, "metric3", 0L));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().metricFilters(metricFilterList)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(2, result.size());
+    Assert.assertEquals(2, result.size());
     // Two entities with IDs' id_1 and id_2 should be returned.
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1") && !entity.getId().equals("id_2")) {
-        fail("Incorrect filtering based on metric filters");
+        Assert.fail("Incorrect filtering based on metric filters");
       }
     }
 
@@ -572,14 +569,14 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineFilterList(Operator.OR, list1, list2);
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().configFilters(confFilterList1)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(2, result.size());
+    Assert.assertEquals(2, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1") && !entity.getId().equals("id_2")) {
-        fail("Incorrect filtering based on config filters");
+        Assert.fail("Incorrect filtering based on config filters");
       }
     }
 
@@ -595,14 +592,14 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineFilterList(Operator.OR, list3, list4);
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().configFilters(confFilterList2)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(2, result.size());
+    Assert.assertEquals(2, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1") && !entity.getId().equals("id_2")) {
-        fail("Incorrect filtering based on config filters");
+        Assert.fail("Incorrect filtering based on config filters");
       }
     }
 
@@ -613,14 +610,14 @@ public class TestFileSystemTimelineReaderImpl {
         TimelineCompareOp.NOT_EQUAL, "config_3", "abc"));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().configFilters(confFilterList3)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(1, result.size());
-    for (TimelineEntity entity : result) {
+    Assert.assertEquals(1, result.size());
+    for(TimelineEntity entity : result) {
       if (!entity.getId().equals("id_2")) {
-        fail("Incorrect filtering based on config filters");
+        Assert.fail("Incorrect filtering based on config filters");
       }
     }
 
@@ -631,11 +628,11 @@ public class TestFileSystemTimelineReaderImpl {
         TimelineCompareOp.EQUAL, "config_3", "def"));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().configFilters(confFilterList4)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(0, result.size());
+    Assert.assertEquals(0, result.size());
 
     TimelineFilterList confFilterList5 = new TimelineFilterList(Operator.OR);
     confFilterList5.addFilter(new TimelineKeyValueFilter(
@@ -644,14 +641,14 @@ public class TestFileSystemTimelineReaderImpl {
         TimelineCompareOp.EQUAL, "config_3", "def"));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().configFilters(confFilterList5)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(1, result.size());
+    Assert.assertEquals(1, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_2")) {
-        fail("Incorrect filtering based on config filters");
+        Assert.fail("Incorrect filtering based on config filters");
       }
     }
 
@@ -668,15 +665,15 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineFilterList(Operator.OR, list6, list7);
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().metricFilters(metricFilterList1)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(2, result.size());
+    Assert.assertEquals(2, result.size());
     // Two entities with IDs' id_2 and id_3 should be returned.
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_2") && !entity.getId().equals("id_3")) {
-        fail("Incorrect filtering based on metric filters");
+        Assert.fail("Incorrect filtering based on metric filters");
       }
     }
 
@@ -687,14 +684,14 @@ public class TestFileSystemTimelineReaderImpl {
         TimelineCompareOp.LESS_OR_EQUAL, "metric3", 23));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().metricFilters(metricFilterList2)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(1, result.size());
+    Assert.assertEquals(1, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1")) {
-        fail("Incorrect filtering based on metric filters");
+        Assert.fail("Incorrect filtering based on metric filters");
       }
     }
 
@@ -705,11 +702,11 @@ public class TestFileSystemTimelineReaderImpl {
         TimelineCompareOp.LESS_OR_EQUAL, "metric3", 23));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().metricFilters(metricFilterList3)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(0, result.size());
+    Assert.assertEquals(0, result.size());
 
     TimelineFilterList metricFilterList4 = new TimelineFilterList(Operator.OR);
     metricFilterList4.addFilter(new TimelineCompareFilter(
@@ -718,14 +715,14 @@ public class TestFileSystemTimelineReaderImpl {
         TimelineCompareOp.LESS_OR_EQUAL, "metric3", 23));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().metricFilters(metricFilterList4)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(2, result.size());
+    Assert.assertEquals(2, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1") && !entity.getId().equals("id_2")) {
-        fail("Incorrect filtering based on metric filters");
+        Assert.fail("Incorrect filtering based on metric filters");
       }
     }
 
@@ -734,14 +731,14 @@ public class TestFileSystemTimelineReaderImpl {
             TimelineCompareOp.NOT_EQUAL, "metric2", 74));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().metricFilters(metricFilterList5)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(2, result.size());
+    Assert.assertEquals(2, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1") && !entity.getId().equals("id_2")) {
-        fail("Incorrect filtering based on metric filters");
+        Assert.fail("Incorrect filtering based on metric filters");
       }
     }
 
@@ -752,11 +749,11 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineKeyValueFilter(TimelineCompareOp.NOT_EQUAL, "info4", 20));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().infoFilters(infoFilterList1)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(0, result.size());
+    Assert.assertEquals(0, result.size());
 
     TimelineFilterList infoFilterList2 = new TimelineFilterList(Operator.OR);
     infoFilterList2.addFilter(
@@ -765,14 +762,14 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineKeyValueFilter(TimelineCompareOp.EQUAL, "info1", "val1"));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().infoFilters(infoFilterList2)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(2, result.size());
+    Assert.assertEquals(2, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1") && !entity.getId().equals("id_3")) {
-        fail("Incorrect filtering based on info filters");
+        Assert.fail("Incorrect filtering based on info filters");
       }
     }
 
@@ -783,11 +780,11 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineKeyValueFilter(TimelineCompareOp.EQUAL, "info2", "val5"));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().infoFilters(infoFilterList3)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(0, result.size());
+    Assert.assertEquals(0, result.size());
 
     TimelineFilterList infoFilterList4 = new TimelineFilterList(Operator.OR);
     infoFilterList4.addFilter(
@@ -796,55 +793,55 @@ public class TestFileSystemTimelineReaderImpl {
         new TimelineKeyValueFilter(TimelineCompareOp.EQUAL, "info2", "val5"));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().infoFilters(infoFilterList4)
             .build(),
         new TimelineDataToRetrieve());
-    assertEquals(1, result.size());
+    Assert.assertEquals(1, result.size());
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1")) {
-        fail("Incorrect filtering based on info filters");
+        Assert.fail("Incorrect filtering based on info filters");
       }
     }
   }
 
   @Test
-  void testGetEntitiesByRelations() throws Exception {
+  public void testGetEntitiesByRelations() throws Exception {
     // Get entities based on relatesTo.
     TimelineFilterList relatesTo = new TimelineFilterList(Operator.OR);
     Set<Object> relatesToIds =
-        new HashSet<Object>(Arrays.asList((Object) "flow1"));
+        new HashSet<Object>(Arrays.asList((Object)"flow1"));
     relatesTo.addFilter(new TimelineKeyValuesFilter(
         TimelineCompareOp.EQUAL, "flow", relatesToIds));
     Set<TimelineEntity> result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().relatesTo(relatesTo).build(),
         new TimelineDataToRetrieve());
-    assertEquals(1, result.size());
+    Assert.assertEquals(1, result.size());
     // Only one entity with ID id_1 should be returned.
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1")) {
-        fail("Incorrect filtering based on relatesTo");
+        Assert.fail("Incorrect filtering based on relatesTo");
       }
     }
 
     // Get entities based on isRelatedTo.
     TimelineFilterList isRelatedTo = new TimelineFilterList(Operator.OR);
     Set<Object> isRelatedToIds =
-        new HashSet<Object>(Arrays.asList((Object) "tid1_2"));
+        new HashSet<Object>(Arrays.asList((Object)"tid1_2"));
     isRelatedTo.addFilter(new TimelineKeyValuesFilter(
         TimelineCompareOp.EQUAL, "type1", isRelatedToIds));
     result = reader.getEntities(
         new TimelineReaderContext("cluster1", "user1", "flow1", 1L, "app1",
-            "app", null),
+        "app", null),
         new TimelineEntityFilters.Builder().isRelatedTo(isRelatedTo).build(),
         new TimelineDataToRetrieve());
-    assertEquals(2, result.size());
+    Assert.assertEquals(2, result.size());
     // Two entities with IDs' id_1 and id_3 should be returned.
     for (TimelineEntity entity : result) {
       if (!entity.getId().equals("id_1") && !entity.getId().equals("id_3")) {
-        fail("Incorrect filtering based on isRelatedTo");
+        Assert.fail("Incorrect filtering based on isRelatedTo");
       }
     }
   }

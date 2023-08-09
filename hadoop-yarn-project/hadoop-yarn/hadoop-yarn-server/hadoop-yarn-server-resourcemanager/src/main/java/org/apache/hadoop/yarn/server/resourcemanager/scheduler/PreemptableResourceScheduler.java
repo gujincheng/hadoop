@@ -42,8 +42,8 @@ public interface PreemptableResourceScheduler extends ResourceScheduler {
   void markContainerForPreemption(ApplicationAttemptId aid, RMContainer container);
 
   /**
-   * Ask the scheduler to forcibly interrupt the container given as input.
-   * @param container RMContainer.
+   * Ask the scheduler to forcibly interrupt the container given as input
+   * @param container
    */
   void markContainerForKillable(RMContainer container);
 

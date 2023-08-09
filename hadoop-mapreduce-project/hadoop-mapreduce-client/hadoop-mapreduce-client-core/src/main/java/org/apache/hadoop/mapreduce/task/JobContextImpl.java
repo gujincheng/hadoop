@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.task;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -44,7 +43,6 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.partition.HashPartitioner;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * A read-only view of the job that is provided to the tasks while they
@@ -307,27 +305,7 @@ public class JobContextImpl implements JobContext {
    * Get the archive entries in classpath as an array of Path
    */
   public Path[] getArchiveClassPaths() {
-    return getArchiveClassPaths(conf);
-  }
-
-  /**
-   * Get the archive entries in classpath as an array of Path.
-   * Used by internal DistributedCache code.
-   *
-   * @param conf Configuration that contains the classpath setting.
-   * @return An array of Path consisting of archive entries in classpath.
-   */
-  public static Path[] getArchiveClassPaths(Configuration conf) {
-    ArrayList<String> list = (ArrayList<String>)conf.getStringCollection(
-        MRJobConfig.CLASSPATH_ARCHIVES);
-    if (list.size() == 0) {
-      return null;
-    }
-    Path[] paths = new Path[list.size()];
-    for (int i = 0; i < list.size(); i++) {
-      paths[i] = new Path(list.get(i));
-    }
-    return paths;
+    return DistributedCache.getArchiveClassPaths(conf);
   }
 
   /**
@@ -336,18 +314,7 @@ public class JobContextImpl implements JobContext {
    * @throws IOException
    */
   public URI[] getCacheArchives() throws IOException {
-    return getCacheArchives(conf);
-  }
-
-  /**
-   * Get cache archives set in the Configuration. Used by
-   * internal DistributedCache and JobContextImpl code.
-   *
-   * @param conf The configuration which contains the archives.
-   * @return A URI array of the caches set in the Configuration.
-   */
-  public static URI[] getCacheArchives(Configuration conf) {
-    return StringUtils.stringToURI(conf.getStrings(MRJobConfig.CACHE_ARCHIVES));
+    return DistributedCache.getCacheArchives(conf);
   }
 
   /**
@@ -357,18 +324,7 @@ public class JobContextImpl implements JobContext {
    */
 
   public URI[] getCacheFiles() throws IOException {
-    return getCacheFiles(conf);
-  }
-
-  /**
-   * Get cache files set in the Configuration. Used by internal
-   * DistributedCache and MapReduce code.
-   *
-   * @param conf The configuration which contains the files.
-   * @return A URI array of the files set in the Configuration.
-   */
-  public static URI[] getCacheFiles(Configuration conf) {
-    return StringUtils.stringToURI(conf.getStrings(MRJobConfig.CACHE_FILES));
+    return DistributedCache.getCacheFiles(conf);
   }
 
   /**
@@ -378,17 +334,7 @@ public class JobContextImpl implements JobContext {
    */
   public Path[] getLocalCacheArchives()
     throws IOException {
-    return getLocalCacheArchives(conf);
-  }
-
-  /**
-   * Return the path array of the localized caches.
-   *
-   * @param conf Configuration that contains the localized archives.
-   * @return A path array of localized caches.
-   */
-  public static Path[] getLocalCacheArchives(Configuration conf) {
-    return StringUtils.stringToPath(conf.getStrings(MRJobConfig.CACHE_LOCALARCHIVES));
+    return DistributedCache.getLocalCacheArchives(conf);
   }
 
   /**
@@ -398,82 +344,14 @@ public class JobContextImpl implements JobContext {
    */
   public Path[] getLocalCacheFiles()
     throws IOException {
-    return getLocalCacheFiles(conf);
-  }
-
-  /**
-   * Return the path array of the localized files.
-   *
-   * @param conf Configuration that contains the localized files.
-   * @return A path array of localized files.
-   */
-  public static Path[] getLocalCacheFiles(Configuration conf) {
-    return StringUtils.stringToPath(conf.getStrings(MRJobConfig.CACHE_LOCALFILES));
-  }
-
-  /**
-   * Parse a list of strings into longs.
-   * @param strs the list of strings to parse
-   * @return a list of longs that were parsed. same length as strs.
-   */
-  private static long[] parseTimestamps(String[] strs) {
-    if (strs == null) {
-      return null;
-    }
-    long[] result = new long[strs.length];
-    for(int i=0; i < strs.length; ++i) {
-      result[i] = Long.parseLong(strs[i]);
-    }
-    return result;
-  }
-
-  /**
-   * Get the timestamps of the archives. Used by internal
-   * DistributedCache and MapReduce code.
-   *
-   * @param conf The configuration which stored the timestamps.
-   * @return a long array of timestamps.
-   */
-  public static long[] getArchiveTimestamps(Configuration conf) {
-    return parseTimestamps(conf.getStrings(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS));
-  }
-
-  /**
-   * Get the timestamps of the files. Used by internal
-   * DistributedCache and MapReduce code.
-   *
-   * @param conf The configuration which stored the timestamps.
-   * @return a long array of timestamps.
-   */
-  public static long[] getFileTimestamps(Configuration conf) {
-    return parseTimestamps(conf.getStrings(MRJobConfig.CACHE_FILE_TIMESTAMPS));
+    return DistributedCache.getLocalCacheFiles(conf);
   }
 
   /**
    * Get the file entries in classpath as an array of Path
    */
   public Path[] getFileClassPaths() {
-    return getFileClassPaths(conf);
-  }
-
-  /**
-   * Get the file entries in classpath as an array of Path.
-   * Used by internal DistributedCache code.
-   *
-   * @param conf Configuration that contains the classpath setting.
-   * @return Array of Path consisting of file entries in the classpath.
-   */
-  public static Path[] getFileClassPaths(Configuration conf) {
-    ArrayList<String> list =
-        (ArrayList<String>) conf.getStringCollection(MRJobConfig.CLASSPATH_FILES);
-    if (list.size() == 0) {
-      return null;
-    }
-    Path[] paths = new Path[list.size()];
-    for (int i = 0; i < list.size(); i++) {
-      paths[i] = new Path(list.get(i));
-    }
-    return paths;
+    return DistributedCache.getFileClassPaths(conf);
   }
 
   /**
@@ -498,7 +376,7 @@ public class JobContextImpl implements JobContext {
    * @return a string array of timestamps 
    */
   public String[] getArchiveTimestamps() {
-    return toTimestampStrs(getArchiveTimestamps(conf));
+    return toTimestampStrs(DistributedCache.getArchiveTimestamps(conf));
   }
 
   /**
@@ -507,7 +385,7 @@ public class JobContextImpl implements JobContext {
    * @return a string array of timestamps 
    */
   public String[] getFileTimestamps() {
-    return toTimestampStrs(getFileTimestamps(conf));
+    return toTimestampStrs(DistributedCache.getFileTimestamps(conf));
   }
 
   /** 

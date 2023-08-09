@@ -18,64 +18,47 @@
 
 package org.apache.hadoop.yarn.util;
 
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
-import org.junit.jupiter.api.Test;
-
-import static org.apache.hadoop.yarn.util.Times.ISO8601_DATE_FORMAT;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class TestTimes {
 
   @Test
-  void testNegativeStartTimes() {
+  public void testNegativeStartTimes() {
     long elapsed = Times.elapsed(-5, 10, true);
-    assertEquals(0, elapsed, "Elapsed time is not 0");
+    Assert.assertEquals("Elapsed time is not 0", 0, elapsed);
     elapsed = Times.elapsed(-5, 10, false);
-    assertEquals(-1, elapsed, "Elapsed time is not -1");
+    Assert.assertEquals("Elapsed time is not -1", -1, elapsed);
   }
 
   @Test
-  void testNegativeFinishTimes() {
+  public void testNegativeFinishTimes() {
     long elapsed = Times.elapsed(5, -10, false);
-    assertEquals(-1, elapsed, "Elapsed time is not -1");
+    Assert.assertEquals("Elapsed time is not -1", -1, elapsed);
   }
 
   @Test
-  void testNegativeStartandFinishTimes() {
+  public void testNegativeStartandFinishTimes() {
     long elapsed = Times.elapsed(-5, -10, false);
-    assertEquals(-1, elapsed, "Elapsed time is not -1");
+    Assert.assertEquals("Elapsed time is not -1", -1, elapsed);
   }
 
   @Test
-  void testPositiveStartandFinishTimes() {
+  public void testPositiveStartandFinishTimes() {
     long elapsed = Times.elapsed(5, 10, true);
-    assertEquals(5, elapsed, "Elapsed time is not 5");
+    Assert.assertEquals("Elapsed time is not 5", 5, elapsed);
     elapsed = Times.elapsed(5, 10, false);
-    assertEquals(5, elapsed, "Elapsed time is not 5");
+    Assert.assertEquals("Elapsed time is not 5", 5, elapsed);
   }
 
   @Test
-  void testFinishTimesAheadOfStartTimes() {
+  public void testFinishTimesAheadOfStartTimes() {
     long elapsed = Times.elapsed(10, 5, true);
-    assertEquals(-1, elapsed, "Elapsed time is not -1");
+    Assert.assertEquals("Elapsed time is not -1", -1, elapsed);
     elapsed = Times.elapsed(10, 5, false);
-    assertEquals(-1, elapsed, "Elapsed time is not -1");
+    Assert.assertEquals("Elapsed time is not -1", -1, elapsed);
     // use Long.MAX_VALUE to ensure started time is after the current one
     elapsed = Times.elapsed(Long.MAX_VALUE, 0, true);
-    assertEquals(-1, elapsed, "Elapsed time is not -1");
-  }
-
-  @Test
-  void validateISO() throws IOException {
-    SimpleDateFormat isoFormat = new SimpleDateFormat(ISO8601_DATE_FORMAT);
-    for (int i = 0; i < 1000; i++) {
-      long now = System.currentTimeMillis();
-      String instant =  Times.formatISO8601(now);
-      String date = isoFormat.format(new Date(now));
-      assertEquals(date, instant);
-    }
+    Assert.assertEquals("Elapsed time is not -1", -1, elapsed);
   }
 }

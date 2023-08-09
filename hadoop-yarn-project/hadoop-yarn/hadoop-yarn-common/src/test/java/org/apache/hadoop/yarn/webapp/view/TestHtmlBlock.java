@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import java.io.PrintWriter;
-
 import com.google.inject.Injector;
-import org.junit.jupiter.api.Test;
+
+import java.io.PrintWriter;
 
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verify;
+import org.junit.Test;
+import static org.mockito.Mockito.*;
 
 public class TestHtmlBlock {
   public static class TestBlock extends HtmlBlock {
@@ -55,8 +54,7 @@ public class TestHtmlBlock {
     }
   }
 
-  @Test
-  void testUsual() {
+  @Test public void testUsual() {
     Injector injector = WebAppTests.testBlock(TestBlock.class);
     PrintWriter out = injector.getInstance(PrintWriter.class);
 
@@ -64,17 +62,11 @@ public class TestHtmlBlock {
     verify(out).print("test note");
   }
 
-  @Test
-  void testShortBlock() {
-    assertThrows(WebAppException.class, () -> {
-      WebAppTests.testBlock(ShortBlock.class);
-    });
+  @Test(expected=WebAppException.class) public void testShortBlock() {
+    WebAppTests.testBlock(ShortBlock.class);
   }
 
-  @Test
-  void testShortPage() {
-    assertThrows(WebAppException.class, () -> {
-      WebAppTests.testPage(ShortPage.class);
-    });
+  @Test(expected=WebAppException.class) public void testShortPage() {
+    WebAppTests.testPage(ShortPage.class);
   }
 }

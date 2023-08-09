@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import io.netty.channel.Channel;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -56,9 +55,10 @@ import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.security.IdMappingServiceProvider;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
+import org.jboss.netty.channel.Channel;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

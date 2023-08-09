@@ -82,7 +82,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 @InterfaceAudience.Private
@@ -269,7 +269,7 @@ public class FSImageFormatPBSnapshot {
         }
         diffs.addFirst(diff);
       }
-      file.loadSnapshotFeature(diffs);
+      file.addSnapshotFeature(diffs);
       short repl = file.getPreferredBlockReplication();
       for (BlockInfo b : file.getBlocks()) {
         if (b.getReplication() < repl) {
@@ -438,7 +438,7 @@ public class FSImageFormatPBSnapshot {
           .setSnapshotCounter(sm.getSnapshotCounter())
           .setNumSnapshots(sm.getNumSnapshots());
 
-      final List<INodeDirectory> snapshottables = sm.getSnapshottableDirs();
+      INodeDirectory[] snapshottables = sm.getSnapshottableDirs();
       for (INodeDirectory sdir : snapshottables) {
         b.addSnapshottableDir(sdir.getId());
       }

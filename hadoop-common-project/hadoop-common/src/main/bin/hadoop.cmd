@@ -149,7 +149,7 @@ call :updatepath %HADOOP_BIN_PATH%
     exit /b
   )
 
-  set corecommands=fs version jar checknative conftest distch distcp daemonlog archive classpath credential kerbname key kdiag
+  set corecommands=fs version jar checknative conftest distch distcp daemonlog archive classpath credential kerbname key trace kdiag
   for %%i in ( %corecommands% ) do (
     if %hadoop-command% == %%i set corecommand=true  
   )
@@ -244,6 +244,10 @@ call :updatepath %HADOOP_BIN_PATH%
   set CLASS=org.apache.hadoop.crypto.key.KeyShell
   goto :eof
 
+:trace
+  set CLASS=org.apache.hadoop.tracing.TraceAdmin
+  goto :eof
+
 :updatepath
   set path_to_add=%*
   set current_path_comparable=%path%
@@ -314,6 +318,7 @@ call :updatepath %HADOOP_BIN_PATH%
   @echo   kerbname             show auth_to_local principal conversion
   @echo   kdiag                diagnose kerberos problems
   @echo   key                  manage keys via the KeyProvider
+  @echo   trace                view and modify Hadoop tracing settings
   @echo   daemonlog            get/set the log level for each daemon
   @echo  or
   @echo   CLASSNAME            run the class named CLASSNAME

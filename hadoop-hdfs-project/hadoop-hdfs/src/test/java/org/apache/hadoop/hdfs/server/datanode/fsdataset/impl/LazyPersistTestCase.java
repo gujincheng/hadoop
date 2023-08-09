@@ -45,8 +45,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -151,7 +151,7 @@ public abstract class LazyPersistTestCase {
       jmx = null;
     }
 
-    IOUtils.closeStream(sockDir);
+    IOUtils.closeQuietly(sockDir);
     sockDir = null;
   }
 
@@ -252,13 +252,16 @@ public abstract class LazyPersistTestCase {
       createFlags.add(LAZY_PERSIST);
     }
 
-    try (FSDataOutputStream fos = fs.create(path,
-        FsPermission.getFileDefault(),
-        createFlags,
-        BUFFER_LENGTH,
-        REPL_FACTOR,
-        BLOCK_SIZE,
-        null)) {
+    FSDataOutputStream fos = null;
+    try {
+      fos =
+          fs.create(path,
+              FsPermission.getFileDefault(),
+              createFlags,
+              BUFFER_LENGTH,
+              REPL_FACTOR,
+              BLOCK_SIZE,
+              null);
 
       // Allocate a block.
       byte[] buffer = new byte[BUFFER_LENGTH];
@@ -269,6 +272,8 @@ public abstract class LazyPersistTestCase {
       if (length > 0) {
         fos.hsync();
       }
+    } finally {
+      IOUtils.closeQuietly(fos);
     }
   }
 

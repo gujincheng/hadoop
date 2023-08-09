@@ -94,8 +94,12 @@ public final class AMRMClientUtils {
         token.setService(ClientRMProxy.getAMRMTokenService(configuration));
         setAuthModeInConf(configuration);
       }
-      final T proxyConnection = user.doAs((PrivilegedExceptionAction<T>) () ->
-          ClientRMProxy.createRMProxyFederation(configuration, protocol));
+      final T proxyConnection = user.doAs(new PrivilegedExceptionAction<T>() {
+        @Override
+        public T run() throws Exception {
+          return ClientRMProxy.createRMProxy(configuration, protocol);
+        }
+      });
       return proxyConnection;
 
     } catch (InterruptedException e) {

@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A Datanode has one or more storages. A storage in the Datanode is represented
@@ -128,10 +128,6 @@ public class DatanodeStorageInfo {
   /** The number of block reports received */
   private int blockReportCount = 0;
 
-  /** Whether the NameNode has received block reports for this storage since it
-   * was started.*/
-  private boolean hasReceivedBlockReport = false;
-
   /**
    * Set to false on any NN failover, and reset to true
    * whenever a block report is received.
@@ -164,21 +160,12 @@ public class DatanodeStorageInfo {
     return blockReportCount;
   }
 
-  boolean hasReceivedBlockReport() {
-    return hasReceivedBlockReport;
-  }
-
   void setBlockReportCount(int blockReportCount) {
     this.blockReportCount = blockReportCount;
   }
 
   public boolean areBlockContentsStale() {
     return blockContentsStale;
-  }
-
-  @VisibleForTesting
-  public void setBlockContentsStale(boolean value) {
-    blockContentsStale = value;
   }
 
   void markStaleAfterFailover() {
@@ -196,7 +183,6 @@ public class DatanodeStorageInfo {
       blockContentsStale = false;
     }
     blockReportCount++;
-    hasReceivedBlockReport = true;
   }
 
   @VisibleForTesting
@@ -355,7 +341,7 @@ public class DatanodeStorageInfo {
   public boolean equals(Object obj) {
     if (this == obj) {
       return true;
-    } else if (!(obj instanceof DatanodeStorageInfo)) {
+    } else if (obj == null || !(obj instanceof DatanodeStorageInfo)) {
       return false;
     }
     final DatanodeStorageInfo that = (DatanodeStorageInfo)obj;

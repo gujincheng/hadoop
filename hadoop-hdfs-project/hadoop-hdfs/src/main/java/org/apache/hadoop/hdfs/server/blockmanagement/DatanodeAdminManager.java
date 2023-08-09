@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.Queue;
@@ -29,11 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -105,15 +105,40 @@ public class DatanodeAdminManager {
         DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_DEFAULT,
         TimeUnit.SECONDS);
-    Preconditions.checkArgument(intervalSecs >= 0, "Cannot set a negative " +
+    checkArgument(intervalSecs >= 0, "Cannot set a negative " +
         "value for " + DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY);
+
+    int blocksPerInterval = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_KEY,
+        DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_DEFAULT);
+
+    final String deprecatedKey =
+        "dfs.namenode.decommission.nodes.per.interval";
+    final String strNodes = conf.get(deprecatedKey);
+    if (strNodes != null) {
+      LOG.warn("Deprecated configuration key {} will be ignored.",
+          deprecatedKey);
+      LOG.warn("Please update your configuration to use {} instead.",
+          DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_KEY);
+    }
+
+    checkArgument(blocksPerInterval > 0,
+        "Must set a positive value for "
+        + DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BLOCKS_PER_INTERVAL_KEY);
+
+    final int maxConcurrentTrackedNodes = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES,
+        DFSConfigKeys
+            .DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES_DEFAULT);
+    checkArgument(maxConcurrentTrackedNodes >= 0, "Cannot set a negative " +
+        "value for "
+        + DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES);
 
     Class cls = null;
     try {
       cls = conf.getClass(
           DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MONITOR_CLASS,
-          Class.forName(DFSConfigKeys
-                  .DFS_NAMENODE_DECOMMISSION_MONITOR_CLASS_DEFAULT));
+          DatanodeAdminDefaultMonitor.class);
       monitor =
           (DatanodeAdminMonitorInterface)ReflectionUtils.newInstance(cls, conf);
       monitor.setBlockManager(blockManager);
@@ -126,7 +151,10 @@ public class DatanodeAdminManager {
     executor.scheduleWithFixedDelay(monitor, intervalSecs, intervalSecs,
         TimeUnit.SECONDS);
 
-    LOG.debug("Activating DatanodeAdminManager with interval {} seconds.", intervalSecs);
+    LOG.debug("Activating DatanodeAdminManager with interval {} seconds, " +
+            "{} max blocks per interval, " +
+            "{} max concurrently tracked nodes.", intervalSecs,
+        blocksPerInterval, maxConcurrentTrackedNodes);
   }
 
   /**
@@ -148,8 +176,6 @@ public class DatanodeAdminManager {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
       // Update DN stats maintained by HeartbeatManager
       hbManager.startDecommission(node);
-      // Update cluster's emptyRack
-      blockManager.getDatanodeManager().getNetworkTopology().decommissionNode(node);
       // hbManager.startDecommission will set dead node to decommissioned.
       if (node.isDecommissionInProgress()) {
         for (DatanodeStorageInfo storage : node.getStorageInfos()) {
@@ -174,8 +200,6 @@ public class DatanodeAdminManager {
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
       // Update DN stats maintained by HeartbeatManager
       hbManager.stopDecommission(node);
-      // Update cluster's emptyRack
-      blockManager.getDatanodeManager().getNetworkTopology().recommissionNode(node);
       // extra redundancy blocks will be detected and processed when
       // the dead node comes back and send in its full block report.
       if (node.isAlive()) {
@@ -321,7 +345,8 @@ public class DatanodeAdminManager {
         }
       }
     }
-    if (isMaintenance && numLive >= blockManager.getMinMaintenanceStorageNum(block)) {
+    if (isMaintenance
+      && numLive >= blockManager.getMinReplicationToBeInMaintenance()) {
       return true;
     }
     return false;
@@ -387,30 +412,4 @@ public class DatanodeAdminManager {
     executor.submit(monitor).get();
   }
 
-  public void refreshPendingRepLimit(int pendingRepLimit, String key) {
-    ensurePositiveInt(pendingRepLimit, key);
-    this.monitor.setPendingRepLimit(pendingRepLimit);
-  }
-
-  @VisibleForTesting
-  public int getPendingRepLimit() {
-    return this.monitor.getPendingRepLimit();
-  }
-
-  public void refreshBlocksPerLock(int blocksPerLock, String key) {
-    ensurePositiveInt(blocksPerLock, key);
-    this.monitor.setBlocksPerLock(blocksPerLock);
-  }
-
-  @VisibleForTesting
-  public int getBlocksPerLock() {
-    return this.monitor.getBlocksPerLock();
-  }
-
-  private void ensurePositiveInt(int val, String key) {
-    Preconditions.checkArgument(
-        (val > 0),
-        key + " = '" + val + "' is invalid. " +
-            "It should be a positive, non-zero integer value.");
-  }
 }

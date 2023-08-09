@@ -27,9 +27,9 @@ import org.apache.hadoop.ipc.metrics.RetryCacheMetrics;
 import org.apache.hadoop.util.LightWeightCache;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,20 +49,20 @@ public class RetryCache {
   private static final int MAX_CAPACITY = 16;
 
   /**
-   * CacheEntry is tracked using unique client ID and callId of the RPC request.
+   * CacheEntry is tracked using unique client ID and callId of the RPC request
    */
   public static class CacheEntry implements LightWeightCache.Entry {
     /**
-     * Processing state of the requests.
+     * Processing state of the requests
      */
-    private static final byte INPROGRESS = 0;
-    private static final byte SUCCESS = 1;
-    private static final byte FAILED = 2;
+    private static byte INPROGRESS = 0;
+    private static byte SUCCESS = 1;
+    private static byte FAILED = 2;
 
     private byte state = INPROGRESS;
     
     // Store uuid as two long for better memory utilization
-    private final long clientIdMsb; // Most significant bytes
+    private final long clientIdMsb; // Most signficant bytes
     private final long clientIdLsb; // Least significant bytes
     
     private final int callId;
@@ -140,8 +140,8 @@ public class RetryCache {
     
     @Override
     public String toString() {
-      return String.format("%s:%s:%s", new UUID(this.clientIdMsb, this.clientIdLsb),
-          this.callId, this.state);
+      return (new UUID(this.clientIdMsb, this.clientIdLsb)).toString() + ":"
+          + this.callId + ":" + this.state;
     }
   }
 
@@ -183,7 +183,7 @@ public class RetryCache {
 
   private final LightWeightGSet<CacheEntry, CacheEntry> set;
   private final long expirationTime;
-  private final String cacheName;
+  private String cacheName;
 
   private final ReentrantLock lock = new ReentrantLock();
 
@@ -195,7 +195,7 @@ public class RetryCache {
    */
   public RetryCache(String cacheName, double percentage, long expirationTime) {
     int capacity = LightWeightGSet.computeCapacity(percentage, cacheName);
-    capacity = Math.max(capacity, MAX_CAPACITY);
+    capacity = capacity > MAX_CAPACITY ? capacity : MAX_CAPACITY;
     this.set = new LightWeightCache<CacheEntry, CacheEntry>(capacity, capacity,
         expirationTime, 0);
     this.expirationTime = expirationTime;
@@ -203,11 +203,11 @@ public class RetryCache {
     this.retryCacheMetrics =  RetryCacheMetrics.create(this);
   }
 
-  private static boolean skipRetryCache(byte[] clientId, int callId) {
+  private static boolean skipRetryCache() {
     // Do not track non RPC invocation or RPC requests with
     // invalid callId or clientId in retry cache
-    return !Server.isRpcInvocation() || callId < 0
-        || Arrays.equals(clientId, RpcConstants.DUMMY_CLIENT_ID);
+    return !Server.isRpcInvocation() || Server.getCallId() < 0
+        || Arrays.equals(Server.getClientId(), RpcConstants.DUMMY_CLIENT_ID);
   }
 
   public void lock() {
@@ -233,7 +233,7 @@ public class RetryCache {
   }
 
   /**
-   * @return This method returns cache name for metrics.
+   * This method returns cache name for metrics.
    */
   public String getCacheName() {
     return cacheName;
@@ -302,9 +302,6 @@ public class RetryCache {
   /** 
    * Add a new cache entry into the retry cache. The cache entry consists of 
    * clientId and callId extracted from editlog.
-   *
-   * @param clientId input clientId.
-   * @param callId input callId.
    */
   public void addCacheEntry(byte[] clientId, int callId) {
     CacheEntry newEntry = new CacheEntry(clientId, callId, System.nanoTime()
@@ -332,51 +329,34 @@ public class RetryCache {
     retryCacheMetrics.incrCacheUpdated();
   }
 
-  private static CacheEntry newEntry(long expirationTime,
-      byte[] clientId, int callId) {
-    return new CacheEntry(clientId, callId,
+  private static CacheEntry newEntry(long expirationTime) {
+    return new CacheEntry(Server.getClientId(), Server.getCallId(),
         System.nanoTime() + expirationTime);
   }
 
   private static CacheEntryWithPayload newEntry(Object payload,
-      long expirationTime, byte[] clientId, int callId) {
-    return new CacheEntryWithPayload(clientId, callId,
+      long expirationTime) {
+    return new CacheEntryWithPayload(Server.getClientId(), Server.getCallId(),
         payload, System.nanoTime() + expirationTime);
   }
 
-  /**
-   * Static method that provides null check for retryCache.
-   * @param cache input Cache.
-   * @param clientId client id of this request
-   * @param callId client call id of this request
-   * @return CacheEntry.
-   */
-  public static CacheEntry waitForCompletion(RetryCache cache,
-      byte[] clientId, int callId) {
-    if (skipRetryCache(clientId, callId)) {
+  /** Static method that provides null check for retryCache */
+  public static CacheEntry waitForCompletion(RetryCache cache) {
+    if (skipRetryCache()) {
       return null;
     }
     return cache != null ? cache
-        .waitForCompletion(newEntry(cache.expirationTime,
-            clientId, callId)) : null;
+        .waitForCompletion(newEntry(cache.expirationTime)) : null;
   }
 
-  /**
-   * Static method that provides null check for retryCache.
-   * @param cache input cache.
-   * @param payload input payload.
-   * @param clientId client id of this request
-   * @param callId client call id of this request
-   * @return CacheEntryWithPayload.
-   */
+  /** Static method that provides null check for retryCache */
   public static CacheEntryWithPayload waitForCompletion(RetryCache cache,
-      Object payload, byte[] clientId, int callId) {
-    if (skipRetryCache(clientId, callId)) {
+      Object payload) {
+    if (skipRetryCache()) {
       return null;
     }
     return (CacheEntryWithPayload) (cache != null ? cache
-        .waitForCompletion(newEntry(payload, cache.expirationTime,
-            clientId, callId)) : null);
+        .waitForCompletion(newEntry(payload, cache.expirationTime)) : null);
   }
 
   public static void setState(CacheEntry e, boolean success) {

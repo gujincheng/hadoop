@@ -67,8 +67,6 @@ public class ClusterMetricsInfo {
   private int activeNodes;
   private int shutdownNodes;
 
-  private int containerAssignedPerSecond;
-
   // Total used resource of the cluster, including all partitions
   private ResourceInfo totalUsedResourcesAcrossPartition;
 
@@ -82,9 +80,6 @@ public class ClusterMetricsInfo {
   private int totalAllocatedContainersAcrossPartition;
 
   private boolean crossPartitionMetricsAvailable = false;
-
-  private int rmEventQueueSize;
-  private int schedulerEventQueueSize;
 
   public ClusterMetricsInfo() {
   } // JAXB needs this
@@ -163,10 +158,6 @@ public class ClusterMetricsInfo {
     this.shutdownNodes = clusterMetrics.getNumShutdownNMs();
     this.totalNodes = activeNodes + lostNodes + decommissionedNodes
         + rebootedNodes + unhealthyNodes + decommissioningNodes + shutdownNodes;
-    this.containerAssignedPerSecond = clusterMetrics
-        .getContainerAssignedPerSecond();
-    this.rmEventQueueSize = clusterMetrics.getRmEventQueueSize();
-    this.schedulerEventQueueSize = clusterMetrics.getSchedulerEventQueueSize();
   }
 
   public int getAppsSubmitted() {
@@ -419,17 +410,5 @@ public class ClusterMetricsInfo {
 
   public boolean getCrossPartitionMetricsAvailable() {
     return crossPartitionMetricsAvailable;
-  }
-
-  public int getContainerAssignedPerSecond() {
-    return this.containerAssignedPerSecond;
-  }
-
-  public int getRmEventQueueSize() {
-    return rmEventQueueSize;
-  }
-
-  public int getSchedulerEventQueueSize() {
-    return schedulerEventQueueSize;
   }
 }

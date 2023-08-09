@@ -32,7 +32,6 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
 import org.junit.After;
 import org.junit.Before;
@@ -748,7 +747,7 @@ public class TestTrash {
     Path myPath = new Path(TEST_DIR, "test/mkdirs");
     mkdir(fs, myPath);
     int fileIndex = 0;
-    Set<String> checkpoints = new HashSet<>();
+    Set<String> checkpoints = new HashSet<String>();
     while (true)  {
       // Create a file with a new name
       Path myFile = new Path(TEST_DIR, "test/mkdirs/myFile" + fileIndex++);
@@ -783,55 +782,6 @@ public class TestTrash {
       }
       Thread.sleep(5000);
     }
-    emptierThread.interrupt();
-    emptierThread.join();
-  }
-
-  /**
-   * Test trash emptier can delete non-checkpoint dir or not.
-   * @throws Exception
-   */
-  @Test()
-  public void testTrashEmptierCleanDirNotInCheckpointDir() throws Exception {
-    Configuration conf = new Configuration();
-    // Trash with 12 second deletes and 6 seconds checkpoints.
-    conf.set(FS_TRASH_INTERVAL_KEY, "0.2"); // 12 seconds
-    conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
-    conf.set(FS_TRASH_CHECKPOINT_INTERVAL_KEY, "0.1"); // 6 seconds
-    conf.setBoolean(FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY, true);
-    FileSystem fs = FileSystem.getLocal(conf);
-    conf.set("fs.default.name", fs.getUri().toString());
-
-    Trash trash = new Trash(conf);
-
-    // Start Emptier in background.
-    Runnable emptier = trash.getEmptier();
-    Thread emptierThread = new Thread(emptier);
-    emptierThread.start();
-
-    FsShell shell = new FsShell();
-    shell.setConf(conf);
-    shell.init();
-
-    // Make sure the .Trash dir existed.
-    mkdir(fs, shell.getCurrentTrashDir());
-    assertTrue(fs.exists(shell.getCurrentTrashDir()));
-    // Create a directory under .Trash directly.
-    Path myPath = new Path(shell.getCurrentTrashDir().getParent(), "test_dirs");
-    mkdir(fs, myPath);
-    assertTrue(fs.exists(myPath));
-
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        try {
-          return !fs.exists(myPath);
-        } catch (IOException e) {
-          // Do nothing.
-        }
-        return false;
-      }
-    }, 6000, 60000);
     emptierThread.interrupt();
     emptierThread.join();
   }

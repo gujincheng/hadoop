@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.yarn.service;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.*;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -32,9 +32,9 @@ import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Artifact.TypeEnum;
 import org.apache.hadoop.yarn.service.api.records.Component;
@@ -47,9 +47,9 @@ import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.ServiceStatus;
 import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.webapp.ApiServer;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 /**
@@ -61,7 +61,7 @@ public class TestApiServer {
   private HttpServletRequest request;
   private ServiceClientTest mockServerClient;
 
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     request = Mockito.mock(HttpServletRequest.class);
     Mockito.when(request.getRemoteUser())
@@ -74,41 +74,40 @@ public class TestApiServer {
     apiServer.setServiceClient(mockServerClient);
   }
 
-  @AfterEach
+  @After
   public void teardown() {
     mockServerClient.forceStop();
   }
 
   @Test
-  void testPathAnnotation() {
+  public void testPathAnnotation() {
     assertNotNull(this.apiServer.getClass().getAnnotation(Path.class));
-    assertTrue(this.apiServer.getClass().isAnnotationPresent(Path.class),
-        "The controller has the annotation Path");
+    assertTrue("The controller has the annotation Path",
+        this.apiServer.getClass().isAnnotationPresent(Path.class));
     final Path path = this.apiServer.getClass()
         .getAnnotation(Path.class);
-    assertEquals("/v1", path.value(), "The path has /v1 annotation");
+    assertEquals("The path has /v1 annotation", "/v1", path.value());
   }
 
   @Test
-  void testGetVersion() {
+  public void testGetVersion() {
     final Response actual = apiServer.getVersion();
-    assertEquals(Response.ok().build().getStatus(),
-        actual.getStatus(),
-        "Version number is");
+    assertEquals("Version number is", Response.ok().build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testBadCreateService() {
+  public void testBadCreateService() {
     Service service = new Service();
     // Test for invalid argument
     final Response actual = apiServer.createService(request, service);
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "Create service is ");
+    assertEquals("Create service is ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testGoodCreateService() throws Exception {
+  public void testGoodCreateService() throws Exception {
     String json = "{\"auths\": "
         + "{\"https://index.docker.io/v1/\": "
         + "{\"auth\": \"foobarbaz\"},"
@@ -123,13 +122,13 @@ public class TestApiServer {
     bw.close();
     Service service = ServiceClientTest.buildGoodService();
     final Response actual = apiServer.createService(request, service);
-    assertEquals(Response.status(Status.ACCEPTED).build().getStatus(),
-        actual.getStatus(),
-        "Create service is ");
+    assertEquals("Create service is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testInternalServerErrorDockerClientConfigMissingCreateService() {
+  public void testInternalServerErrorDockerClientConfigMissingCreateService() {
     Service service = new Service();
     service.setName("jenkins");
     service.setVersion("v1");
@@ -150,94 +149,97 @@ public class TestApiServer {
     components.add(c);
     service.setComponents(components);
     final Response actual = apiServer.createService(request, service);
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "Create service is ");
+    assertEquals("Create service is ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testBadGetService() {
+  public void testBadGetService() {
     final String serviceName = "nonexistent-jenkins";
     final Response actual = apiServer.getService(request, serviceName);
-    assertEquals(Response.status(Status.NOT_FOUND).build().getStatus(),
-        actual.getStatus(),
-        "Get service is ");
+    assertEquals("Get service is ",
+        Response.status(Status.NOT_FOUND).build().getStatus(),
+        actual.getStatus());
     ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
-    assertEquals(RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode(),
-        "Response code don't match");
-    assertEquals("Service " + serviceName + " not found", serviceStatus.getDiagnostics(),
-        "Response diagnostics don't match");
+    assertEquals("Response code don't match",
+        RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode());
+    assertEquals("Response diagnostics don't match",
+        "Service " + serviceName + " not found",
+        serviceStatus.getDiagnostics());
   }
 
   @Test
-  void testBadGetService2() {
+  public void testBadGetService2() {
     final Response actual = apiServer.getService(request, null);
-    assertEquals(Response.status(Status.NOT_FOUND).build().getStatus(), actual.getStatus(),
-        "Get service is ");
+    assertEquals("Get service is ",
+        Response.status(Status.NOT_FOUND).build().getStatus(),
+        actual.getStatus());
     ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
-    assertEquals(RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode(),
-        "Response code don't match");
-    assertEquals("Service name cannot be null.", serviceStatus.getDiagnostics(),
-        "Response diagnostics don't match");
+    assertEquals("Response code don't match",
+        RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode());
+    assertEquals("Response diagnostics don't match",
+        "Service name cannot be null.", serviceStatus.getDiagnostics());
   }
 
   @Test
-  void testGoodGetService() {
+  public void testGoodGetService() {
     final Response actual = apiServer.getService(request, "jenkins");
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
-        "Get service is ");
+    assertEquals("Get service is ",
+        Response.status(Status.OK).build().getStatus(), actual.getStatus());
   }
 
   @Test
-  void testBadDeleteService() {
+  public void testBadDeleteService() {
     final Response actual = apiServer.deleteService(request, "no-jenkins");
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "Delete service is ");
+    assertEquals("Delete service is ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testBadDeleteService2() {
+  public void testBadDeleteService2() {
     final Response actual = apiServer.deleteService(request, null);
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "Delete service is ");
+    assertEquals("Delete service is ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testBadDeleteService3() {
+  public void testBadDeleteService3() {
     final Response actual = apiServer.deleteService(request,
         "jenkins-doesn't-exist");
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "Delete service is ");
+    assertEquals("Delete service is ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testBadDeleteService4() {
+  public void testBadDeleteService4() {
     final Response actual = apiServer.deleteService(request,
         "jenkins-error-cleaning-registry");
-    assertEquals(Response.status(Status.INTERNAL_SERVER_ERROR).build().getStatus(),
-        actual.getStatus(),
-        "Delete service is ");
+    assertEquals("Delete service is ",
+        Response.status(Status.INTERNAL_SERVER_ERROR).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testGoodDeleteService() {
+  public void testGoodDeleteService() {
     final Response actual = apiServer.deleteService(request, "jenkins");
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
-        "Delete service is ");
+    assertEquals("Delete service is ",
+        Response.status(Status.OK).build().getStatus(), actual.getStatus());
   }
 
   @Test
-  void testDeleteStoppedService() {
-    final Response actual = apiServer.deleteService(request, "jenkins-already-stopped");
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
-        "Delete service is ");
+  public void testDeleteStoppedService() {
+    final Response actual = apiServer.deleteService(request,
+        "jenkins-already-stopped");
+    assertEquals("Delete service is ",
+        Response.status(Status.OK).build().getStatus(), actual.getStatus());
   }
 
   @Test
-  void testDecreaseContainerAndStop() {
+  public void testDecreaseContainerAndStop() {
     Service service = new Service();
     service.setState(ServiceState.STOPPED);
     service.setName("jenkins");
@@ -258,12 +260,12 @@ public class TestApiServer {
     service.setComponents(components);
     final Response actual = apiServer.updateService(request, "jenkins",
         service);
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
-        "update service is ");
+    assertEquals("update service is ",
+        Response.status(Status.OK).build().getStatus(), actual.getStatus());
   }
 
   @Test
-  void testBadDecreaseContainerAndStop() {
+  public void testBadDecreaseContainerAndStop() {
     Service service = new Service();
     service.setState(ServiceState.STOPPED);
     service.setName("no-jenkins");
@@ -285,13 +287,13 @@ public class TestApiServer {
     System.out.println("before stop");
     final Response actual = apiServer.updateService(request, "no-jenkins",
         service);
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "flex service is ");
+    assertEquals("flex service is ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testIncreaseContainersAndStart() {
+  public void testIncreaseContainersAndStart() {
     Service service = new Service();
     service.setState(ServiceState.STARTED);
     service.setName("jenkins");
@@ -312,12 +314,12 @@ public class TestApiServer {
     service.setComponents(components);
     final Response actual = apiServer.updateService(request, "jenkins",
         service);
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
-        "flex service is ");
+    assertEquals("flex service is ",
+        Response.status(Status.OK).build().getStatus(), actual.getStatus());
   }
 
   @Test
-  void testBadStartServices() {
+  public void testBadStartServices() {
     Service service = new Service();
     service.setState(ServiceState.STARTED);
     service.setName("no-jenkins");
@@ -338,13 +340,13 @@ public class TestApiServer {
     service.setComponents(components);
     final Response actual = apiServer.updateService(request, "no-jenkins",
         service);
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "start service is ");
+    assertEquals("start service is ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testGoodStartServices() {
+  public void testGoodStartServices() {
     Service service = new Service();
     service.setState(ServiceState.STARTED);
     service.setName("jenkins");
@@ -365,12 +367,12 @@ public class TestApiServer {
     service.setComponents(components);
     final Response actual = apiServer.updateService(request, "jenkins",
         service);
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
-        "start service is ");
+    assertEquals("start service is ",
+        Response.status(Status.OK).build().getStatus(), actual.getStatus());
   }
 
   @Test
-  void testBadStopServices() {
+  public void testBadStopServices() {
     Service service = new Service();
     service.setState(ServiceState.STOPPED);
     service.setName("no-jenkins");
@@ -392,25 +394,25 @@ public class TestApiServer {
     System.out.println("before stop");
     final Response actual = apiServer.updateService(request, "no-jenkins",
         service);
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "stop service is ");
+    assertEquals("stop service is ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testGoodStopServices() {
+  public void testGoodStopServices() {
     Service service = new Service();
     service.setState(ServiceState.STOPPED);
     service.setName("jenkins");
     System.out.println("before stop");
     final Response actual = apiServer.updateService(request, "jenkins",
         service);
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
-        "stop service is ");
+    assertEquals("stop service is ",
+        Response.status(Status.OK).build().getStatus(), actual.getStatus());
   }
 
   @Test
-  void testBadSecondStopServices() throws Exception {
+  public void testBadSecondStopServices() throws Exception {
     Service service = new Service();
     service.setState(ServiceState.STOPPED);
     service.setName("jenkins-second-stop");
@@ -418,17 +420,17 @@ public class TestApiServer {
     System.out.println("before second stop");
     final Response actual = apiServer.updateService(request,
         "jenkins-second-stop", service);
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "stop service should have thrown 400 Bad Request: ");
+    assertEquals("stop service should have thrown 400 Bad Request: ",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
     ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
-    assertEquals("Service jenkins-second-stop is already stopped",
-        serviceStatus.getDiagnostics(),
-        "Stop service should have failed with service already stopped");
+    assertEquals("Stop service should have failed with service already stopped",
+        "Service jenkins-second-stop is already stopped",
+        serviceStatus.getDiagnostics());
   }
 
   @Test
-  void testUpdateService() {
+  public void testUpdateService() {
     Service service = new Service();
     service.setState(ServiceState.STARTED);
     service.setName("no-jenkins");
@@ -450,71 +452,72 @@ public class TestApiServer {
     System.out.println("before stop");
     final Response actual = apiServer.updateService(request, "no-jenkins",
         service);
-    assertEquals(Response.status(Status.BAD_REQUEST)
-        .build().getStatus(), actual.getStatus(), "update service is ");
+    assertEquals("update service is ",
+        Response.status(Status.BAD_REQUEST)
+            .build().getStatus(), actual.getStatus());
   }
 
   @Test
-  void testUpdateComponent() {
+  public void testUpdateComponent() {
     Response actual = apiServer.updateComponent(request, "jenkins",
         "jenkins-master", null);
     ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "Update component should have failed with 400 bad request");
-    assertEquals("No component data provided", serviceStatus.getDiagnostics(),
-        "Update component should have failed with no data error");
+    assertEquals("Update component should have failed with 400 bad request",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
+    assertEquals("Update component should have failed with no data error",
+        "No component data provided", serviceStatus.getDiagnostics());
 
     Component comp = new Component();
     actual = apiServer.updateComponent(request, "jenkins", "jenkins-master",
         comp);
     serviceStatus = (ServiceStatus) actual.getEntity();
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "Update component should have failed with 400 bad request");
-    assertEquals("No container count provided", serviceStatus.getDiagnostics(),
-        "Update component should have failed with no count error");
+    assertEquals("Update component should have failed with 400 bad request",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
+    assertEquals("Update component should have failed with no count error",
+        "No container count provided", serviceStatus.getDiagnostics());
 
     comp.setNumberOfContainers(-1L);
     actual = apiServer.updateComponent(request, "jenkins", "jenkins-master",
         comp);
     serviceStatus = (ServiceStatus) actual.getEntity();
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "Update component should have failed with 400 bad request");
-    assertEquals("Invalid number of containers specified -1", serviceStatus.getDiagnostics(),
-        "Update component should have failed with no count error");
+    assertEquals("Update component should have failed with 400 bad request",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
+    assertEquals("Update component should have failed with no count error",
+        "Invalid number of containers specified -1", serviceStatus.getDiagnostics());
 
     comp.setName("jenkins-slave");
     comp.setNumberOfContainers(1L);
     actual = apiServer.updateComponent(request, "jenkins", "jenkins-master",
         comp);
     serviceStatus = (ServiceStatus) actual.getEntity();
-    assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
-        actual.getStatus(),
-        "Update component should have failed with 400 bad request");
+    assertEquals("Update component should have failed with 400 bad request",
+        Response.status(Status.BAD_REQUEST).build().getStatus(),
+        actual.getStatus());
     assertEquals(
+        "Update component should have failed with component name mismatch "
+            + "error",
         "Component name in the request object (jenkins-slave) does not match "
             + "that in the URI path (jenkins-master)",
-        serviceStatus.getDiagnostics(),
-        "Update component should have failed with component name mismatch "
-            + "error");
+        serviceStatus.getDiagnostics());
   }
 
   @Test
-  void testInitiateUpgrade() {
+  public void testInitiateUpgrade() {
     Service goodService = ServiceClientTest.buildLiveGoodService();
     goodService.setVersion("v2");
     goodService.setState(ServiceState.UPGRADING);
     final Response actual = apiServer.updateService(request,
         goodService.getName(), goodService);
-    assertEquals(Response.status(Status.ACCEPTED).build().getStatus(),
-        actual.getStatus(),
-        "Initiate upgrade is ");
+    assertEquals("Initiate upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testUpgradeSingleInstance() {
+  public void testUpgradeSingleInstance() {
     Service goodService = ServiceClientTest.buildLiveGoodService();
     Component comp = goodService.getComponents().iterator().next();
     Container container = comp.getContainers().iterator().next();
@@ -533,13 +536,13 @@ public class TestApiServer {
     final Response actual = apiServer.updateComponentInstance(request,
         goodService.getName(), comp.getName(),
         container.getComponentInstanceName(), container);
-    assertEquals(Response.status(Status.ACCEPTED).build().getStatus(),
-        actual.getStatus(),
-        "Instance upgrade is ");
+    assertEquals("Instance upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testUpgradeMultipleInstances() {
+  public void testUpgradeMultipleInstances() {
     Service goodService = ServiceClientTest.buildLiveGoodService();
     Component comp = goodService.getComponents().iterator().next();
     comp.getContainers().forEach(container ->
@@ -560,13 +563,13 @@ public class TestApiServer {
 
     final Response actual = apiServer.updateComponentInstances(request,
         goodService.getName(), comp.getContainers());
-    assertEquals(Response.status(Status.ACCEPTED).build().getStatus(),
-        actual.getStatus(),
-        "Instance upgrade is ");
+    assertEquals("Instance upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testUpgradeComponent() {
+  public void testUpgradeComponent() {
     Service goodService = ServiceClientTest.buildLiveGoodService();
     Component comp = goodService.getComponents().iterator().next();
     comp.setState(ComponentState.UPGRADING);
@@ -586,13 +589,13 @@ public class TestApiServer {
 
     final Response actual = apiServer.updateComponent(request,
         goodService.getName(), comp.getName(), comp);
-    assertEquals(Response.status(Status.ACCEPTED).build().getStatus(),
-        actual.getStatus(),
-        "Component upgrade is ");
+    assertEquals("Component upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
   }
 
   @Test
-  void testUpgradeMultipleComps() {
+  public void testUpgradeMultipleComps() {
     Service goodService = ServiceClientTest.buildLiveGoodService();
     goodService.getComponents().forEach(comp ->
         comp.setState(ComponentState.UPGRADING));
@@ -613,8 +616,8 @@ public class TestApiServer {
 
     final Response actual = apiServer.updateComponents(request,
         goodService.getName(), goodService.getComponents());
-    assertEquals(Response.status(Status.ACCEPTED).build().getStatus(),
-        actual.getStatus(),
-        "Component upgrade is ");
+    assertEquals("Component upgrade is ",
+        Response.status(Status.ACCEPTED).build().getStatus(),
+        actual.getStatus());
   }
 }

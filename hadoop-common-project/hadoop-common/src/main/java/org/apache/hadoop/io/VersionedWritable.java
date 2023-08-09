@@ -36,7 +36,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Stable
 public abstract class VersionedWritable implements Writable {
 
-  /** @return Return the version number of the current implementation. */
+  /** Return the version number of the current implementation. */
   public abstract byte getVersion();
     
   // javadoc from Writable

@@ -118,8 +118,7 @@ public interface HAServiceProtocol {
   /**
    * Request service to transition to active state. No operation, if the
    * service is already in active state.
-   *
-   * @param reqInfo reqInfo.
+   * 
    * @throws ServiceFailedException
    *           if transition from standby to active fails.
    * @throws AccessControlException
@@ -136,8 +135,7 @@ public interface HAServiceProtocol {
   /**
    * Request service to transition to standby state. No operation, if the
    * service is already in standby state.
-   *
-   * @param reqInfo reqInfo.
+   * 
    * @throws ServiceFailedException
    *           if transition from active to standby fails.
    * @throws AccessControlException
@@ -155,7 +153,6 @@ public interface HAServiceProtocol {
    * Request service to transition to observer state. No operation, if the
    * service is already in observer state.
    *
-   * @param reqInfo reqInfo.
    * @throws ServiceFailedException
    *           if transition from standby to observer fails.
    * @throws AccessControlException
@@ -179,7 +176,6 @@ public interface HAServiceProtocol {
    * @throws IOException
    *           if other errors happen
    * @see HAServiceStatus
-   * @return HAServiceStatus.
    */
   @Idempotent
   public HAServiceStatus getServiceStatus() throws AccessControlException,

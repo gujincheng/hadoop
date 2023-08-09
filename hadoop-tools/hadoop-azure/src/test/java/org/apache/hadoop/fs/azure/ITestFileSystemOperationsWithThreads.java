@@ -28,6 +28,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,8 +41,6 @@ import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Tests the Native Azure file system (WASB) using parallel threads for rename and delete operations.
@@ -71,7 +70,8 @@ public class ITestFileSystemOperationsWithThreads extends AbstractWasbTestBase {
     fs.initialize(uri, conf);
 
     // Capture logs
-    logs = LogCapturer.captureLogs(LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME));
+    logs = LogCapturer.captureLogs(new Log4JLogger(org.apache.log4j.Logger
+        .getRootLogger()));
   }
 
   /*

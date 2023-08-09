@@ -47,7 +47,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 public class TestDelegationTokenAuthenticationHandlerWithMocks {
 
@@ -94,7 +93,7 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
   private DelegationTokenAuthenticationHandler handler;
 
   @Rule
-  public Timeout testTimeout = new Timeout(120000, TimeUnit.MILLISECONDS);
+  public Timeout testTimeout = new Timeout(120000);
 
   @Before
   public void setUp() throws Exception {

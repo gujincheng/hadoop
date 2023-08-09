@@ -18,19 +18,20 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.ws.rs.core.MultivaluedMap;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -41,13 +42,12 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestName;
 
 public class TestTimelineClientV2Impl {
   private static final Logger LOG =
@@ -56,25 +56,20 @@ public class TestTimelineClientV2Impl {
   private static final long TIME_TO_SLEEP = 150L;
   private static final String EXCEPTION_MSG = "Exception in the content";
 
-  @BeforeEach
-  public void setup(TestInfo testInfo) {
+  @Before
+  public void setup() {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 2.0f);
     conf.setInt(YarnConfiguration.NUMBER_OF_ASYNC_ENTITIES_TO_MERGE, 3);
-    if (!testInfo.getDisplayName()
+    if (!currTestName.getMethodName()
         .contains("testRetryOnConnectionFailure")) {
       client = createTimelineClient(conf);
     }
   }
 
-  @Test
-  void getTestInfo(TestInfo testInfo) {
-    System.out.println(testInfo.getDisplayName());
-    System.out.println(testInfo.getTestMethod());
-    System.out.println(testInfo.getTestClass());
-    System.out.println(testInfo.getTags());
-  }
+  @Rule
+  public TestName currTestName = new TestName();
   private YarnConfiguration conf;
 
   private TestV2TimelineClient createTimelineClient(YarnConfiguration config) {
@@ -121,8 +116,8 @@ public class TestTimelineClientV2Impl {
     private List<TimelineEntities> publishedEntities;
 
     public TimelineEntities getPublishedEntities(int putIndex) {
-      assertTrue(putIndex < publishedEntities.size(),
-          "Not So many entities Published");
+      Assert.assertTrue("Not So many entities Published",
+          putIndex < publishedEntities.size());
       return publishedEntities.get(putIndex);
     }
 
@@ -157,7 +152,7 @@ public class TestTimelineClientV2Impl {
   }
 
   @Test
-  void testExceptionMultipleRetry() {
+  public void testExceptionMultipleRetry() {
     TestV2TimelineClientForExceptionHandling c =
         new TestV2TimelineClientForExceptionHandling(
             ApplicationId.newInstance(0, 0));
@@ -170,42 +165,42 @@ public class TestTimelineClientV2Impl {
     try {
       c.putEntities(new TimelineEntity());
     } catch (IOException e) {
-      fail("YARN exception is expected");
+      Assert.fail("YARN exception is expected");
     } catch (YarnException e) {
       Throwable cause = e.getCause();
-      assertTrue(cause instanceof IOException,
-          "IOException is expected");
-      assertTrue(cause.getMessage().contains(
-              "TimelineClient has reached to max retry times : " + maxRetries),
-          "YARN exception is expected");
+      Assert.assertTrue("IOException is expected",
+          cause instanceof IOException);
+      Assert.assertTrue("YARN exception is expected",
+          cause.getMessage().contains(
+              "TimelineClient has reached to max retry times : " + maxRetries));
     }
 
     c.setThrowYarnException(true);
     try {
       c.putEntities(new TimelineEntity());
     } catch (IOException e) {
-      fail("YARN exception is expected");
+      Assert.fail("YARN exception is expected");
     } catch (YarnException e) {
       Throwable cause = e.getCause();
-      assertTrue(cause instanceof YarnException,
-          "YARN exception is expected");
-      assertTrue(cause.getMessage().contains(EXCEPTION_MSG),
-          "YARN exception is expected");
+      Assert.assertTrue("YARN exception is expected",
+          cause instanceof YarnException);
+      Assert.assertTrue("YARN exception is expected",
+          cause.getMessage().contains(EXCEPTION_MSG));
     }
     c.stop();
   }
 
   @Test
-  void testPostEntities() throws Exception {
+  public void testPostEntities() throws Exception {
     try {
       client.putEntities(generateEntity("1"));
     } catch (YarnException e) {
-      fail("Exception is not expected");
+      Assert.fail("Exception is not expected");
     }
   }
 
   @Test
-  void testASyncCallMerge() throws Exception {
+  public void testASyncCallMerge() throws Exception {
     client.setSleepBeforeReturn(true);
     try {
       client.putEntitiesAsync(generateEntity("1"));
@@ -214,7 +209,7 @@ public class TestTimelineClientV2Impl {
       client.putEntitiesAsync(generateEntity("2"));
       client.putEntitiesAsync(generateEntity("3"));
     } catch (YarnException e) {
-      fail("Exception is not expected");
+      Assert.fail("Exception is not expected");
     }
     for (int i = 0; i < 4; i++) {
       if (client.getNumOfTimelineEntitiesPublished() == 2) {
@@ -222,33 +217,29 @@ public class TestTimelineClientV2Impl {
       }
       Thread.sleep(TIME_TO_SLEEP);
     }
-    assertEquals(2,
-        client.getNumOfTimelineEntitiesPublished(),
-        "two merged TimelineEntities needs to be published");
+    Assert.assertEquals("two merged TimelineEntities needs to be published", 2,
+        client.getNumOfTimelineEntitiesPublished());
     TimelineEntities secondPublishedEntities = client.getPublishedEntities(1);
-    assertEquals(
-        2,
-        secondPublishedEntities.getEntities().size(),
-        "Merged TimelineEntities Object needs to 2 TimelineEntity Object");
-    assertEquals("2",
-        secondPublishedEntities.getEntities().get(0).getId(),
-        "Order of Async Events Needs to be FIFO");
-    assertEquals("3",
-        secondPublishedEntities.getEntities().get(1).getId(),
-        "Order of Async Events Needs to be FIFO");
+    Assert.assertEquals(
+        "Merged TimelineEntities Object needs to 2 TimelineEntity Object", 2,
+        secondPublishedEntities.getEntities().size());
+    Assert.assertEquals("Order of Async Events Needs to be FIFO", "2",
+        secondPublishedEntities.getEntities().get(0).getId());
+    Assert.assertEquals("Order of Async Events Needs to be FIFO", "3",
+        secondPublishedEntities.getEntities().get(1).getId());
   }
 
   @Test
-  void testSyncCall() throws Exception {
+  public void testSyncCall() throws Exception {
     try {
-      // sync entity should not be merged with Async
+      // sync entity should not be be merged with Async
       client.putEntities(generateEntity("1"));
       client.putEntitiesAsync(generateEntity("2"));
       client.putEntitiesAsync(generateEntity("3"));
       // except for the sync call above 2 should be merged
       client.putEntities(generateEntity("4"));
     } catch (YarnException e) {
-      fail("Exception is not expected");
+      Assert.fail("Exception is not expected");
     }
     for (int i = 0; i < 4; i++) {
       if (client.getNumOfTimelineEntitiesPublished() == 3) {
@@ -262,65 +253,57 @@ public class TestTimelineClientV2Impl {
     int lastPublishIndex = asyncPushesMerged ? 2 : 3;
 
     TimelineEntities firstPublishedEntities = client.getPublishedEntities(0);
-    assertEquals(1,
-        firstPublishedEntities.getEntities().size(),
-        "sync entities should not be merged with async");
+    Assert.assertEquals("sync entities should not be merged with async", 1,
+        firstPublishedEntities.getEntities().size());
 
     // async push does not guarantee a merge but is FIFO
     if (asyncPushesMerged) {
       TimelineEntities secondPublishedEntities = client.getPublishedEntities(1);
-      assertEquals(
-          2,
-          secondPublishedEntities.getEntities().size(),
-          "async entities should be merged before publishing sync");
-      assertEquals("2",
-          secondPublishedEntities.getEntities().get(0).getId(),
-          "Order of Async Events Needs to be FIFO");
-      assertEquals("3",
-          secondPublishedEntities.getEntities().get(1).getId(),
-          "Order of Async Events Needs to be FIFO");
+      Assert.assertEquals(
+          "async entities should be merged before publishing sync", 2,
+          secondPublishedEntities.getEntities().size());
+      Assert.assertEquals("Order of Async Events Needs to be FIFO", "2",
+          secondPublishedEntities.getEntities().get(0).getId());
+      Assert.assertEquals("Order of Async Events Needs to be FIFO", "3",
+          secondPublishedEntities.getEntities().get(1).getId());
     } else {
       TimelineEntities secondAsyncPublish = client.getPublishedEntities(1);
-      assertEquals("2",
-          secondAsyncPublish.getEntities().get(0).getId(),
-          "Order of Async Events Needs to be FIFO");
+      Assert.assertEquals("Order of Async Events Needs to be FIFO", "2",
+          secondAsyncPublish.getEntities().get(0).getId());
       TimelineEntities thirdAsyncPublish = client.getPublishedEntities(2);
-      assertEquals("3",
-          thirdAsyncPublish.getEntities().get(0).getId(),
-          "Order of Async Events Needs to be FIFO");
+      Assert.assertEquals("Order of Async Events Needs to be FIFO", "3",
+          thirdAsyncPublish.getEntities().get(0).getId());
     }
 
     // test the last entity published is sync put
     TimelineEntities thirdPublishedEntities =
         client.getPublishedEntities(lastPublishIndex);
-    assertEquals(1,
-        thirdPublishedEntities.getEntities().size(),
-        "sync entities had to be published at the last");
-    assertEquals("4",
-        thirdPublishedEntities.getEntities().get(0).getId(),
-        "Expected last sync Event is not proper");
+    Assert.assertEquals("sync entities had to be published at the last", 1,
+        thirdPublishedEntities.getEntities().size());
+    Assert.assertEquals("Expected last sync Event is not proper", "4",
+        thirdPublishedEntities.getEntities().get(0).getId());
   }
 
   @Test
-  void testExceptionCalls() throws Exception {
+  public void testExceptionCalls() throws Exception {
     client.setThrowYarnException(true);
     try {
       client.putEntitiesAsync(generateEntity("1"));
     } catch (YarnException e) {
-      fail("Async calls are not expected to throw exception");
+      Assert.fail("Async calls are not expected to throw exception");
     }
 
     try {
       client.putEntities(generateEntity("2"));
-      fail("Sync calls are expected to throw exception");
+      Assert.fail("Sync calls are expected to throw exception");
     } catch (YarnException e) {
-      assertEquals("ActualException", e.getCause().getMessage(),
-          "Same exception needs to be thrown");
+      Assert.assertEquals("Same exception needs to be thrown",
+          "ActualException", e.getCause().getMessage());
     }
   }
 
   @Test
-  void testConfigurableNumberOfMerges() throws Exception {
+  public void testConfigurableNumberOfMerges() throws Exception {
     client.setSleepBeforeReturn(true);
     try {
       // At max 3 entities need to be merged
@@ -335,52 +318,52 @@ public class TestTimelineClientV2Impl {
       client.putEntitiesAsync(generateEntity("9"));
       client.putEntitiesAsync(generateEntity("10"));
     } catch (YarnException e) {
-      fail("No exception expected");
+      Assert.fail("No exception expected");
     }
     // not having the same logic here as it doesn't depend on how many times
     // events are published.
     Thread.sleep(2 * TIME_TO_SLEEP);
     printReceivedEntities();
     for (TimelineEntities publishedEntities : client.publishedEntities) {
-      assertTrue(
-          publishedEntities.getEntities().size() <= 3,
+      Assert.assertTrue(
           "Number of entities should not be greater than 3 for each publish,"
-              + " but was " + publishedEntities.getEntities().size());
+              + " but was " + publishedEntities.getEntities().size(),
+          publishedEntities.getEntities().size() <= 3);
     }
   }
 
   @Test
-  void testSetTimelineToken() throws Exception {
+  public void testSetTimelineToken() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     assertEquals(0, ugi.getTokens().size());
-    assertNull(client.currentTimelineToken,
-        "Timeline token in v2 client should not be set");
+    assertNull("Timeline token in v2 client should not be set",
+        client.currentTimelineToken);
 
     Token token = Token.newInstance(
         new byte[0], "kind", new byte[0], "service");
     client.setTimelineCollectorInfo(CollectorInfo.newInstance(null, token));
-    assertNull(client.currentTimelineToken,
-        "Timeline token in v2 client should not be set as token kind " + "is unexpected.");
+    assertNull("Timeline token in v2 client should not be set as token kind " +
+        "is unexepcted.", client.currentTimelineToken);
     assertEquals(0, ugi.getTokens().size());
 
     token = Token.newInstance(new byte[0], TimelineDelegationTokenIdentifier.
         KIND_NAME.toString(), new byte[0], null);
     client.setTimelineCollectorInfo(CollectorInfo.newInstance(null, token));
-    assertNull(client.currentTimelineToken,
-        "Timeline token in v2 client should not be set as serice is " + "not set.");
+    assertNull("Timeline token in v2 client should not be set as serice is " +
+        "not set.", client.currentTimelineToken);
     assertEquals(0, ugi.getTokens().size());
 
     TimelineDelegationTokenIdentifier ident =
         new TimelineDelegationTokenIdentifier(new Text(ugi.getUserName()),
-            new Text("renewer"), null);
+        new Text("renewer"), null);
     ident.setSequenceNumber(1);
     token = Token.newInstance(ident.getBytes(),
         TimelineDelegationTokenIdentifier.KIND_NAME.toString(), new byte[0],
         "localhost:1234");
     client.setTimelineCollectorInfo(CollectorInfo.newInstance(null, token));
     assertEquals(1, ugi.getTokens().size());
-    assertNotNull(client.currentTimelineToken,
-        "Timeline token should be set in v2 client.");
+    assertNotNull("Timeline token should be set in v2 client.",
+        client.currentTimelineToken);
     assertEquals(token, client.currentTimelineToken);
 
     ident.setSequenceNumber(20);
@@ -394,7 +377,7 @@ public class TestTimelineClientV2Impl {
   }
 
   @Test
-  void testAfterStop() throws Exception {
+  public void testAfterStop() throws Exception {
     client.setSleepBeforeReturn(true);
     try {
       // At max 3 entities need to be merged
@@ -405,12 +388,12 @@ public class TestTimelineClientV2Impl {
       client.stop();
       try {
         client.putEntitiesAsync(generateEntity("50"));
-        fail("Exception expected");
+        Assert.fail("Exception expected");
       } catch (YarnException e) {
         // expected
       }
     } catch (YarnException e) {
-      fail("No exception expected");
+      Assert.fail("No exception expected");
     }
     // not having the same logic here as it doesn't depend on how many times
     // events are published.
@@ -428,7 +411,7 @@ public class TestTimelineClientV2Impl {
         client.publishedEntities.get(client.publishedEntities.size() - 1);
     TimelineEntity timelineEntity = publishedEntities.getEntities()
         .get(publishedEntities.getEntities().size() - 1);
-    assertEquals("19", timelineEntity.getId(), "");
+    Assert.assertEquals("", "19", timelineEntity.getId());
   }
 
   private void printReceivedEntities() {
@@ -452,7 +435,7 @@ public class TestTimelineClientV2Impl {
     return entity;
   }
 
-  @AfterEach
+  @After
   public void tearDown() {
     if (client != null) {
       client.stop();

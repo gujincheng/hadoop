@@ -20,17 +20,16 @@ package org.apache.hadoop.yarn.server.timeline;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 public class TestLevelDBCacheTimelineStore extends TimelineStoreTestUtils {
 
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     store = new LevelDBCacheTimelineStore("app1");
     store.init(new YarnConfiguration());
@@ -40,7 +39,7 @@ public class TestLevelDBCacheTimelineStore extends TimelineStoreTestUtils {
     loadTestDomainData();
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     store.stop();
   }
@@ -50,13 +49,13 @@ public class TestLevelDBCacheTimelineStore extends TimelineStoreTestUtils {
   }
 
   @Test
-  void testDefaultConstructor() {
+  public void testDefaultConstructor() {
     TimelineStore store = null;
     try {
       store = ReflectionUtils.newInstance(LevelDBCacheTimelineStore.class,
           new YarnConfiguration());
     } finally {
-      assertNotNull(store, "LevelDBCacheTimelineStore failed to instantiate");
+      assertNotNull("LevelDBCacheTimelineStore failed to instantiate", store);
     }
   }
 

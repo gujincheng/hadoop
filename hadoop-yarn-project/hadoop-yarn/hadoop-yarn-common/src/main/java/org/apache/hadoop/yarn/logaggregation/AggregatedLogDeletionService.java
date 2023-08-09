@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.logaggregation;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -47,7 +45,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A service that periodically deletes aggregated logs.
@@ -59,21 +57,23 @@ public class AggregatedLogDeletionService extends AbstractService {
   
   private Timer timer = null;
   private long checkIntervalMsecs;
-  private List<LogDeletionTask> tasks = new ArrayList<>();
+  private LogDeletionTask task;
   
-  public static class LogDeletionTask extends TimerTask {
+  static class LogDeletionTask extends TimerTask {
     private Configuration conf;
     private long retentionMillis;
     private String suffix = null;
     private Path remoteRootLogDir = null;
     private ApplicationClientProtocol rmClient = null;
     
-    public LogDeletionTask(Configuration conf, long retentionSecs,
-                           ApplicationClientProtocol rmClient,
-                           LogAggregationFileController fileController) {
+    public LogDeletionTask(Configuration conf, long retentionSecs, ApplicationClientProtocol rmClient) {
       this.conf = conf;
       this.retentionMillis = retentionSecs * 1000;
       this.suffix = LogAggregationUtils.getBucketSuffix();
+      LogAggregationFileControllerFactory factory =
+          new LogAggregationFileControllerFactory(conf);
+      LogAggregationFileController fileController =
+          factory.getFileControllerForWrite();
       this.remoteRootLogDir = fileController.getRemoteRootLogDir();
       this.rmClient = rmClient;
     }
@@ -101,7 +101,7 @@ public class AggregatedLogDeletionService extends AbstractService {
           }
         }
       } catch (Throwable t) {
-        logException("Error reading root log dir, this deletion " +
+        logException("Error reading root log dir this deletion " +
             "attempt is being aborted", t);
       }
       LOG.info("aggregated log deletion finished.");
@@ -220,7 +220,7 @@ public class AggregatedLogDeletionService extends AbstractService {
 
   @Override
   protected void serviceStart() throws Exception {
-    scheduleLogDeletionTasks();
+    scheduleLogDeletionTask();
     super.serviceStart();
   }
 
@@ -249,13 +249,13 @@ public class AggregatedLogDeletionService extends AbstractService {
       setConfig(conf);
       stopRMClient();
       stopTimer();
-      scheduleLogDeletionTasks();
+      scheduleLogDeletionTask();
     } else {
       LOG.warn("Failed to execute refreshLogRetentionSettings : Aggregated Log Deletion Service is not started");
     }
   }
   
-  private void scheduleLogDeletionTasks() throws IOException {
+  private void scheduleLogDeletionTask() throws IOException {
     Configuration conf = getConfig();
     if (!conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
         YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
@@ -271,28 +271,9 @@ public class AggregatedLogDeletionService extends AbstractService {
       return;
     }
     setLogAggCheckIntervalMsecs(retentionSecs);
-
-    tasks = createLogDeletionTasks(conf, retentionSecs, createRMClient());
-    for (LogDeletionTask task : tasks) {
-      timer = new Timer();
-      timer.scheduleAtFixedRate(task, 0, checkIntervalMsecs);
-    }
-  }
-
-  @VisibleForTesting
-  public List<LogDeletionTask> createLogDeletionTasks(Configuration conf, long retentionSecs,
-                                                      ApplicationClientProtocol rmClient)
-          throws IOException {
-    List<LogDeletionTask> tasks = new ArrayList<>();
-    LogAggregationFileControllerFactory factory = new LogAggregationFileControllerFactory(conf);
-    List<LogAggregationFileController> fileControllers =
-            factory.getConfiguredLogAggregationFileControllerList();
-    for (LogAggregationFileController fileController : fileControllers) {
-      LogDeletionTask task = new LogDeletionTask(conf, retentionSecs, rmClient,
-              fileController);
-      tasks.add(task);
-    }
-    return tasks;
+    task = new LogDeletionTask(conf, retentionSecs, createRMClient());
+    timer = new Timer();
+    timer.scheduleAtFixedRate(task, 0, checkIntervalMsecs);
   }
 
   private void stopTimer() {
@@ -314,18 +295,14 @@ public class AggregatedLogDeletionService extends AbstractService {
   // as @Idempotent, it will automatically take care of RM restart/failover.
   @VisibleForTesting
   protected ApplicationClientProtocol createRMClient() throws IOException {
-    return ClientRMProxy.createRMProxy(getConfig(), ApplicationClientProtocol.class);
+    return ClientRMProxy.createRMProxy(getConfig(),
+      ApplicationClientProtocol.class);
   }
 
   @VisibleForTesting
   protected void stopRMClient() {
-    for (LogDeletionTask task : tasks) {
-      if (task != null && task.getRMClient() != null) {
-        RPC.stopProxy(task.getRMClient());
-        //The RMClient instance is the same for all deletion tasks.
-        //It is enough to close the RM client once
-        break;
-      }
+    if (task != null && task.getRMClient() != null) {
+      RPC.stopProxy(task.getRMClient());
     }
   }
 }

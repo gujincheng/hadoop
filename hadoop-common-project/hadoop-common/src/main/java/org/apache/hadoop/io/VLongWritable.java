@@ -37,13 +37,10 @@ public class VLongWritable implements WritableComparable<VLongWritable> {
 
   public VLongWritable(long value) { set(value); }
 
-  /**
-   * Set the value of this LongWritable.
-   * @param value input value.
-   */
+  /** Set the value of this LongWritable. */
   public void set(long value) { this.value = value; }
 
-  /** @return Return the value of this LongWritable. */
+  /** Return the value of this LongWritable. */
   public long get() { return value; }
 
   @Override

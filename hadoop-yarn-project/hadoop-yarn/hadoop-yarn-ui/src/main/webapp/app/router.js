@@ -63,7 +63,6 @@ Router.map(function() {
     this.route('charts');
     this.route('configs');
     this.route('logs');
-    this.route('threaddump');
   });
   this.route('yarn-component-instances', function() {
     this.route('info', {path: '/:component_name/info'});

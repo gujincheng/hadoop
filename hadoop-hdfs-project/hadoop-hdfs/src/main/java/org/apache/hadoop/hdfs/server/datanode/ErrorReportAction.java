@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.ipc.RemoteException;
@@ -69,7 +68,7 @@ public class ErrorReportAction implements BPServiceActorAction {
     if (this == obj) {
       return true;
     }
-    if (!(obj instanceof ErrorReportAction)) {
+    if (obj == null || !(obj instanceof ErrorReportAction)) {
       return false;
     }
     ErrorReportAction other = (ErrorReportAction) obj;
@@ -84,13 +83,5 @@ public class ErrorReportAction implements BPServiceActorAction {
       return false;
     }
     return true;
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this)
-        .append("errorCode", errorCode)
-        .append("errorMessage", errorMessage)
-        .toString();
   }
 }

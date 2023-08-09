@@ -34,15 +34,15 @@ public class JavaProcess {
     this(clazz, null, output);
   }
 
-  public JavaProcess(Class<?> clazz, List<String> addClassPaths, File output)
+  public JavaProcess(Class<?> clazz, List<String> addClasspaths, File output)
       throws IOException, InterruptedException {
     String javaHome = System.getProperty("java.home");
     String javaBin =
         javaHome + File.separator + "bin" + File.separator + "java";
     String classpath = System.getProperty("java.class.path");
     classpath = classpath.concat("./src/test/resources");
-    if (addClassPaths != null) {
-      for (String addClasspath : addClassPaths) {
+    if (addClasspaths != null) {
+      for (String addClasspath : addClasspaths) {
         classpath = classpath.concat(File.pathSeparatorChar + addClasspath);
       }
     }

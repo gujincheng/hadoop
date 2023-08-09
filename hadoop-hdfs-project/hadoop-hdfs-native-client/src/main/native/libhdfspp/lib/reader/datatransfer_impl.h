@@ -18,16 +18,13 @@
 #ifndef LIB_READER_DATATRANFER_IMPL_H_
 #define LIB_READER_DATATRANFER_IMPL_H_
 
+#include "datatransfer.pb.h"
 #include "common/continuation/continuation.h"
 #include "common/continuation/asio.h"
 #include "common/continuation/protobuf.h"
-#include "common/sasl_authenticator.h"
 
-#include <boost/asio/read.hpp>
-#include <boost/asio/buffer.hpp>
-
-#include <boost/asio/read.hpp>
-#include <boost/asio/buffer.hpp>
+#include <asio/read.hpp>
+#include <asio/buffer.hpp>
 
 namespace hdfs {
 
@@ -104,7 +101,7 @@ void DataTransferSaslStream<Stream>::Handshake(const Handler &next) {
   using ::hdfs::continuation::WriteDelimitedPBMessage;
 
   static const int kMagicNumber = htonl(kDataTransferSasl);
-  static const boost::asio::const_buffers_1 kMagicNumberBuffer = boost::asio::buffer(
+  static const asio::const_buffers_1 kMagicNumberBuffer = asio::buffer(
       reinterpret_cast<const char *>(kMagicNumber), sizeof(kMagicNumber));
 
   struct State {

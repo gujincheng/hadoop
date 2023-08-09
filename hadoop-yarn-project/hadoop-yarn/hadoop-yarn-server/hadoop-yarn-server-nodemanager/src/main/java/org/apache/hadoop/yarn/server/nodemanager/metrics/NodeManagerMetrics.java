@@ -30,7 +30,7 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.api.records.Resource;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 @Metrics(about="Metrics for node manager", context="yarn")
 public class NodeManagerMetrics {
@@ -117,9 +117,6 @@ public class NodeManagerMetrics {
       MutableGaugeInt localizedCacheHitFilesRatio;
   @Metric("Container localization time in milliseconds")
       MutableRate localizationDurationMillis;
-
-  @Metric("ContainerMonitor time cost in milliseconds")
-  MutableGaugeLong containersMonitorCostTime;
 
   // CHECKSTYLE:ON:VisibilityModifier
 
@@ -484,9 +481,4 @@ public class NodeManagerMetrics {
   public void localizationComplete(long downloadMillis) {
     localizationDurationMillis.add(downloadMillis);
   }
-
-  public void addContainerMonitorCostTime(long duration) {
-    containersMonitorCostTime.incr(duration);
-  }
-
 }

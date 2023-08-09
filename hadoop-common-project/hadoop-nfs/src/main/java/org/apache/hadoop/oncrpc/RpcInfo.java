@@ -19,9 +19,9 @@ package org.apache.hadoop.oncrpc;
 
 import java.net.SocketAddress;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
 
 /**
  * RpcInfo records all contextual information of an RPC message. It contains
@@ -29,11 +29,11 @@ import io.netty.channel.ChannelHandlerContext;
  */
 public final class RpcInfo {
   private final RpcMessage header;
-  private final ByteBuf data;
+  private final ChannelBuffer data;
   private final Channel channel;
   private final SocketAddress remoteAddress;
 
-  public RpcInfo(RpcMessage header, ByteBuf data,
+  public RpcInfo(RpcMessage header, ChannelBuffer data,
       ChannelHandlerContext channelContext, Channel channel,
       SocketAddress remoteAddress) {
     this.header = header;
@@ -46,7 +46,7 @@ public final class RpcInfo {
     return header;
   }
 
-  public ByteBuf data() {
+  public ChannelBuffer data() {
     return data;
   }
 

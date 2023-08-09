@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -77,7 +77,6 @@ public class CentralizedOpportunisticContainerAllocator extends
    * @param tokenSecretManager TokenSecretManager
    * @param maxAllocationsPerAMHeartbeat max number of containers to be
    *                                     allocated in one AM heartbeat
-   * @param nodeQueueLoadMonitor NodeQueueLoadMonitor.
    */
   public CentralizedOpportunisticContainerAllocator(
       BaseContainerTokenSecretManager tokenSecretManager,
@@ -252,15 +251,14 @@ public class CentralizedOpportunisticContainerAllocator extends
       String userName, Map<Resource, List<Allocation>> allocations)
       throws YarnException {
     List<Container> allocatedContainers = new ArrayList<>();
-    final ResourceRequest resourceRequest = enrichedAsk.getRequest();
     while (toAllocate > 0) {
       RMNode node = nodeQueueLoadMonitor.selectLocalNode(nodeLocation,
-          blacklist, resourceRequest.getCapability());
+          blacklist);
       if (node != null) {
         toAllocate--;
         Container container = createContainer(rmIdentifier, appParams,
             idCounter, id, userName, allocations, nodeLocation,
-            resourceRequest, convertToRemoteNode(node));
+            enrichedAsk.getRequest(), convertToRemoteNode(node));
         allocatedContainers.add(container);
         LOG.info("Allocated [{}] as opportunistic at location [{}]",
             container.getId(), nodeLocation);
@@ -282,15 +280,14 @@ public class CentralizedOpportunisticContainerAllocator extends
       String userName, Map<Resource, List<Allocation>> allocations)
       throws YarnException {
     List<Container> allocatedContainers = new ArrayList<>();
-    final ResourceRequest resourceRequest = enrichedAsk.getRequest();
     while (toAllocate > 0) {
       RMNode node = nodeQueueLoadMonitor.selectRackLocalNode(rackLocation,
-          blacklist, resourceRequest.getCapability());
+          blacklist);
       if (node != null) {
         toAllocate--;
         Container container = createContainer(rmIdentifier, appParams,
             idCounter, id, userName, allocations, rackLocation,
-            resourceRequest, convertToRemoteNode(node));
+            enrichedAsk.getRequest(), convertToRemoteNode(node));
         allocatedContainers.add(container);
         metrics.incrRackLocalOppContainers();
         LOG.info("Allocated [{}] as opportunistic at location [{}]",
@@ -312,15 +309,13 @@ public class CentralizedOpportunisticContainerAllocator extends
       String userName, Map<Resource, List<Allocation>> allocations)
       throws YarnException {
     List<Container> allocatedContainers = new ArrayList<>();
-    final ResourceRequest resourceRequest = enrichedAsk.getRequest();
     while (toAllocate > 0) {
-      RMNode node = nodeQueueLoadMonitor.selectAnyNode(
-          blacklist, resourceRequest.getCapability());
+      RMNode node = nodeQueueLoadMonitor.selectAnyNode(blacklist);
       if (node != null) {
         toAllocate--;
         Container container = createContainer(rmIdentifier, appParams,
             idCounter, id, userName, allocations, ResourceRequest.ANY,
-            resourceRequest, convertToRemoteNode(node));
+            enrichedAsk.getRequest(), convertToRemoteNode(node));
         allocatedContainers.add(container);
         metrics.incrOffSwitchOppContainers();
         LOG.info("Allocated [{}] as opportunistic at location [{}]",

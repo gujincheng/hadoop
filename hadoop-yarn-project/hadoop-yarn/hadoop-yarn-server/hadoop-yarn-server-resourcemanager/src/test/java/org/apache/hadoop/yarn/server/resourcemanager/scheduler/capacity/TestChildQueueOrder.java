@@ -74,7 +74,6 @@ public class TestChildQueueOrder {
   YarnConfiguration conf;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
-  CapacitySchedulerQueueContext queueContext;
 
   final static int GB = 1024;
   final static String DEFAULT_RACK = "/default";
@@ -101,10 +100,6 @@ public class TestChildQueueOrder {
         thenReturn(resourceComparator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
-    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(
-        new CapacitySchedulerQueueManager(csConf, rmContext.getNodeLabelManager(), null));
-
-    queueContext = new CapacitySchedulerQueueContext(csContext);
   }
 
   private FiCaSchedulerApp getMockApplication(int appId, String user) {
@@ -137,8 +132,8 @@ public class TestChildQueueOrder {
               " alloc=" + allocation + " node=" + node.getNodeName());
         }
         final Resource allocatedResource = Resources.createResource(allocation);
-        if (queue instanceof AbstractParentQueue) {
-          ((AbstractParentQueue)queue).allocateResource(clusterResource,
+        if (queue instanceof ParentQueue) {
+          ((ParentQueue)queue).allocateResource(clusterResource, 
               allocatedResource, RMNodeLabelsManager.NO_LABEL);
         } else {
           FiCaSchedulerApp app1 = getMockApplication(0, "");
@@ -224,10 +219,9 @@ public class TestChildQueueOrder {
   public void testSortedQueues() throws Exception {
     // Setup queue configs
     setupSortedQueues(csConf);
-    queueContext.reinitialize();
     CSQueueStore queues = new CSQueueStore();
     CSQueue root =
-        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues, 
           TestUtils.spyHook);
 

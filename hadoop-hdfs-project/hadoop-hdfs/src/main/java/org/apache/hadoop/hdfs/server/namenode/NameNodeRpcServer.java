@@ -21,7 +21,6 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENG
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HANDLER_COUNT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER_RATIO_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_HANDLER_RATIO_KEY;
@@ -46,7 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -134,7 +133,6 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
-import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
@@ -172,7 +170,6 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
-import org.apache.hadoop.hdfs.server.protocol.InvalidBlockReportLeaseException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -222,12 +219,11 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetUserMappingsProtocolService;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 import org.slf4j.Logger;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 
@@ -271,9 +267,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   private final String defaultECPolicyName;
 
-  // Users who can override the client info
-  private final String[] ipProxyUsers;
-
   public NameNodeRpcServer(Configuration conf, NameNode nn)
       throws IOException {
     this.nn = nn;
@@ -284,7 +277,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     int handlerCount = 
       conf.getInt(DFS_NAMENODE_HANDLER_COUNT_KEY, 
                   DFS_NAMENODE_HANDLER_COUNT_DEFAULT);
-    ipProxyUsers = conf.getStrings(DFS_NAMENODE_IP_PROXY_USERS);
 
     RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
         ProtobufRpcEngine2.class);
@@ -458,7 +450,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
     GlobalStateIdContext stateIdContext = null;
     if (enableStateContext) {
-      stateIdContext = new GlobalStateIdContext(namesystem);
+      stateIdContext = new GlobalStateIdContext((namesystem));
     }
 
     clientRpcServer = new RPC.Builder(conf)
@@ -649,9 +641,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   /////////////////////////////////////////////////////
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize, long timeInterval)
+      minBlockSize)
       throws IOException {
-    String operationName = "getBlocks";
     if(size <= 0) {
       throw new IllegalArgumentException(
           "Unexpected not positive size: "+size);
@@ -661,16 +652,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           "Unexpected not positive size: "+size);
     }
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     namesystem.checkNameNodeSafeMode("Cannot execute getBlocks");
-    return namesystem.getBlocks(datanode, size, minBlockSize, timeInterval);
+    return namesystem.getBlocks(datanode, size, minBlockSize);
   }
 
   @Override // NamenodeProtocol
   public ExportedBlockKeys getBlockKeys() throws IOException {
-    String operationName = "getBlockKeys";
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     return namesystem.getBlockManager().getBlockKeys();
   }
 
@@ -678,10 +668,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void errorReport(NamenodeRegistration registration,
                           int errorCode, 
                           String msg) throws IOException {
-    String operationName = "errorReport";
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.UNCHECKED);
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     verifyRequest(registration);
     LOG.info("Error report from " + registration + ": " + msg);
     if (errorCode == FATAL) {
@@ -692,9 +681,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public NamenodeRegistration registerSubordinateNamenode(
       NamenodeRegistration registration) throws IOException {
-    String operationName = "registerSubordinateNamenode";
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     verifyLayoutVersion(registration.getVersion());
     NamenodeRegistration myRegistration = nn.setRegistration();
     namesystem.registerBackupNode(registration, myRegistration);
@@ -704,14 +692,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public NamenodeCommand startCheckpoint(NamenodeRegistration registration)
       throws IOException {
-    String operationName = "startCheckpoint";
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     verifyRequest(registration);
     if(!nn.isRole(NamenodeRole.NAMENODE))
       throw new IOException("Only an ACTIVE node can invoke startCheckpoint.");
 
-    CacheEntryWithPayload cacheEntry = getCacheEntryWithPayload(null);
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
+      null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return (NamenodeCommand) cacheEntry.getPayload();
     }
@@ -724,33 +712,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     return ret;
   }
 
-  /**
-   * Return the current CacheEntry.
-   */
-  private CacheEntry getCacheEntry() {
-    Pair<byte[], Integer> clientInfo =
-        NameNode.getClientIdAndCallId(this.ipProxyUsers);
-    return RetryCache.waitForCompletion(
-        retryCache, clientInfo.getLeft(), clientInfo.getRight());
-  }
-
-  /**
-   * Return the current CacheEntryWithPayload.
-   */
-  private CacheEntryWithPayload getCacheEntryWithPayload(Object payload) {
-    Pair<byte[], Integer> clientInfo =
-        NameNode.getClientIdAndCallId(this.ipProxyUsers);
-    return RetryCache.waitForCompletion(retryCache, payload,
-        clientInfo.getLeft(), clientInfo.getRight());
-  }
-
   @Override // NamenodeProtocol
   public void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
-    String operationName = "endCheckpoint";
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
-    CacheEntry cacheEntry = getCacheEntry();
+    namesystem.checkSuperuserPrivilege();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -811,14 +778,16 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     checkNNStartup();
     String clientMachine = getClientMachine();
-    stateChangeLog.debug("*DIR* NameNode.create: file {} for {} at {}.",
-        src, clientName, clientMachine);
+    if (stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.create: file "
+          +src+" for "+clientName+" at "+clientMachine);
+    }
     if (!checkPathLength(src)) {
       throw new IOException("create: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntryWithPayload cacheEntry = getCacheEntryWithPayload(null);
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache, null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return (HdfsFileStatus) cacheEntry.getPayload();
     }
@@ -844,10 +813,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       EnumSetWritable<CreateFlag> flag) throws IOException {
     checkNNStartup();
     String clientMachine = getClientMachine();
-    stateChangeLog.debug("*DIR* NameNode.append: file {} for {} at {}.",
-        src, clientName, clientMachine);
+    if (stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.append: file "
+          +src+" for "+clientName+" at "+clientMachine);
+    }
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntryWithPayload cacheEntry = getCacheEntryWithPayload(null);
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
+        null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return (LastBlockWithStatus) cacheEntry.getPayload();
     }
@@ -891,8 +863,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void setStoragePolicy(String src, String policyName)
       throws IOException {
     checkNNStartup();
-    stateChangeLog.debug("*DIR* NameNode.setStoragePolicy for path: {}, policyName: {}",
-        src, policyName);
+    stateChangeLog.debug("*DIR* NameNode.setStoragePolicy for path: {}, " +
+            "policyName: {}", src, policyName);
     namesystem.setStoragePolicy(src, policyName);
   }
 
@@ -946,9 +918,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       ) throws IOException {
     checkNNStartup();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("getAdditionalDatanode: src={}, fileId={}, blk={}, existings={}, excludes={}"
-          + ", numAdditionalNodes={}, clientName={}", src, fileId, blk, Arrays.asList(existings),
-          Arrays.asList(excludes), numAdditionalNodes, clientName);
+      LOG.debug("getAdditionalDatanode: src=" + src
+          + ", fileId=" + fileId
+          + ", blk=" + blk
+          + ", existings=" + Arrays.asList(existings)
+          + ", excludes=" + Arrays.asList(excludes)
+          + ", numAdditionalNodes=" + numAdditionalNodes
+          + ", clientName=" + clientName);
     }
 
     metrics.incrGetAdditionalDatanodeOps();
@@ -1009,7 +985,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -1046,13 +1022,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public boolean rename(String src, String dst) throws IOException {
     checkNNStartup();
-    stateChangeLog.debug("*DIR* NameNode.rename: {} to {}.", src, dst);
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
+    }
     if (!checkPathLength(dst)) {
       throw new IOException("rename: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return true; // Return previous response
     }
@@ -1072,12 +1050,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void concat(String trg, String[] src) throws IOException {
     checkNNStartup();
-    if (stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.concat: src path {} to target path {}",
-          Arrays.toString(src), trg);
-    }
+    stateChangeLog.debug("*DIR* NameNode.concat: src path {} to" +
+        " target path {}", Arrays.toString(src), trg);
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -1095,13 +1071,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void rename2(String src, String dst, Options.Rename... options)
       throws IOException {
     checkNNStartup();
-    stateChangeLog.debug("*DIR* NameNode.rename: {} to {}.", src, dst);
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
+    }
     if (!checkPathLength(dst)) {
       throw new IOException("rename: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -1119,7 +1097,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public boolean truncate(String src, long newLength, String clientName)
       throws IOException {
     checkNNStartup();
-    stateChangeLog.debug("*DIR* NameNode.truncate: {} to {}", src, newLength);
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.truncate: " + src + " to " +
+          newLength);
+    }
     String clientMachine = getClientMachine();
     try {
       return namesystem.truncate(
@@ -1132,9 +1113,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public boolean delete(String src, boolean recursive) throws IOException {
     checkNNStartup();
-    stateChangeLog.debug("*DIR* Namenode.delete: src={}, recursive={}.", src, recursive);
+    if (stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* Namenode.delete: src=" + src
+          + ", recursive=" + recursive);
+    }
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return true; // Return previous response
     }
@@ -1165,7 +1149,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
       throws IOException {
     checkNNStartup();
-    stateChangeLog.debug("*DIR* NameNode.mkdirs: {}.", src);
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src);
+    }
     if (!checkPathLength(src)) {
       throw new IOException("mkdirs: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -1176,14 +1162,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public void renewLease(String clientName, List<String> namespaces)
-      throws IOException {
-    if (namespaces != null && namespaces.size() > 0) {
-      LOG.warn("namespaces({}) should be null or empty "
-          + "on NameNode side, please check it.", namespaces);
-      throw new IOException("namespaces(" + namespaces
-          + ") should be null or empty");
-    }
+  public void renewLease(String clientName) throws IOException {
     checkNNStartup();
     namesystem.renewLease(clientName);        
   }
@@ -1317,7 +1296,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public boolean saveNamespace(long timeWindow, long txGap) throws IOException {
     checkNNStartup();
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return true; // Return previous response
     }
@@ -1346,19 +1325,17 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // NamenodeProtocol
   public long getTransactionID() throws IOException {
-    String operationName = "getTransactionID";
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.UNCHECKED);
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     return namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
   }
   
   @Override // NamenodeProtocol
   public long getMostRecentCheckpointTxId() throws IOException {
-    String operationName = "getMostRecentCheckpointTxId";
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.UNCHECKED);
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     return namesystem.getFSImage().getMostRecentCheckpointTxId();
   }
   
@@ -1371,26 +1348,23 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
       throws IOException {
-    String operationName = "getEditLogManifest";
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.READ);
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     return namesystem.getEditLog().getEditLogManifest(sinceTxId);
   }
 
   @Override // NamenodeProtocol
   public boolean isUpgradeFinalized() throws IOException {
-    String operationName = "isUpgradeFinalized";
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     return namesystem.isUpgradeFinalized();
   }
 
   @Override // NamenodeProtocol
   public boolean isRollingUpgrade() throws IOException {
-    String operationName = "isRollingUpgrade";
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     return namesystem.isRollingUpgrade();
   }
     
@@ -1505,7 +1479,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void satisfyStoragePolicy(String src) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -1516,12 +1490,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     } finally {
       RetryCache.setState(cacheEntry, success);
     }
-  }
-
-  @Override
-  public DatanodeInfo[] getSlowDatanodeReport() throws IOException {
-    checkNNStartup();
-    return namesystem.slowDataNodesReport();
   }
 
   @Override // ClientProtocol
@@ -1552,7 +1520,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       boolean createParent) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -1634,8 +1602,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         final BlockReportContext context) throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
-    blockStateChangeLog.debug("*BLOCK* NameNode.blockReport: from {}, reports.length={}.",
-        nodeReg, reports.length);
+    if(blockStateChangeLog.isDebugEnabled()) {
+      blockStateChangeLog.debug("*BLOCK* NameNode.blockReport: "
+           + "from " + nodeReg + ", reports.length=" + reports.length);
+    }
     final BlockManager bm = namesystem.getBlockManager(); 
     boolean noStaleStorages = false;
     try {
@@ -1652,11 +1622,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
             bm.processReport(nodeReg, reports[index].getStorage(),
                 blocks, context));
         }
-      } else {
-        throw new InvalidBlockReportLeaseException(context.getReportId(), context.getLeaseId());
       }
     } catch (UnregisteredNodeException une) {
-      LOG.warn("Datanode {} is attempting to report but not register yet.",
+      LOG.debug("Datanode {} is attempting to report but not register yet.",
           nodeReg);
       return RegisterCommand.REGISTER;
     }
@@ -1680,8 +1648,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       String poolId, List<Long> blockIds) throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
-    blockStateChangeLog.debug("*BLOCK* NameNode.cacheReport: from {} {} blocks",
-        nodeReg, blockIds.size());
+    if (blockStateChangeLog.isDebugEnabled()) {
+      blockStateChangeLog.debug("*BLOCK* NameNode.cacheReport: "
+           + "from " + nodeReg + " " + blockIds.size() + " blocks");
+    }
     namesystem.getCacheManager().processCacheReport(nodeReg, blockIds);
     return null;
   }
@@ -1693,8 +1663,11 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     verifyRequest(nodeReg);
     metrics.incrBlockReceivedAndDeletedOps();
-    blockStateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: from {} {} blocks.",
-        nodeReg, receivedAndDeletedBlocks.length);
+    if(blockStateChangeLog.isDebugEnabled()) {
+      blockStateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: "
+          +"from "+nodeReg+" "+receivedAndDeletedBlocks.length
+          +" blocks.");
+    }
     final BlockManager bm = namesystem.getBlockManager();
     for (final StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
       bm.enqueueBlockOp(new Runnable() {
@@ -1822,7 +1795,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   
   @Override // GetUserMappingsProtocol
   public String[] getGroupsForUser(String user) throws IOException {
-    LOG.debug("Getting groups for user {}", user);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Getting groups for user " + user);
+    }
     return UserGroupInformation.createRemoteUser(user).getGroupNames();
   }
 
@@ -1915,11 +1890,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
   }
 
-  /**
-   * Get the actual client's machine.
-   */
-  private String getClientMachine() {
-    return NameNode.getClientMachine(this.ipProxyUsers);
+  private static String getClientMachine() {
+    String clientMachine = Server.getRemoteAddress();
+    if (clientMachine == null) { //not a RPC client
+      clientMachine = "";
+    }
+    return clientMachine;
   }
 
   @Override
@@ -1932,14 +1908,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public String createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkNNStartup();
-    LOG.debug("*DIR* NameNode.createSnapshot: Path {} and SnapshotName {}",
-        snapshotRoot, snapshotName);
     if (!checkPathLength(snapshotRoot)) {
       throw new IOException("createSnapshot: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntryWithPayload cacheEntry = getCacheEntryWithPayload(null);
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
+        null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return (String) cacheEntry.getPayload();
     }
@@ -1959,14 +1934,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkNNStartup();
-    LOG.debug("*DIR* NameNode.deleteSnapshot: Path {} and SnapshotName {}",
-        snapshotRoot, snapshotName);
     if (snapshotName == null || snapshotName.isEmpty()) {
       throw new IOException("The snapshot name is null or empty.");
     }
     namesystem.checkOperation(OperationCategory.WRITE);
     metrics.incrDeleteSnapshotOps();
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -2000,15 +1973,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void renameSnapshot(String snapshotRoot, String snapshotOldName,
       String snapshotNewName) throws IOException {
     checkNNStartup();
-    LOG.debug(
-        "*DIR* NameNode.renameSnapshot: Snapshot Path {},snapshotOldName {}, snapshotNewName {}",
-        snapshotRoot, snapshotOldName, snapshotNewName);
     if (snapshotNewName == null || snapshotNewName.isEmpty()) {
       throw new IOException("The new snapshot name is null or empty.");
     }
     namesystem.checkOperation(OperationCategory.WRITE);
     metrics.incrRenameSnapshotOps();
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -2029,16 +1999,6 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     SnapshottableDirectoryStatus[] status = namesystem
         .getSnapshottableDirListing();
     metrics.incrListSnapshottableDirOps();
-    return status;
-  }
-
-  @Override // Client Protocol
-  public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
-      throws IOException {
-    checkNNStartup();
-    SnapshotStatus[] status = namesystem
-        .getSnapshotListing(snapshotRoot);
-    metrics.incrListSnapshotsOps();
     return status;
   }
 
@@ -2069,7 +2029,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       CacheDirectiveInfo path, EnumSet<CacheFlag> flags) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntryWithPayload cacheEntry = getCacheEntryWithPayload(null);
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion
+      (retryCache, null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return (Long) cacheEntry.getPayload();
     }
@@ -2090,7 +2051,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       CacheDirectiveInfo directive, EnumSet<CacheFlag> flags) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
@@ -2108,7 +2069,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void removeCacheDirective(long id) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
@@ -2135,7 +2096,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void addCachePool(CachePoolInfo info) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -2152,7 +2113,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void modifyCachePool(CachePoolInfo info) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -2169,7 +2130,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void removeCachePool(String cachePoolName) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
@@ -2232,7 +2193,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    final CacheEntry cacheEntry = getCacheEntry();
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
@@ -2264,7 +2225,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       final ReencryptAction action) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    final CacheEntry cacheEntry = getCacheEntry();
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
@@ -2288,7 +2249,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void setErasureCodingPolicy(String src, String ecPolicyName)
       throws IOException {
     checkNNStartup();
-    final CacheEntry cacheEntry = getCacheEntry();
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
@@ -2296,7 +2257,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     try {
       if (ecPolicyName == null) {
         ecPolicyName = defaultECPolicyName;
-        LOG.debug("No policy name is specified, set the default policy name instead");
+        LOG.debug("No policy name is specified, " +
+            "set the default policy name instead");
       }
       LOG.debug("Set erasure coding policy {} on {}", ecPolicyName, src);
       namesystem.setErasureCodingPolicy(src, ecPolicyName, cacheEntry != null);
@@ -2311,7 +2273,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -2341,7 +2303,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void removeXAttr(String src, XAttr xAttr) throws IOException {
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.WRITE);
-    CacheEntry cacheEntry = getCacheEntry();
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
     }
@@ -2369,10 +2331,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public long getCurrentEditLogTxid() throws IOException {
-    String operationName = "getCurrentEditLogTxid";
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.READ); // only active
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     // if it's not yet open for write, we may be in the process of transitioning
     // from standby to active and may not yet know what the latest committed
     // txid is
@@ -2399,10 +2360,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public EventBatchList getEditsFromTxid(long txid) throws IOException {
-    String operationName = "getEditsFromTxid";
     checkNNStartup();
     namesystem.checkOperation(OperationCategory.READ); // only active
-    namesystem.checkSuperuserPrivilege(operationName);
+    namesystem.checkSuperuserPrivilege();
     int maxEventsPerRPC = nn.getConf().getInt(
         DFSConfigKeys.DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_KEY,
         DFSConfigKeys.DFS_NAMENODE_INOTIFY_MAX_EVENTS_PER_RPC_DEFAULT);
@@ -2524,7 +2484,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void unsetErasureCodingPolicy(String src) throws IOException {
     checkNNStartup();
-    final CacheEntry cacheEntry = getCacheEntry();
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
@@ -2547,10 +2507,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException {
-    String operationName = "addErasureCodingPolicies";
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
-    final CacheEntryWithPayload cacheEntry = getCacheEntryWithPayload(null);
+    namesystem.checkSuperuserPrivilege();
+    final CacheEntryWithPayload cacheEntry =
+        RetryCache.waitForCompletion(retryCache, null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return (AddErasureCodingPolicyResponse[]) cacheEntry.getPayload();
     }
@@ -2570,10 +2530,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public void removeErasureCodingPolicy(String ecPolicyName)
       throws IOException {
-    String operationName = "removeErasureCodingPolicy";
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
-    final CacheEntry cacheEntry = getCacheEntry();
+    namesystem.checkSuperuserPrivilege();
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
@@ -2589,10 +2548,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void enableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
-    String operationName = "enableErasureCodingPolicy";
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
-    final CacheEntry cacheEntry = getCacheEntry();
+    namesystem.checkSuperuserPrivilege();
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }
@@ -2608,10 +2566,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void disableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
-    String operationName = "disableErasureCodingPolicy";
     checkNNStartup();
-    namesystem.checkSuperuserPrivilege(operationName);
-    final CacheEntry cacheEntry = getCacheEntry();
+    namesystem.checkSuperuserPrivilege();
+    final CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
     }

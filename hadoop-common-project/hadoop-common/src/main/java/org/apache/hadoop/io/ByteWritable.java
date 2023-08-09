@@ -33,16 +33,10 @@ public class ByteWritable implements WritableComparable<ByteWritable> {
 
   public ByteWritable(byte value) { set(value); }
 
-  /**
-   * Set the value of this ByteWritable.
-   * @param value value.
-   */
+  /** Set the value of this ByteWritable. */
   public void set(byte value) { this.value = value; }
 
-  /**
-   * Return the value of this ByteWritable.
-   * @return value bytes.
-   */
+  /** Return the value of this ByteWritable. */
   public byte get() { return value; }
 
   @Override

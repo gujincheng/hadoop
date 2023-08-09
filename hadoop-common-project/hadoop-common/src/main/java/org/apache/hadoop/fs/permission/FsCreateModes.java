@@ -35,10 +35,7 @@ public final class FsCreateModes extends FsPermission {
   /**
    * Create from unmasked mode and umask.
    *
-   * @param mode mode.
-   * @param umask umask.
-   * @return If the mode is already
-   * an FsCreateModes object, return it.
+   * If the mode is already an FsCreateModes object, return it.
    */
   public static FsPermission applyUMask(FsPermission mode,
                                         FsPermission umask) {
@@ -50,10 +47,6 @@ public final class FsCreateModes extends FsPermission {
 
   /**
    * Create from masked and unmasked modes.
-   *
-   * @param masked masked.
-   * @param unmasked unmasked.
-   * @return FsCreateModes.
    */
   public static FsCreateModes create(FsPermission masked,
                                      FsPermission unmasked) {

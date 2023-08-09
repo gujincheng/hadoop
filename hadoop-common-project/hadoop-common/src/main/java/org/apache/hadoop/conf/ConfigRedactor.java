@@ -37,7 +37,6 @@ import org.apache.hadoop.util.StringUtils;
 public class ConfigRedactor {
 
   private static final String REDACTED_TEXT = "<redacted>";
-  private static final String REDACTED_XML = "******";
 
   private List<Pattern> compiledPatterns;
 
@@ -58,8 +57,8 @@ public class ConfigRedactor {
    * Given a key / value pair, decides whether or not to redact and returns
    * either the original value or text indicating it has been redacted.
    *
-   * @param key param key.
-   * @param value param value, will return if conditions permit.
+   * @param key
+   * @param value
    * @return Original value, or text indicating it has been redacted
    */
   public String redact(String key, String value) {
@@ -84,20 +83,5 @@ public class ConfigRedactor {
       }
     }
     return false;
-  }
-
-  /**
-   * Given a key / value pair, decides whether or not to redact and returns
-   * either the original value or text indicating it has been redacted.
-   *
-   * @param key param key.
-   * @param value param value, will return if conditions permit.
-   * @return Original value, or text indicating it has been redacted
-   */
-  public String redactXml(String key, String value) {
-    if (configIsSensitive(key)) {
-      return REDACTED_XML;
-    }
-    return value;
   }
 }

@@ -18,9 +18,6 @@
 
 #include "common/hdfs_configuration.h"
 #include "configuration_test.h"
-#include "utils/temp-file.h"
-#include "utils/temp-dir.h"
-
 #include <gmock/gmock.h>
 #include <iostream>
 
@@ -73,14 +70,14 @@ TEST(HdfsConfigurationTest, TestSetOptions)
 TEST(HdfsConfigurationTest, TestDefaultConfigs) {
   // Search path
   {
-    TestUtils::TempDir tempDir;
-    TestUtils::TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
-    writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
-    TestUtils::TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
-    writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
+    TempDir tempDir;
+    TempFile coreSite(tempDir.path + "/core-site.xml");
+    writeSimpleConfig(coreSite.filename, "key1", "value1");
+    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    writeSimpleConfig(hdfsSite.filename, "key2", "value2");
 
     ConfigurationLoader loader;
-    loader.SetSearchPath(tempDir.GetPath());
+    loader.SetSearchPath(tempDir.path);
 
     optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
     EXPECT_TRUE(config && "Parse streams");
@@ -90,12 +87,12 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
 
   // Only core-site.xml available
   {
-    TestUtils::TempDir tempDir;
-    TestUtils::TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
-    writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
+    TempDir tempDir;
+    TempFile coreSite(tempDir.path + "/core-site.xml");
+    writeSimpleConfig(coreSite.filename, "key1", "value1");
 
     ConfigurationLoader loader;
-    loader.SetSearchPath(tempDir.GetPath());
+    loader.SetSearchPath(tempDir.path);
 
     optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
     EXPECT_TRUE(config && "Parse streams");
@@ -104,12 +101,12 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
 
   // Only hdfs-site available
   {
-    TestUtils::TempDir tempDir;
-    TestUtils::TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
-    writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
+    TempDir tempDir;
+    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    writeSimpleConfig(hdfsSite.filename, "key2", "value2");
 
     ConfigurationLoader loader;
-    loader.SetSearchPath(tempDir.GetPath());
+    loader.SetSearchPath(tempDir.path);
 
     optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
     EXPECT_TRUE(config && "Parse streams");
@@ -122,13 +119,13 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
 TEST(HdfsConfigurationTest, TestConfigParserAPI) {
   // Config parser API
   {
-    TestUtils::TempDir tempDir;
-    TestUtils::TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
-    writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
-    TestUtils::TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
-    writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
+    TempDir tempDir;
+    TempFile coreSite(tempDir.path + "/core-site.xml");
+    writeSimpleConfig(coreSite.filename, "key1", "value1");
+    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    writeSimpleConfig(hdfsSite.filename, "key2", "value2");
 
-    ConfigParser parser(tempDir.GetPath());
+    ConfigParser parser(tempDir.path);
 
     EXPECT_EQ("value1", parser.get_string_or("key1", ""));
     EXPECT_EQ("value2", parser.get_string_or("key2", ""));
@@ -143,13 +140,13 @@ TEST(HdfsConfigurationTest, TestConfigParserAPI) {
   }
 
   {
-    TestUtils::TempDir tempDir;
-    TestUtils::TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
-    writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
-    TestUtils::TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
-    writeDamagedConfig(hdfsSite.GetFileName(), "key2", "value2");
+    TempDir tempDir;
+    TempFile coreSite(tempDir.path + "/core-site.xml");
+    writeSimpleConfig(coreSite.filename, "key1", "value1");
+    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    writeDamagedConfig(hdfsSite.filename, "key2", "value2");
 
-    ConfigParser parser(tempDir.GetPath());
+    ConfigParser parser(tempDir.path);
 
     EXPECT_EQ("value1", parser.get_string_or("key1", ""));
     EXPECT_EQ("", parser.get_string_or("key2", ""));

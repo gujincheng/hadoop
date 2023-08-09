@@ -90,7 +90,7 @@ public abstract class GenericWritable implements Writable, Configurable {
   /**
    * Set the instance that is wrapped.
    * 
-   * @param obj input obj.
+   * @param obj
    */
   public void set(Writable obj) {
     instance = obj;
@@ -109,7 +109,6 @@ public abstract class GenericWritable implements Writable, Configurable {
 
   /**
    * Return the wrapped instance.
-   * @return the wrapped instance.
    */
   public Writable get() {
     return instance;
@@ -146,7 +145,6 @@ public abstract class GenericWritable implements Writable, Configurable {
   /**
    * Return all classes that may be wrapped.  Subclasses should implement this
    * to return a constant array of classes.
-   * @return all classes that may be wrapped.
    */
   abstract protected Class<? extends Writable>[] getTypes();
 

@@ -32,7 +32,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,7 +107,6 @@ public final class DataBlocks {
    * @param len number of bytes to be written.
    * @throws NullPointerException      for a null buffer
    * @throws IndexOutOfBoundsException if indices are out of range
-   * @throws IOException raised on errors performing I/O.
    */
   public static void validateWriteArgs(byte[] b, int off, int len)
       throws IOException {
@@ -288,7 +287,6 @@ public final class DataBlocks {
      * @param limit      limit of the block.
      * @param statistics stats to work with
      * @return a new block.
-     * @throws IOException raised on errors performing I/O.
      */
     public abstract DataBlock create(long index, int limit,
         BlockUploadStatistics statistics)
@@ -484,8 +482,6 @@ public final class DataBlocks {
 
     /**
      * Inner close logic for subclasses to implement.
-     *
-     * @throws IOException raised on errors performing I/O.
      */
     protected void innerClose() throws IOException {
 

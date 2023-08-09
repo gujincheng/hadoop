@@ -480,17 +480,9 @@ public class TestServiceAM extends ServiceTestUtils{
     am.stop();
   }
 
-  /**
-   This test verifies that the containers are released and the
-   component instance is added to the pending queue when building the launch
-   context fails.
-   Here, we intentionally have an artifact that doesn't have an id.
-   This will cause TarballProviderService.processArtifact
-   to throw an IllegalArgumentException because the Path object is
-   constructed from the id of the artifact.
-   In case the id is set to null or unset so it is effectively null,
-   Path.checkPathArg throws an IllegalArgumentException.
-  **/
+  // Test to verify that the containers are released and the
+  // component instance is added to the pending queue when building the launch
+  // context fails.
   @Test(timeout = 30000)
   public void testContainersReleasedWhenPreLaunchFails()
       throws Exception {
@@ -553,7 +545,7 @@ public class TestServiceAM extends ServiceTestUtils{
       am.stop();
       am.close();
     } catch (Exception e) {
-      LOG.error("Fail to sync sysfs.", e);
+      LOG.error("Fail to sync sysfs: {}", e);
       Assert.fail("Fail to sync sysfs.");
     }
   }

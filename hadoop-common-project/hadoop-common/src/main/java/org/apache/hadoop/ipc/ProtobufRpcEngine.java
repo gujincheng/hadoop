@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
@@ -34,11 +35,10 @@ import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngineProtos.RequestHeaderProto
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.tracing.TraceScope;
-import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
+import org.apache.hadoop.tracing.TraceScope;
+import org.apache.hadoop.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,16 +75,6 @@ public class ProtobufRpcEngine implements RpcEngine {
   @Unstable
   public static AsyncGet<Message, Exception> getAsyncReturnMessage() {
     return ASYNC_RETURN_MESSAGE.get();
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
-      ConnectionId connId, Configuration conf, SocketFactory factory,
-      AlignmentContext alignmentContext) throws IOException {
-    final Invoker invoker = new Invoker(protocol, connId, conf, factory, alignmentContext);
-    return new ProtocolProxy<T>(protocol, (T) Proxy.newProxyInstance(
-        protocol.getClassLoader(), new Class[] {protocol}, invoker), false);
   }
 
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
@@ -126,7 +116,7 @@ public class ProtobufRpcEngine implements RpcEngine {
     return new ProtocolProxy<ProtocolMetaInfoPB>(protocol,
         (ProtocolMetaInfoPB) Proxy.newProxyInstance(protocol.getClassLoader(),
             new Class[] { protocol }, new Invoker(protocol, connId, conf,
-                factory, null)), false);
+                factory)), false);
   }
 
   protected static class Invoker implements RpcInvocationHandler {
@@ -147,26 +137,21 @@ public class ProtobufRpcEngine implements RpcEngine {
         throws IOException {
       this(protocol, Client.ConnectionId.getConnectionId(
           addr, protocol, ticket, rpcTimeout, connectionRetryPolicy, conf),
-          conf, factory, alignmentContext);
+          conf, factory);
       this.fallbackToSimpleAuth = fallbackToSimpleAuth;
+      this.alignmentContext = alignmentContext;
     }
     
     /**
      * This constructor takes a connectionId, instead of creating a new one.
-     * @param protocol input protocol.
-     * @param connId input connId.
-     * @param conf input Configuration.
-     * @param factory input factory.
-     * @param alignmentContext Alignment context
      */
     protected Invoker(Class<?> protocol, Client.ConnectionId connId,
-        Configuration conf, SocketFactory factory, AlignmentContext alignmentContext) {
+        Configuration conf, SocketFactory factory) {
       this.remoteId = connId;
       this.client = CLIENTS.getClient(conf, factory, RpcWritable.Buffer.class);
       this.protocolName = RPC.getProtocolName(protocol);
       this.clientProtocolVersion = RPC
           .getProtocolVersion(protocol);
-      this.alignmentContext = alignmentContext;
     }
 
     private RequestHeaderProto constructRpcRequestHeader(Method method) {
@@ -438,10 +423,6 @@ public class ProtobufRpcEngine implements RpcEngine {
      * @param portRangeConfig A config parameter that can be used to restrict
      * the range of ports used when port is 0 (an ephemeral port)
      * @param alignmentContext provides server state info on client responses
-     * @param secretManager input secretManager.
-     * @param queueSizePerHandler input queueSizePerHandler.
-     * @param numReaders input numReaders.
-     * @throws IOException raised on errors performing I/O.
      */
     public Server(Class<?> protocolClass, Object protocolImpl,
         Configuration conf, String bindAddress, int port, int numHandlers,

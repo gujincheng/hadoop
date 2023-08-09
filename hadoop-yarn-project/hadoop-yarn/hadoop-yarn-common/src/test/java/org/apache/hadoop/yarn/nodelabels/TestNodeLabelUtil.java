@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.yarn.nodelabels;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.junit.jupiter.api.Test;
+import static org.junit.Assert.fail;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * Test class to verify node label util ops.
@@ -33,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class TestNodeLabelUtil {
 
   @Test
-  void testAttributeValueAddition() {
+  public void testAttributeValueAddition() {
     String[] values =
         new String[]{"1_8", "1.8", "ABZ", "ABZ", "az", "a-z", "a_z",
             "123456789"};
@@ -57,7 +55,7 @@ public class TestNodeLabelUtil {
   }
 
   @Test
-  void testIsNodeAttributesEquals() {
+  public void testIsNodeAttributesEquals() {
     NodeAttribute nodeAttributeCK1V1 = NodeAttribute
         .newInstance(NodeAttribute.PREFIX_CENTRALIZED, "K1",
             NodeAttributeType.STRING, "V1");
@@ -79,45 +77,45 @@ public class TestNodeLabelUtil {
     /*
      * equals if set size equals and items are all the same
      */
-    assertTrue(NodeLabelUtil.isNodeAttributesEquals(null, null));
-    assertTrue(NodeLabelUtil
+    Assert.assertTrue(NodeLabelUtil.isNodeAttributesEquals(null, null));
+    Assert.assertTrue(NodeLabelUtil
         .isNodeAttributesEquals(ImmutableSet.of(), ImmutableSet.of()));
-    assertTrue(NodeLabelUtil
+    Assert.assertTrue(NodeLabelUtil
         .isNodeAttributesEquals(ImmutableSet.of(nodeAttributeCK1V1),
             ImmutableSet.of(nodeAttributeCK1V1Copy)));
-    assertTrue(NodeLabelUtil
+    Assert.assertTrue(NodeLabelUtil
         .isNodeAttributesEquals(ImmutableSet.of(nodeAttributeDK1V1),
             ImmutableSet.of(nodeAttributeDK1V1Copy)));
-    assertTrue(NodeLabelUtil.isNodeAttributesEquals(
+    Assert.assertTrue(NodeLabelUtil.isNodeAttributesEquals(
         ImmutableSet.of(nodeAttributeCK1V1, nodeAttributeDK1V1),
         ImmutableSet.of(nodeAttributeCK1V1Copy, nodeAttributeDK1V1Copy)));
     /*
      * not equals if set size not equals or items are different
      */
-    assertFalse(
+    Assert.assertFalse(
         NodeLabelUtil.isNodeAttributesEquals(null, ImmutableSet.of()));
-    assertFalse(
+    Assert.assertFalse(
         NodeLabelUtil.isNodeAttributesEquals(ImmutableSet.of(), null));
     // different attribute prefix
-    assertFalse(NodeLabelUtil
+    Assert.assertFalse(NodeLabelUtil
         .isNodeAttributesEquals(ImmutableSet.of(nodeAttributeCK1V1),
             ImmutableSet.of(nodeAttributeDK1V1)));
     // different attribute name
-    assertFalse(NodeLabelUtil
+    Assert.assertFalse(NodeLabelUtil
         .isNodeAttributesEquals(ImmutableSet.of(nodeAttributeDK1V1),
             ImmutableSet.of(nodeAttributeDK2V1)));
     // different attribute value
-    assertFalse(NodeLabelUtil
+    Assert.assertFalse(NodeLabelUtil
         .isNodeAttributesEquals(ImmutableSet.of(nodeAttributeDK2V1),
             ImmutableSet.of(nodeAttributeDK2V2)));
     // different set
-    assertFalse(NodeLabelUtil
+    Assert.assertFalse(NodeLabelUtil
         .isNodeAttributesEquals(ImmutableSet.of(nodeAttributeCK1V1),
             ImmutableSet.of()));
-    assertFalse(NodeLabelUtil
+    Assert.assertFalse(NodeLabelUtil
         .isNodeAttributesEquals(ImmutableSet.of(nodeAttributeCK1V1),
             ImmutableSet.of(nodeAttributeCK1V1, nodeAttributeDK1V1)));
-    assertFalse(NodeLabelUtil.isNodeAttributesEquals(
+    Assert.assertFalse(NodeLabelUtil.isNodeAttributesEquals(
         ImmutableSet.of(nodeAttributeCK1V1, nodeAttributeDK1V1),
         ImmutableSet.of(nodeAttributeDK1V1)));
   }

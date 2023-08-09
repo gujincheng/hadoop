@@ -22,7 +22,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
 import java.net.InetSocketAddress;
 
-import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -45,7 +44,6 @@ public class RMWebApp extends WebApp implements YarnWebParams {
       LoggerFactory.getLogger(RMWebApp.class.getName());
   private final ResourceManager rm;
   private boolean standby = false;
-  private Configuration conf;
 
   public RMWebApp(ResourceManager rm) {
     this.rm = rm;
@@ -53,17 +51,15 @@ public class RMWebApp extends WebApp implements YarnWebParams {
 
   @Override
   public void setup() {
-    conf = rm.getConfig();
     bind(JAXBContextResolver.class);
-    Class webService = conf.getClass(
-        YarnConfiguration.YARN_WEBAPP_CUSTOM_WEBSERVICE_CLASS,
-        RMWebServices.class);
-    bind(webService);
+    bind(RMWebServices.class);
     bind(GenericExceptionHandler.class);
     bind(RMWebApp.class).toInstance(this);
     bindExternalClasses();
-    bind(ResourceManager.class).toInstance(rm);
 
+    if (rm != null) {
+      bind(ResourceManager.class).toInstance(rm);
+    }
     route("/", RmController.class);
     route(pajoin("/nodes", NODE_STATE), RmController.class, "nodes");
     route(pajoin("/apps", APP_STATE), RmController.class);
@@ -103,7 +99,8 @@ public class RMWebApp extends WebApp implements YarnWebParams {
   }
 
   private void bindExternalClasses() {
-    Class<?>[] externalClasses = conf
+    YarnConfiguration yarnConf = new YarnConfiguration(rm.getConfig());
+    Class<?>[] externalClasses = yarnConf
         .getClasses(YarnConfiguration.YARN_HTTP_WEBAPP_EXTERNAL_CLASSES);
     for (Class<?> c : externalClasses) {
       bind(c);
@@ -114,7 +111,7 @@ public class RMWebApp extends WebApp implements YarnWebParams {
   private String buildRedirectPath() {
     // make a copy of the original configuration so not to mutate it. Also use
     // an YarnConfiguration to force loading of yarn-site.xml.
-    YarnConfiguration yarnConf = new YarnConfiguration(conf);
+    YarnConfiguration yarnConf = new YarnConfiguration(rm.getConfig());
     String activeRMHAId = RMHAUtils.findActiveRMHAId(yarnConf);
     String path = "";
     if (activeRMHAId != null) {

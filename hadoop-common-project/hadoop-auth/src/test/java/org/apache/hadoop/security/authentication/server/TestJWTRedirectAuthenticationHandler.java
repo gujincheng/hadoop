@@ -25,6 +25,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.Vector;
 import java.util.Date;
 
 import javax.servlet.ServletException;

@@ -57,9 +57,6 @@ public final class RMWSConsts {
   /** Path for {@code RMWebServiceProtocol#dumpSchedulerLogs}. */
   public static final String SCHEDULER_LOGS = "/scheduler/logs";
 
-  /** Path for {@code RMWebServiceProtocol#getSchedulerOverview}. */
-  public static final String SCHEDULER_OVERVIEW = "/scheduler-overview";
-
   /**
    * Path for {@code RMWebServiceProtocol#validateAndGetSchedulerConfiguration}.
    */
@@ -83,10 +80,6 @@ public final class RMWSConsts {
 
   /** Path for {@code RMWebServiceProtocol#getActivities}. */
   public static final String SCHEDULER_ACTIVITIES = "/scheduler/activities";
-
-  /** Path for {@code RMWebServiceProtocol#getBulkActivities}. */
-  public static final String SCHEDULER_BULK_ACTIVITIES =
-      "/scheduler/bulk-activities";
 
   /** Path for {@code RMWebServiceProtocol#getAppActivities}. */
   public static final String SCHEDULER_APP_ACTIVITIES =
@@ -126,13 +119,10 @@ public final class RMWSConsts {
   /** Path for {@code RMWebServiceProtocol#getClusterNodeLabels}. */
   public static final String GET_NODE_LABELS = "/get-node-labels";
 
-  /** Path for {@code RMWebServiceProtocol#getRMNodeLabels}. */
-  public static final String GET_RM_NODE_LABELS = "/get-rm-node-labels";
-
   /** Path for {@code RMWebServiceProtocol#addToClusterNodeLabels}. */
   public static final String ADD_NODE_LABELS = "/add-node-labels";
 
-  /** Path for {@code RMWebServiceProtocol#removeFromClusterNodeLabels}. */
+  /** Path for {@code RMWebServiceProtocol#removeFromCluserNodeLabels}. */
   public static final String REMOVE_NODE_LABELS = "/remove-node-labels";
 
   /** Path for {@code RMWebServiceProtocol#getLabelsOnNode}. */
@@ -262,7 +252,6 @@ public final class RMWSConsts {
   public static final String ACTIONS = "actions";
   public static final String SUMMARIZE = "summarize";
   public static final String NAME = "name";
-  public static final String ACTIVITIES_COUNT = "activitiesCount";
 
   private RMWSConsts() {
     // not called

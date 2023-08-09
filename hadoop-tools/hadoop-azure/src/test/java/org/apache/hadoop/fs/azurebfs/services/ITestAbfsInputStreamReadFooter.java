@@ -235,14 +235,14 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       assertEquals(expectedBCurson, abfsInputStream.getBCursor());
       assertEquals(actualLength, bytesRead);
       //  Verify user-content read
-      assertContentReadCorrectly(fileContent, seekPos, (int) actualLength, buffer, testFilePath);
+      assertContentReadCorrectly(fileContent, seekPos, (int) actualLength, buffer);
       //  Verify data read to AbfsInputStream buffer
       int from = seekPos;
       if (optimizationOn) {
         from = (int) max(0, actualContentLength - bufferSize);
       }
       assertContentReadCorrectly(fileContent, from, (int) abfsInputStream.getLimit(),
-          abfsInputStream.getBuffer(), testFilePath);
+          abfsInputStream.getBuffer());
     }
   }
 
@@ -280,7 +280,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
       assertEquals(length, bytesRead);
-      assertContentReadCorrectly(fileContent, seekPos, length, buffer, testFilePath);
+      assertContentReadCorrectly(fileContent, seekPos, length, buffer);
       assertEquals(fileContent.length, abfsInputStream.getFCursor());
       assertEquals(length, abfsInputStream.getBCursor());
       assertTrue(abfsInputStream.getLimit() >= length);

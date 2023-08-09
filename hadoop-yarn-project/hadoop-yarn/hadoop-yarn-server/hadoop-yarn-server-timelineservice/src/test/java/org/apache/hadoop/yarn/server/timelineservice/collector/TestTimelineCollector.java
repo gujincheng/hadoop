@@ -18,35 +18,34 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector.AggregationStatusTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
+import org.junit.Test;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.mockito.internal.stubbing.answers.AnswersWithDelay;
+import org.mockito.internal.stubbing.answers.Returns;
+
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.junit.jupiter.api.Test;
-import org.mockito.internal.stubbing.answers.AnswersWithDelay;
-import org.mockito.internal.stubbing.answers.Returns;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
-import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector.AggregationStatusTable;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -104,7 +103,7 @@ public class TestTimelineCollector {
   }
 
   @Test
-  void testAggregation() throws Exception {
+  public void testAggregation() throws Exception {
     // Test aggregation with multiple groups.
     int groups = 3;
     int n = 50;
@@ -154,19 +153,9 @@ public class TestTimelineCollector {
    * putEntity() calls.
    */
   @Test
-  void testPutEntity() throws IOException {
+  public void testPutEntity() throws IOException {
     TimelineWriter writer = mock(TimelineWriter.class);
-    TimelineHealth timelineHealth = new TimelineHealth(TimelineHealth.
-        TimelineHealthStatus.RUNNING, "");
-    when(writer.getHealthStatus()).thenReturn(timelineHealth);
-
-    Configuration conf = new Configuration();
-    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 5);
-    conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-        500L);
-
     TimelineCollector collector = new TimelineCollectorForTest(writer);
-    collector.init(conf);
 
     TimelineEntities entities = generateTestEntities(1, 1);
     collector.putEntities(
@@ -177,42 +166,12 @@ public class TestTimelineCollector {
     verify(writer, times(1)).flush();
   }
 
-
-  @Test
-  void testPutEntityWithStorageDown() throws IOException {
-    TimelineWriter writer = mock(TimelineWriter.class);
-    TimelineHealth timelineHealth = new TimelineHealth(TimelineHealth.
-        TimelineHealthStatus.CONNECTION_FAILURE, "");
-    when(writer.getHealthStatus()).thenReturn(timelineHealth);
-
-    Configuration conf = new Configuration();
-    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 5);
-    conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-        500L);
-
-    TimelineCollector collector = new TimelineCollectorForTest(writer);
-    collector.init(conf);
-
-    TimelineEntities entities = generateTestEntities(1, 1);
-    boolean exceptionCaught = false;
-    try {
-      collector.putEntities(entities, UserGroupInformation.
-          createRemoteUser("test-user"));
-    } catch (Exception e) {
-      if (e.getMessage().contains("Failed to putEntities")) {
-        exceptionCaught = true;
-      }
-    }
-    assertTrue(exceptionCaught, "TimelineCollector putEntity failed to " +
-        "handle storage down");
-  }
-
   /**
    * Test TimelineCollector's interaction with TimelineWriter upon
    * putEntityAsync() calls.
    */
   @Test
-  void testPutEntityAsync() throws Exception {
+  public void testPutEntityAsync() throws Exception {
     TimelineWriter writer = mock(TimelineWriter.class);
     TimelineCollector collector = new TimelineCollectorForTest(writer);
     collector.init(new Configuration());
@@ -232,7 +191,7 @@ public class TestTimelineCollector {
    * write is taking too much time.
    */
   @Test
-  void testAsyncEntityDiscard() throws Exception {
+  public void testAsyncEntityDiscard() throws Exception {
     TimelineWriter writer = mock(TimelineWriter.class);
 
     when(writer.write(any(), any(), any())).thenAnswer(
@@ -261,20 +220,9 @@ public class TestTimelineCollector {
    * Test TimelineCollector's interaction with TimelineWriter upon
    * putDomain() calls.
    */
-  @Test
-  void testPutDomain() throws IOException {
+  @Test public void testPutDomain() throws IOException {
     TimelineWriter writer = mock(TimelineWriter.class);
-    TimelineHealth timelineHealth = new TimelineHealth(TimelineHealth.
-        TimelineHealthStatus.RUNNING, "");
-    when(writer.getHealthStatus()).thenReturn(timelineHealth);
-
-    Configuration conf = new Configuration();
-    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 5);
-    conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-        500L);
-
     TimelineCollector collector = new TimelineCollectorForTest(writer);
-    collector.init(conf);
 
     TimelineDomain domain =
         generateDomain("id", "desc", "owner", "reader1,reader2", "writer", 0L,
@@ -330,32 +278,21 @@ public class TestTimelineCollector {
   }
 
   @Test
-  void testClearPreviousEntitiesOnAggregation() throws Exception {
+  public void testClearPreviousEntitiesOnAggregation() throws Exception {
     final long ts = System.currentTimeMillis();
     TimelineCollector collector = new TimelineCollector("") {
-      @Override
-      public TimelineCollectorContext getTimelineEntityContext() {
-        return new TimelineCollectorContext("cluster", "user", "flow", "1",
-            1L, ApplicationId.newInstance(ts, 1).toString());
-      }
+        @Override
+        public TimelineCollectorContext getTimelineEntityContext() {
+          return new TimelineCollectorContext("cluster", "user", "flow", "1",
+              1L, ApplicationId.newInstance(ts, 1).toString());
+        }
     };
-
-    TimelineWriter writer = mock(TimelineWriter.class);
-    TimelineHealth timelineHealth = new TimelineHealth(TimelineHealth.
-        TimelineHealthStatus.RUNNING, "");
-    when(writer.getHealthStatus()).thenReturn(timelineHealth);
-
-    Configuration conf = new Configuration();
-    conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 5);
-    conf.setLong(YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
-        500L);
-
-    collector.init(conf);
-    collector.setWriter(writer);
+    collector.init(new Configuration());
+    collector.setWriter(mock(TimelineWriter.class));
 
     // Put 5 entities with different metric values.
     TimelineEntities entities = new TimelineEntities();
-    for (int i = 1; i <= 5; i++) {
+    for (int i = 1; i <=5; i++) {
       TimelineEntity entity = createEntity("e" + i, "type");
       entity.addMetric(createDummyMetric(ts + i, Long.valueOf(i * 50)));
       entities.addEntity(entity);
@@ -369,7 +306,7 @@ public class TestTimelineCollector {
     assertEquals(Sets.newHashSet("type"), aggregationGroups.keySet());
     TimelineEntity aggregatedEntity = TimelineCollector.
         aggregateWithoutGroupId(aggregationGroups, currContext.getAppId(),
-        TimelineEntityType.YARN_APPLICATION.toString());
+            TimelineEntityType.YARN_APPLICATION.toString());
     TimelineMetric aggregatedMetric =
         aggregatedEntity.getMetrics().iterator().next();
     assertEquals(750L, aggregatedMetric.getValues().values().iterator().next());
@@ -379,7 +316,7 @@ public class TestTimelineCollector {
     // Aggregate entities.
     aggregatedEntity = TimelineCollector.
         aggregateWithoutGroupId(aggregationGroups, currContext.getAppId(),
-        TimelineEntityType.YARN_APPLICATION.toString());
+            TimelineEntityType.YARN_APPLICATION.toString());
     aggregatedMetric = aggregatedEntity.getMetrics().iterator().next();
     // No values aggregated as no metrics put for an entity between this
     // aggregation and the previous one.
@@ -389,7 +326,7 @@ public class TestTimelineCollector {
 
     // Put 3 entities.
     entities = new TimelineEntities();
-    for (int i = 1; i <= 3; i++) {
+    for (int i = 1; i <=3; i++) {
       TimelineEntity entity = createEntity("e" + i, "type");
       entity.addMetric(createDummyMetric(System.currentTimeMillis() + i, 50L));
       entities.addEntity(entity);
@@ -400,7 +337,7 @@ public class TestTimelineCollector {
     // Aggregate entities.
     aggregatedEntity = TimelineCollector.
         aggregateWithoutGroupId(aggregationGroups, currContext.getAppId(),
-        TimelineEntityType.YARN_APPLICATION.toString());
+            TimelineEntityType.YARN_APPLICATION.toString());
     // Last 3 entities picked up for aggregation.
     aggregatedMetric = aggregatedEntity.getMetrics().iterator().next();
     assertEquals(150L, aggregatedMetric.getValues().values().iterator().next());

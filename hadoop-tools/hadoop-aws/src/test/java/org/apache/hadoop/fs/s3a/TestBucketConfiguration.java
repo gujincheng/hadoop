@@ -35,8 +35,6 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_CLIENT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_BUCKET_PREFIX;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_SECURITY_CREDENTIAL_PROVIDER_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
@@ -140,9 +138,9 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
     String impl = "fs.s3a.impl";
     config.set(impl, "orig");
     setBucketOption(config, "b", impl, "b");
-    String changeDetectionMode = CHANGE_DETECT_MODE;
-    String client = CHANGE_DETECT_MODE_CLIENT;
-    setBucketOption(config, "b", changeDetectionMode, client);
+    String metastoreImpl = "fs.s3a.metadatastore.impl";
+    String ddb = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
+    setBucketOption(config, "b", metastoreImpl, ddb);
     setBucketOption(config, "b", "impl2", "b2");
     setBucketOption(config, "b", "bucket.b.loop", "b3");
     assertOptionEquals(config, "fs.s3a.bucket.b.impl", "b");
@@ -150,7 +148,7 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
     Configuration updated = propagateBucketOptions(config, "b");
     assertOptionEquals(updated, impl, "orig");
     assertOptionEquals(updated, "fs.s3a.impl2", "b2");
-    assertOptionEquals(updated, changeDetectionMode, client);
+    assertOptionEquals(updated, metastoreImpl, ddb);
     assertOptionEquals(updated, "fs.s3a.bucket.b.loop", null);
   }
 

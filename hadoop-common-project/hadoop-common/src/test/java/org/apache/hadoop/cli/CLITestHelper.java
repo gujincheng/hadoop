@@ -24,8 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.XMLUtils;
-
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -36,6 +34,7 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 import java.io.File;
 import java.util.ArrayList;
 
@@ -77,7 +76,7 @@ public class CLITestHelper {
       boolean success = false;
       testConfigFile = TEST_CACHE_DATA_DIR + File.separator + testConfigFile;
       try {
-        SAXParser p = XMLUtils.newSecureSAXParserFactory().newSAXParser();
+        SAXParser p = (SAXParserFactory.newInstance()).newSAXParser();
         p.parse(testConfigFile, getConfigParser());
         success = true;
       } catch (Exception e) {

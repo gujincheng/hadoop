@@ -88,11 +88,6 @@ final class PairedDurationTrackerFactory implements DurationTrackerFactory {
     public Duration asDuration() {
       return firstDuration.asDuration();
     }
-
-    @Override
-    public String toString() {
-      return firstDuration.toString();
-    }
   }
 
 }

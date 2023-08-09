@@ -186,6 +186,7 @@ public class NodeInfo {
 
     @Override
     public List<Container> pullNewlyIncreasedContainers() {
+      // TODO Auto-generated method stub
       return null;
     }
 
@@ -258,8 +259,9 @@ public class NodeInfo {
                               final Resource resource, int port) {
     final NodeId nodeId = newNodeID(hostName, port);
     final String nodeAddr = hostName + ":" + port;
-
-    return new FakeRMNodeImpl(nodeId, nodeAddr, hostName,
+    final String httpAddress = hostName;
+    
+    return new FakeRMNodeImpl(nodeId, nodeAddr, httpAddress,
         resource, rackName, "Me good",
         port, hostName, null);
   }

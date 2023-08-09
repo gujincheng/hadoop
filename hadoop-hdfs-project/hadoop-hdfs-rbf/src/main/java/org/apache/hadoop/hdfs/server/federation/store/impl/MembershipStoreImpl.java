@@ -185,9 +185,7 @@ public class MembershipStoreImpl
 
   @Override
   public boolean loadCache(boolean force) throws IOException {
-    if (!super.loadCache(force)) {
-      return false;
-    }
+    super.loadCache(force);
 
     // Update local cache atomically
     cacheWriteLock.lock();

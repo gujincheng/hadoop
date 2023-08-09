@@ -23,6 +23,7 @@ import java.util.List;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
 
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 
 /**
  * Stub implementation of {@link OperationCallbacks}.
@@ -74,7 +76,8 @@ public class MinimalOperationCallbacks
   public void deleteObjectAtPath(
       Path path,
       String key,
-      boolean isFile)
+      boolean isFile,
+      BulkOperationState operationState)
       throws IOException {
 
   }
@@ -83,6 +86,7 @@ public class MinimalOperationCallbacks
   public RemoteIterator<S3ALocatedFileStatus> listFilesAndDirectoryMarkers(
       final Path path,
       final S3AFileStatus status,
+      final boolean collectTombstones,
       final boolean includeSelf) throws IOException {
     return null;
   }
@@ -98,11 +102,20 @@ public class MinimalOperationCallbacks
   }
 
   @Override
-  public void removeKeys(
-          List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-          boolean deleteFakeDir)
+  public DeleteObjectsResult removeKeys(
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      boolean deleteFakeDir,
+      List<Path> undeletedObjectsOnFailure,
+      BulkOperationState operationState,
+      boolean quiet)
       throws MultiObjectDeleteException, AmazonClientException,
              IOException {
+    return null;
+  }
+
+  @Override
+  public boolean allowAuthoritative(Path p) {
+    return false;
   }
 
   @Override

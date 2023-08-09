@@ -22,8 +22,8 @@ import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.appcatalog.model.AppEntry;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Container;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 import javax.ws.rs.Path;
@@ -31,9 +31,8 @@ import javax.ws.rs.core.Response;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,14 +44,14 @@ public class AppDetailsControllerTest {
 
   private AppDetailsController controller;
 
-  @BeforeEach
+  @Before
   public void setUp() throws Exception {
     this.controller = new AppDetailsController();
 
   }
 
   @Test
-  void testGetDetails() throws Exception {
+  public void testGetDetails() throws Exception {
     String id = "application 1";
     AppDetailsController ac = Mockito.mock(AppDetailsController.class);
 
@@ -64,7 +63,7 @@ public class AppDetailsControllerTest {
   }
 
   @Test
-  void testGetStatus() throws Exception {
+  public void testGetStatus() throws Exception {
     String id = "application 1";
     AppDetailsController ac = Mockito.mock(AppDetailsController.class);
 
@@ -85,7 +84,7 @@ public class AppDetailsControllerTest {
   }
 
   @Test
-  void testStopApp() throws Exception {
+  public void testStopApp() throws Exception {
     String id = "application 1";
     AppDetailsController ac = Mockito.mock(AppDetailsController.class);
 
@@ -104,7 +103,7 @@ public class AppDetailsControllerTest {
   }
 
   @Test
-  void testRestartApp() throws Exception {
+  public void testRestartApp() throws Exception {
     String id = "application 1";
     AppDetailsController ac = Mockito.mock(AppDetailsController.class);
 
@@ -123,12 +122,12 @@ public class AppDetailsControllerTest {
   }
 
   @Test
-  void testPathAnnotation() throws Exception {
+  public void testPathAnnotation() throws Exception {
     assertNotNull(this.controller.getClass()
         .getAnnotations());
     assertThat("The controller has the annotation Path",
         this.controller.getClass()
-            .isAnnotationPresent(Path.class));
+        .isAnnotationPresent(Path.class));
 
     final Path path = this.controller.getClass()
         .getAnnotation(Path.class);
@@ -137,7 +136,7 @@ public class AppDetailsControllerTest {
   }
 
   @Test
-  void testUpgradeApp() throws Exception {
+  public void testUpgradeApp() throws Exception {
     String id = "application1";
     AppDetailsController ac = Mockito.mock(AppDetailsController.class);
 

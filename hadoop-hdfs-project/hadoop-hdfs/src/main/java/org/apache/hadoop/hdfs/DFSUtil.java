@@ -69,15 +69,10 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
-import org.apache.hadoop.net.DomainNameResolver;
-import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -108,9 +103,11 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 @InterfaceAudience.Private
@@ -139,17 +136,10 @@ public class DFSUtil {
   public static class ServiceComparator implements Comparator<DatanodeInfo> {
     @Override
     public int compare(DatanodeInfo a, DatanodeInfo b) {
-      // Decommissioned nodes will be moved to the end of the list.
+      // Decommissioned nodes will still be moved to the end of the list
       if (a.isDecommissioned()) {
         return b.isDecommissioned() ? 0 : 1;
       } else if (b.isDecommissioned()) {
-        return -1;
-      }
-
-      // Decommissioning nodes will be placed before decommissioned nodes.
-      if (a.isDecommissionInProgress()) {
-        return b.isDecommissionInProgress() ? 0 : 1;
-      } else if (b.isDecommissionInProgress()) {
         return -1;
       }
 
@@ -166,9 +156,9 @@ public class DFSUtil {
 
   /**
    * Comparator for sorting DataNodeInfo[] based on
-   * slow, stale, entering_maintenance, decommissioning and decommissioned states.
+   * slow, stale, entering_maintenance and decommissioned states.
    * Order: live {@literal ->} slow {@literal ->} stale {@literal ->}
-   * entering_maintenance {@literal ->} decommissioning {@literal ->} decommissioned
+   * entering_maintenance {@literal ->} decommissioned
    */
   @InterfaceAudience.Private 
   public static class StaleAndSlowComparator extends ServiceComparator {
@@ -317,11 +307,7 @@ public class DFSUtil {
     // specifically not using StringBuilder to more efficiently build
     // string w/o excessive byte[] copies and charset conversions.
     final int range = offset + length;
-    if (offset < 0 || range < offset || range > components.length) {
-      throw new IndexOutOfBoundsException(
-          "Incorrect index [offset, range, size] ["
-              + offset + ", " + range + ", " + components.length + "]");
-    }
+    Preconditions.checkPositionIndexes(offset, range, components.length);
     if (length == 0) {
       return "";
     }
@@ -501,7 +487,7 @@ public class DFSUtil {
                     " to append it with namenodeId");
                 URI uri = new URI(journalsUri);
                 List<InetSocketAddress> socketAddresses = Util.
-                    getAddressesList(uri, conf);
+                    getAddressesList(uri);
                 for (InetSocketAddress is : socketAddresses) {
                   journalNodeList.add(is.getHostName());
                 }
@@ -512,7 +498,7 @@ public class DFSUtil {
           } else {
             URI uri = new URI(journalsUri);
             List<InetSocketAddress> socketAddresses = Util.
-                getAddressesList(uri, conf);
+                getAddressesList(uri);
             for (InetSocketAddress is : socketAddresses) {
               journalNodeList.add(is.getHostName());
             }
@@ -523,7 +509,7 @@ public class DFSUtil {
           return journalNodeList;
         } else {
           URI uri = new URI(journalsUri);
-          List<InetSocketAddress> socketAddresses = Util.getAddressesList(uri, conf);
+          List<InetSocketAddress> socketAddresses = Util.getAddressesList(uri);
           for (InetSocketAddress is : socketAddresses) {
             journalNodeList.add(is.getHostName());
           }
@@ -642,10 +628,26 @@ public class DFSUtil {
       defaultAddress = null;
     }
 
-    Collection<String> parentNameServices = getParentNameServices(conf);
+    Collection<String> parentNameServices = conf.getTrimmedStringCollection
+            (DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY);
+
+    if (parentNameServices.isEmpty()) {
+      parentNameServices = conf.getTrimmedStringCollection
+              (DFSConfigKeys.DFS_NAMESERVICES);
+    } else {
+      // Ensure that the internal service is ineed in the list of all available
+      // nameservices.
+      Set<String> availableNameServices = Sets.newHashSet(conf
+              .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMESERVICES));
+      for (String nsId : parentNameServices) {
+        if (!availableNameServices.contains(nsId)) {
+          throw new IOException("Unknown nameservice: " + nsId);
+        }
+      }
+    }
 
     Map<String, Map<String, InetSocketAddress>> addressList =
-            getAddressesForNsIds(conf, parentNameServices,
+            DFSUtilClient.getAddressesForNsIds(conf, parentNameServices,
                                                defaultAddress,
                                                DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
                                                DFS_NAMENODE_RPC_ADDRESS_KEY);
@@ -671,58 +673,6 @@ public class DFSUtil {
       getNNLifelineRpcAddressesForCluster(Configuration conf)
       throws IOException {
 
-    Collection<String> parentNameServices = getParentNameServices(conf);
-
-    return getAddressesForNsIds(conf, parentNameServices, null,
-        DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY);
-  }
-
-  //
-  /**
-   * Returns the configured address for all NameNodes in the cluster.
-   * This is similar with DFSUtilClient.getAddressesForNsIds()
-   * but can access DFSConfigKeys.
-   *
-   * @param conf configuration
-   * @param defaultAddress default address to return in case key is not found.
-   * @param keys Set of keys to look for in the order of preference
-   *
-   * @return a map(nameserviceId to map(namenodeId to InetSocketAddress))
-   */
-  static Map<String, Map<String, InetSocketAddress>> getAddressesForNsIds(
-      Configuration conf, Collection<String> nsIds, String defaultAddress,
-      String... keys) {
-    // Look for configurations of the form
-    // <key>[.<nameserviceId>][.<namenodeId>]
-    // across all of the configured nameservices and namenodes.
-    Map<String, Map<String, InetSocketAddress>> ret = Maps.newLinkedHashMap();
-    for (String nsId : DFSUtilClient.emptyAsSingletonNull(nsIds)) {
-
-      String configKeyWithHost =
-          DFSConfigKeys.DFS_NAMESERVICES_RESOLUTION_ENABLED + "." + nsId;
-      boolean resolveNeeded = conf.getBoolean(configKeyWithHost,
-          DFSConfigKeys.DFS_NAMESERVICES_RESOLUTION_ENABLED_DEFAULT);
-
-      Map<String, InetSocketAddress> isas;
-
-      if (resolveNeeded) {
-        DomainNameResolver dnr = DomainNameResolverFactory.newInstance(
-            conf, nsId, DFSConfigKeys.DFS_NAMESERVICES_RESOLVER_IMPL);
-        isas = DFSUtilClient.getResolvedAddressesForNsId(
-            conf, nsId, dnr, defaultAddress, keys);
-      } else {
-        isas = DFSUtilClient.getAddressesForNameserviceId(
-            conf, nsId, defaultAddress, keys);
-      }
-      if (!isas.isEmpty()) {
-        ret.put(nsId, isas);
-      }
-    }
-    return ret;
-  }
-
-  private static Collection<String> getParentNameServices(Configuration conf)
-      throws IOException {
     Collection<String> parentNameServices = conf.getTrimmedStringCollection(
         DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY);
 
@@ -732,9 +682,8 @@ public class DFSUtil {
     } else {
       // Ensure that the internal service is indeed in the list of all available
       // nameservices.
-      Collection<String> namespaces = conf
-          .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMESERVICES);
-      Set<String> availableNameServices = new HashSet<>(namespaces);
+      Set<String> availableNameServices = Sets.newHashSet(conf
+          .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMESERVICES));
       for (String nsId : parentNameServices) {
         if (!availableNameServices.contains(nsId)) {
           throw new IOException("Unknown nameservice: " + nsId);
@@ -742,7 +691,8 @@ public class DFSUtil {
       }
     }
 
-    return parentNameServices;
+    return DFSUtilClient.getAddressesForNsIds(conf, parentNameServices, null,
+        DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY);
   }
 
   /**
@@ -1847,7 +1797,6 @@ public class DFSUtil {
    * Throw if the given directory has any non-empty protected descendants
    * (including itself).
    *
-   * @param fsd the namespace tree.
    * @param iip directory whose descendants are to be checked.
    * @throws AccessControlException if a non-empty protected descendant
    *                                was found.
@@ -1943,19 +1892,5 @@ public class DFSUtil {
 
     return path.charAt(parent.length()) == Path.SEPARATOR_CHAR
         || parent.equals(Path.SEPARATOR);
-  }
-
-  /**
-   * Add transfer rate metrics for valid data read and duration values.
-   * @param metrics metrics for datanodes
-   * @param read bytes read
-   * @param duration read duration
-   */
-  public static void addTransferRateMetric(final DataNodeMetrics metrics, final long read, final long duration) {
-    if (read >= 0 && duration > 0) {
-        metrics.addReadTransferRate(read * 1000 / duration);
-    } else {
-      LOG.warn("Unexpected value for data transfer bytes={} duration={}", read, duration);
-    }
   }
 }

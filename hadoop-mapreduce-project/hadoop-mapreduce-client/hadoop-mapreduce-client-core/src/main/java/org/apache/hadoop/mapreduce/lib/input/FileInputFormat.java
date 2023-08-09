@@ -41,14 +41,15 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.security.TokenCache;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+
+/** 
  * A base class for file-based {@link InputFormat}s.
  *
  * <p><code>FileInputFormat</code> is the base class for all file-based 
@@ -324,7 +325,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
                   addInputPathRecursively(result, fs, stat.getPath(),
                       inputFilter);
                 } else {
-                  result.add(shrinkStatus(stat));
+                  result.add(stat);
                 }
               }
             }
@@ -363,42 +364,13 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
         if (stat.isDirectory()) {
           addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
         } else {
-          result.add(shrinkStatus(stat));
+          result.add(stat);
         }
       }
     }
   }
-
-  /**
-   * The HdfsBlockLocation includes a LocatedBlock which contains messages
-   * for issuing more detailed queries to datanodes about a block, but these
-   * messages are useless during job submission currently. This method tries
-   * to exclude the LocatedBlock from HdfsBlockLocation by creating a new
-   * BlockLocation from original, reshaping the LocatedFileStatus,
-   * allowing {@link #listStatus(JobContext)} to scan more files with less
-   * memory footprint.
-   * @see BlockLocation
-   * @see org.apache.hadoop.fs.HdfsBlockLocation
-   * @param origStat The fat FileStatus.
-   * @return The FileStatus that has been shrunk.
-   */
-  public static FileStatus shrinkStatus(FileStatus origStat) {
-    if (origStat.isDirectory() || origStat.getLen() == 0 ||
-        !(origStat instanceof LocatedFileStatus)) {
-      return origStat;
-    } else {
-      BlockLocation[] blockLocations =
-          ((LocatedFileStatus)origStat).getBlockLocations();
-      BlockLocation[] locs = new BlockLocation[blockLocations.length];
-      int i = 0;
-      for (BlockLocation location : blockLocations) {
-        locs[i++] = new BlockLocation(location);
-      }
-      LocatedFileStatus newStat = new LocatedFileStatus(origStat, locs);
-      return newStat;
-    }
-  }
-
+  
+  
   /**
    * A factory that makes the split for this class. It can be overridden
    * by sub-classes to make sub-types

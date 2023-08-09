@@ -21,9 +21,7 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.JceAesCtrCryptoCodec;
-import org.apache.hadoop.crypto.JceSm4CtrCryptoCodec;
 import org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec;
-import org.apache.hadoop.crypto.OpensslSm4CtrCryptoCodec;
 
 /** 
  * This class contains constants for configuration keys used
@@ -169,11 +167,11 @@ public class CommonConfigurationKeysPublic {
 
   /**
    * Number of filesystems instances can be created in parallel.
-   * <p>
+   * <p></p>
    * A higher number here does not necessarily improve performance, especially
    * for object stores, where multiple threads may be attempting to create an FS
    * instance for the same URI.
-   * </p>
+   * <p></p>
    * Default value: {@value}.
    */
   public static final String FS_CREATION_PARALLEL_COUNT =
@@ -181,9 +179,8 @@ public class CommonConfigurationKeysPublic {
 
   /**
    * Default value for {@link #FS_CREATION_PARALLEL_COUNT}.
-   * <p>
+   * <p></p>
    * Default value: {@value}.
-   * </p>
    */
   public static final int FS_CREATION_PARALLEL_COUNT_DEFAULT =
       64;
@@ -214,15 +211,6 @@ public class CommonConfigurationKeysPublic {
   public static final String  FS_TRASH_INTERVAL_KEY = "fs.trash.interval";
   /** Default value for FS_TRASH_INTERVAL_KEY */
   public static final long    FS_TRASH_INTERVAL_DEFAULT = 0;
-  /**
-   * @see
-   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
-   * core-default.xml</a>
-   */
-  public static final String  FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY =
-      "fs.trash.clean.trashroot.enable";
-  /** Default value for FS_TRASH_CLEAN_TRASHROOT_ENABLE_KEY. */
-  public static final boolean FS_TRASH_CLEAN_TRASHROOT_ENABLE_DEFAULT = false;
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -383,9 +371,6 @@ public class CommonConfigurationKeysPublic {
       "hadoop.caller.context.signature.max.size";
   public static final int     HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT =
       40;
-  public static final String HADOOP_CALLER_CONTEXT_SEPARATOR_KEY =
-      "hadoop.caller.context.separator";
-  public static final String HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT = ",";
 
   /**
    * @see
@@ -742,17 +727,9 @@ public class CommonConfigurationKeysPublic {
       HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
           + CipherSuite.AES_CTR_NOPADDING.getConfigSuffix();
   public static final String
-      HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_KEY =
-      HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
-          + CipherSuite.SM4_CTR_NOPADDING.getConfigSuffix();
-  public static final String
       HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_DEFAULT =
       OpensslAesCtrCryptoCodec.class.getName() + "," +
           JceAesCtrCryptoCodec.class.getName();
-  public static final String
-      HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_DEFAULT =
-      OpensslSm4CtrCryptoCodec.class.getName() + "," +
-          JceSm4CtrCryptoCodec.class.getName();
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -921,13 +898,6 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
-  public static final String HADOOP_SECURITY_OPENSSL_ENGINE_ID_KEY =
-          "hadoop.security.openssl.engine.id";
-  /**
-   * @see
-   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
-   * core-default.xml</a>
-   */
   public static final String HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_KEY = 
     "hadoop.security.random.device.file.path";
   public static final String HADOOP_SECURITY_SECURE_RANDOM_DEVICE_FILE_PATH_DEFAULT = 
@@ -968,15 +938,6 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
-  public static final String HADOOP_HTTP_METRICS_ENABLED =
-      "hadoop.http.metrics.enabled";
-  public static final boolean HADOOP_HTTP_METRICS_ENABLED_DEFAULT = true;
-
-  /**
-   * @see
-   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
-   * core-default.xml</a>
-   */
   public static final String HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH =
       "hadoop.security.credential.provider.path";
 
@@ -1009,7 +970,6 @@ public class CommonConfigurationKeysPublic {
       String.join(",",
           "secret$",
           "password$",
-          "username$",
           "ssl.keystore.pass$",
           "fs.s3.*[Ss]ecret.?[Kk]ey",
           "fs.s3a.*.server-side-encryption.key",
@@ -1064,13 +1024,5 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_HTTP_IDLE_TIMEOUT_MS_KEY =
       "hadoop.http.idle_timeout.ms";
   public static final int HADOOP_HTTP_IDLE_TIMEOUT_MS_DEFAULT = 60000;
-
-  /**
-   * To configure scheduling of server metrics update thread. This config is used to indicate
-   * initial delay and delay between each execution of the metric update runnable thread.
-   */
-  public static final String IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL =
-      "ipc.server.metrics.update.runner.interval";
-  public static final int IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL_DEFAULT = 5000;
 }
 

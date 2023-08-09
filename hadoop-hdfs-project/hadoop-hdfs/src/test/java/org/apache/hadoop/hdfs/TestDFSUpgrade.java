@@ -34,14 +34,14 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.TestParallelImageWrite;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
@@ -239,7 +239,7 @@ public class TestDFSUpgrade {
       // make sure that rolling upgrade cannot be started
       try {
         final DistributedFileSystem dfs = cluster.getFileSystem();
-        dfs.setSafeMode(SafeModeAction.ENTER);
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
         dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
         fail();
       } catch(RemoteException re) {
@@ -303,8 +303,7 @@ public class TestDFSUpgrade {
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
       baseDirs = UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
-      storageInfo = new StorageInfo(
-          DataNodeLayoutVersion.getCurrentLayoutVersion(),
+      storageInfo = new StorageInfo(HdfsServerConstants.DATANODE_LAYOUT_VERSION,
           UpgradeUtilities.getCurrentNamespaceID(cluster),
           UpgradeUtilities.getCurrentClusterID(cluster), Long.MAX_VALUE,
           NodeType.DATA_NODE);
@@ -349,7 +348,7 @@ public class TestDFSUpgrade {
           UpgradeUtilities.getCurrentFsscTime(null), NodeType.NAME_NODE);
       
       UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs, storageInfo,
-          UpgradeUtilities.getCurrentBlockPoolID(null));
+          UpgradeUtilities.getCurrentBlockPoolID(cluster));
       
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -362,7 +361,7 @@ public class TestDFSUpgrade {
           UpgradeUtilities.getCurrentFsscTime(null), NodeType.NAME_NODE);
       
       UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs, storageInfo,
-          UpgradeUtilities.getCurrentBlockPoolID(null));
+          UpgradeUtilities.getCurrentBlockPoolID(cluster));
       
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -384,7 +383,7 @@ public class TestDFSUpgrade {
       // make sure that rolling upgrade cannot be started
       try {
         final DistributedFileSystem dfs = cluster.getFileSystem();
-        dfs.setSafeMode(SafeModeAction.ENTER);
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
         dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
         fail();
       } catch(RemoteException re) {

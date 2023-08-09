@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
-import java.net.InetSocketAddress;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.net.InetSocketAddress;
 
 public class TestWebAppProxyServer {
   private WebAppProxyServer webAppProxy = null;
@@ -36,20 +36,20 @@ public class TestWebAppProxyServer {
   private final String proxyAddress = "localhost:" + port;
   private YarnConfiguration conf = null;
 
-  @BeforeEach
+  @Before
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.set(YarnConfiguration.PROXY_ADDRESS, proxyAddress);
     webAppProxy = new WebAppProxyServer();
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     webAppProxy.stop();
   }
 
   @Test
-  void testStart() {
+  public void testStart() {
     webAppProxy.init(conf);
     assertEquals(STATE.INITED, webAppProxy.getServiceState());
     webAppProxy.start();
@@ -62,7 +62,7 @@ public class TestWebAppProxyServer {
   }
 
   @Test
-  void testStartWithBindHost() {
+  public void testStartWithBindHost() {
     String bindHost = "0.0.0.0";
     conf.set(YarnConfiguration.PROXY_BIND_HOST, bindHost);
     webAppProxy.init(conf);
@@ -80,12 +80,12 @@ public class TestWebAppProxyServer {
 
 
   @Test
-  void testBindAddress() {
+  public void testBindAddress() {
     conf = new YarnConfiguration();
 
     InetSocketAddress defaultBindAddress = WebAppProxyServer.getBindAddress(conf);
-    assertEquals(YarnConfiguration.DEFAULT_PROXY_PORT,
-        defaultBindAddress.getPort(),
-        "Web Proxy default bind address port is incorrect");
+    Assert.assertEquals("Web Proxy default bind address port is incorrect",
+        YarnConfiguration.DEFAULT_PROXY_PORT,
+        defaultBindAddress.getPort());
   }
 }

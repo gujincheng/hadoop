@@ -30,7 +30,6 @@ import org.apache.commons.lang3.ClassUtils;
 import org.apache.hadoop.hdfs.protocolPB.RouterPolicyProvider;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.security.authorize.Service;
-import org.apache.hadoop.util.Sets;
 
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -41,6 +40,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 /**
  * Test suite covering RouterPolicyProvider. We expect that it contains a

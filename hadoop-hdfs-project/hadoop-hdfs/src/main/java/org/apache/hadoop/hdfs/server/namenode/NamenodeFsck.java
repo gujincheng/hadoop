@@ -37,8 +37,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
-import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -89,7 +89,7 @@ import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.tracing.Tracer;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
@@ -126,8 +126,6 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   public static final String ENTERING_MAINTENANCE_STATUS =
       "is ENTERING MAINTENANCE";
   public static final String IN_MAINTENANCE_STATUS = "is IN MAINTENANCE";
-  public static final String STALE_STATUS = "is STALE";
-  public static final String EXCESS_STATUS = "is EXCESS";
   public static final String NONEXISTENT_STATUS = "does not exist";
   public static final String FAILURE_STATUS = "FAILED";
   public static final String UNDEFINED = "undefined";
@@ -322,10 +320,6 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       }
       out.println("No. of corrupted Replica: " +
           numberReplicas.corruptReplicas());
-      // for striped blocks only and number of redundant internal block replicas.
-      if (blockInfo.isStriped()) {
-        out.println("No. of redundant Replica: " + numberReplicas.redundantInternalBlocks());
-      }
       //record datanodes that have corrupted block replica
       Collection<DatanodeDescriptor> corruptionRecord = null;
       if (blockManager.getCorruptReplicas(block) != null) {
@@ -372,10 +366,6 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       out.print(ENTERING_MAINTENANCE_STATUS);
     } else if (this.showMaintenanceState && dn.isInMaintenance()) {
       out.print(IN_MAINTENANCE_STATUS);
-    } else if (dn.isStale(this.staleInterval)) {
-      out.print(STALE_STATUS);
-    } else if (blockManager.isExcess(dn, blockManager.getStoredBlock(block))) {
-      out.print(EXCESS_STATUS);
     } else {
       out.print(HEALTHY_STATUS);
     }
@@ -387,10 +377,9 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
    */
   public void fsck() throws AccessControlException {
     final long startTime = Time.monotonicNow();
-    String operationName = "fsck";
     try {
       if(blockIds != null) {
-        namenode.getNamesystem().checkSuperuserPrivilege(operationName, path);
+        namenode.getNamesystem().checkSuperuserPrivilege();
         StringBuilder sb = new StringBuilder();
         sb.append("FSCK started by " +
             UserGroupInformation.getCurrentUser() + " from " +
@@ -495,10 +484,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   }
 
   private void listCorruptFileBlocks() throws IOException {
-    final List<String> corruptBlocksFiles = namenode.getNamesystem()
+    final List<String> corrputBlocksFiles = namenode.getNamesystem()
         .listCorruptFileBlocksWithSnapshot(path, snapshottableDirs,
             currentCookie);
-    int numCorruptFiles = corruptBlocksFiles.size();
+    int numCorruptFiles = corrputBlocksFiles.size();
     String filler;
     if (numCorruptFiles > 0) {
       filler = Integer.toString(numCorruptFiles);
@@ -508,7 +497,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       filler = "no more";
     }
     out.println("Cookie:\t" + currentCookie[0]);
-    for (String s : corruptBlocksFiles) {
+    for (String s : corrputBlocksFiles) {
       out.println(s);
     }
     out.println("\n\nThe filesystem under path '" + path + "' has " + filler
@@ -1119,7 +1108,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
                         blockToken, datanodeId, HdfsConstants.READ_TIMEOUT);
                 } finally {
                   if (peer == null) {
-                    IOUtils.closeStream(s);
+                    IOUtils.closeQuietly(s);
                   }
                 }
                 return peer;

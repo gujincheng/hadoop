@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.nodelabels.store.op.FSNodeStoreLogOp;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.store.FSStoreOpHandler.StoreType;
 
 import java.io.EOFException;
@@ -48,7 +47,6 @@ public abstract class AbstractFSNodeStore<M> {
   private FSDataOutputStream editlogOs;
 
   private Path editLogPath;
-  private int replication;
   private StoreSchema schema;
 
   protected M manager;
@@ -65,34 +63,8 @@ public abstract class AbstractFSNodeStore<M> {
     this.fsWorkingPath = fsStorePath;
     this.manager = mgr;
     initFileSystem(conf);
-    initNodeStoreRootDirectory(conf);
-    this.replication = conf.getInt(YarnConfiguration.FS_STORE_FILE_REPLICATION,
-        YarnConfiguration.DEFAULT_FS_STORE_FILE_REPLICATION);
-  }
-
-  private void initNodeStoreRootDirectory(Configuration conf) throws IOException {
-    // mkdir of root dir path with retry logic
-    int maxRetries = conf.getInt(YarnConfiguration.NODE_STORE_ROOT_DIR_NUM_RETRIES,
-        YarnConfiguration.NODE_STORE_ROOT_DIR_NUM_DEFAULT_RETRIES);
-    int retryCount = 0;
-    boolean success = false;
-
-    while (!success && retryCount <= maxRetries) {
-      try {
-        success = fs.mkdirs(fsWorkingPath);
-      } catch (IOException e) {
-        retryCount++;
-        if (retryCount > maxRetries) {
-          throw e;
-        }
-        try {
-          Thread.sleep(conf.getInt(YarnConfiguration.NODE_STORE_ROOT_DIR_RETRY_INTERVAL,
-              YarnConfiguration.NODE_STORE_ROOT_DIR_RETRY_DEFAULT_INTERVAL));
-        } catch (InterruptedException ie) {
-          throw new RuntimeException(ie);
-        }
-      }
-    }
+    // mkdir of root dir path
+    fs.mkdirs(fsWorkingPath);
     LOG.info("Created store directory :" + fsWorkingPath);
   }
 
@@ -190,7 +162,6 @@ public abstract class AbstractFSNodeStore<M> {
       StoreOp op = FSStoreOpHandler.getMirrorOp(storeType);
       op.write(os, manager);
     }
-    checkAvailability(writingMirrorPath);
     // Move mirror to mirror.old
     if (fs.exists(mirrorPath)) {
       fs.delete(oldMirrorPath, false);
@@ -207,25 +178,9 @@ public abstract class AbstractFSNodeStore<M> {
     // create a new editlog file
     editlogOs = fs.create(editLogPath, true);
     editlogOs.close();
-    checkAvailability(editLogPath);
+
     LOG.info("Finished write mirror at:" + mirrorPath.toString());
     LOG.info("Finished create editlog file at:" + editLogPath.toString());
-  }
-
-  /**
-   * Make sure replica is highly available. It will avoid setting replication,
-   * if the value configured for
-   * {@link YarnConfiguration#FS_STORE_FILE_REPLICATION} is 0.
-   */
-  private void checkAvailability(Path file) throws IOException {
-    try {
-      if (replication != 0
-          && fs.getFileStatus(file).getReplication() < replication) {
-        fs.setReplication(file, (short) replication);
-      }
-    } catch (UnsupportedOperationException e) {
-      LOG.error("Failed set replication for a file : {}", file);
-    }
   }
 
   protected void loadManagerFromEditLog(Path editPath) throws IOException {

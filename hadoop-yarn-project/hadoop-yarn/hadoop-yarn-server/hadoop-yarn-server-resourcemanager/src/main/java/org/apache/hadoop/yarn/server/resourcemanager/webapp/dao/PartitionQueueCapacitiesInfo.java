@@ -39,8 +39,6 @@ public class PartitionQueueCapacitiesInfo {
   private float absoluteUsedCapacity;
   private float absoluteMaxCapacity  = 100;
   private float maxAMLimitPercentage;
-  private float weight;
-  private float normalizedWeight;
   private ResourceInfo configuredMinResource;
   private ResourceInfo configuredMaxResource;
   private ResourceInfo effectiveMinResource;
@@ -52,7 +50,6 @@ public class PartitionQueueCapacitiesInfo {
   public PartitionQueueCapacitiesInfo(String partitionName, float capacity,
       float usedCapacity, float maxCapacity, float absCapacity,
       float absUsedCapacity, float absMaxCapacity, float maxAMLimitPercentage,
-      float weight, float normalizedWeight,
       Resource confMinRes, Resource confMaxRes, Resource effMinRes,
       Resource effMaxRes) {
     super();
@@ -64,8 +61,6 @@ public class PartitionQueueCapacitiesInfo {
     this.absoluteUsedCapacity = absUsedCapacity;
     this.absoluteMaxCapacity = absMaxCapacity;
     this.maxAMLimitPercentage = maxAMLimitPercentage;
-    this.weight = weight;
-    this.normalizedWeight = normalizedWeight;
     this.configuredMinResource = new ResourceInfo(confMinRes);
     this.configuredMaxResource = new ResourceInfo(confMaxRes);
     this.effectiveMinResource = new ResourceInfo(effMinRes);
@@ -130,22 +125,6 @@ public class PartitionQueueCapacitiesInfo {
 
   public float getMaxAMLimitPercentage() {
     return maxAMLimitPercentage;
-  }
-
-  public float getWeight() {
-    return weight;
-  }
-
-  public void setWeight(float weight) {
-    this.weight = weight;
-  }
-
-  public float getNormalizedWeight() {
-    return normalizedWeight;
-  }
-
-  public void setNormalizedWeight(float normalizedWeight) {
-    this.normalizedWeight = normalizedWeight;
   }
 
   public void setMaxAMLimitPercentage(float maxAMLimitPercentage) {

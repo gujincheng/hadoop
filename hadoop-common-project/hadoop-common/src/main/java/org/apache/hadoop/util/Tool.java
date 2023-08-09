@@ -32,7 +32,7 @@ import org.apache.hadoop.conf.Configurable;
  * and only handle its custom arguments.</p>
  * 
  * <p>Here is how a typical <code>Tool</code> is implemented:</p>
- * <blockquote><pre>
+ * <p><blockquote><pre>
  *     public class MyApp extends Configured implements Tool {
  *     
  *       public int run(String[] args) throws Exception {
@@ -69,7 +69,7 @@ import org.apache.hadoop.conf.Configurable;
  *         System.exit(res);
  *       }
  *     }
- * </pre></blockquote>
+ * </pre></blockquote><p>
  * 
  * @see GenericOptionsParser
  * @see ToolRunner
@@ -82,7 +82,7 @@ public interface Tool extends Configurable {
    * 
    * @param args command specific arguments.
    * @return exit code.
-   * @throws Exception command exception.
+   * @throws Exception
    */
   int run(String [] args) throws Exception;
 }

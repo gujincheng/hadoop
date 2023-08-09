@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
+import org.junit.Test;
 
 public class TestTwoColumnCssPage {
 
@@ -58,8 +57,7 @@ public class TestTwoColumnCssPage {
     }
   }
 
-  @Test
-  void shouldNotThrow() {
+  @Test public void shouldNotThrow() {
     WebAppTests.testPage(TwoColumnCssLayout.class);
   }
 

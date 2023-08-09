@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
-import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 
 /**
@@ -55,45 +54,26 @@ public interface RouterRpcMonitor {
 
   /**
    * Start proxying an operation to the Namenode.
-   * @return id of the thread doing the proxying.
+   * @return Id of the thread doing the proxying.
    */
   long proxyOp();
 
   /**
    * Mark a proxy operation as completed.
-   *
-   * @param success if the operation was successful.
-   * @param nsId nameservice id.
-   * @param state namenode state in the federation.
+   * @param success If the operation was successful.
    */
-  void proxyOpComplete(boolean success, String nsId, FederationNamenodeServiceState state);
+  void proxyOpComplete(boolean success);
 
   /**
-   * Failed to proxy an operation to a namenode because it was in standby.
-   * @param nsId nameservice id.
+   * Failed to proxy an operation to a Namenode because it was in standby.
    */
-  void proxyOpFailureStandby(String nsId);
+  void proxyOpFailureStandby();
 
   /**
-   * Failed to proxy an operation to a namenode because of an unexpected exception.
-   *
-   * @param nsId nameservice id.
+   * Failed to proxy an operation to a Namenode because of an unexpected
+   * exception.
    */
-  void proxyOpFailureCommunicate(String nsId);
-
-  /**
-   * Rejected to proxy an operation to a namenode.
-   *
-   * @param nsId nameservice id.
-   */
-  void proxyOpPermitRejected(String nsId);
-
-  /**
-   * Accepted to proxy an operation to a namenode.
-   *
-   * @param nsId nameservice id.
-   */
-  void proxyOpPermitAccepted(String nsId);
+  void proxyOpFailureCommunicate();
 
   /**
    * Failed to proxy an operation to a Namenode because the client was
@@ -114,10 +94,8 @@ public interface RouterRpcMonitor {
 
   /**
    * Failed to proxy an operation because of no namenodes available.
-   *
-   * @param nsId nameservice id.
    */
-  void proxyOpNoNamenodes(String nsId);
+  void proxyOpNoNamenodes();
 
   /**
    * If the Router cannot contact the State Store in an operation.

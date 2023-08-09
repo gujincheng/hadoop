@@ -49,7 +49,7 @@ private:
 
   static size_t NextToken(const std::string &payload, size_t off,
                           std::string *tok);
-  Status GenerateCNonce();
+  void GenerateCNonce();
   std::string username_;
   std::string password_;
   std::string nonce_;

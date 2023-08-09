@@ -56,7 +56,7 @@ public interface StateStoreRecordOperations {
    * @param clazz Class of record to fetch.
    * @param query Query to filter results.
    * @return A single record matching the query. Null if there are no matching
-   *         records.
+   *         records or more than one matching record in the store.
    * @throws IOException If multiple records match or if the data store cannot
    *           be queried.
    */
@@ -107,11 +107,12 @@ public interface StateStoreRecordOperations {
    * @param allowUpdate True if update of exiting record is allowed.
    * @param errorIfExists True if an error should be returned when inserting
    *          an existing record. Only used if allowUpdate = false.
-   * @return The result of the putAll operation.
+   * @return true if all operations were successful.
+   *
    * @throws IOException Throws exception if unable to query the data store.
    */
   @AtMostOnce
-  <T extends BaseRecord> StateStoreOperationResult putAll(
+  <T extends BaseRecord> boolean putAll(
       List<T> records, boolean allowUpdate, boolean errorIfExists)
           throws IOException;
 
@@ -142,9 +143,8 @@ public interface StateStoreRecordOperations {
    * Remove multiple records of a specific class that match a query. Requires
    * the getAll implementation to fetch fresh records on each call.
    *
-   * @param clazz The class to match the records with.
-   * @param query Query to filter what to remove.
    * @param <T> Record class of the records.
+   * @param query Query to filter what to remove.
    * @return The number of records removed.
    * @throws IOException Throws exception if unable to query the data store.
    */

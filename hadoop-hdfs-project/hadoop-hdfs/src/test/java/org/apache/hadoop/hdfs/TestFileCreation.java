@@ -92,7 +92,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.Mockito;
 import org.slf4j.event.Level;
 
 /**
@@ -241,8 +240,9 @@ public class TestFileCreation {
    * Test that server defaults are updated on the client after cache expiration.
    */
   @Test
-  public void testServerDefaultsWithMinimalCaching() throws Exception  {
-    // Create cluster with an explicit block size param.
+  public void testServerDefaultsWithMinimalCaching()
+      throws IOException, InterruptedException {
+    // Create cluster with an explicit block size param
     Configuration clusterConf = new HdfsConfiguration();
     long originalBlockSize = DFS_BLOCK_SIZE_DEFAULT * 2;
     clusterConf.setLong(DFS_BLOCK_SIZE_KEY, originalBlockSize);
@@ -274,19 +274,11 @@ public class TestFileCreation {
               defaults.getDefaultStoragePolicyId());
       doReturn(newDefaults).when(spyNamesystem).getServerDefaults();
 
-      // Verify that the value is updated correctly. Wait for 6 seconds.
-      GenericTestUtils.waitFor(()->{
-        try {
-          FsServerDefaults currDef = dfsClient.getServerDefaults();
-          return (currDef.getBlockSize() == updatedDefaultBlockSize);
-        } catch (IOException e) {
-          // do nothing;
-          return false;
-        }
-      }, 1, 6000);
-
+      Thread.sleep(1);
+      defaults = dfsClient.getServerDefaults();
+      // Value is updated correctly
+      assertEquals(updatedDefaultBlockSize, defaults.getBlockSize());
     } finally {
-      Mockito.reset(spyNamesystem);
       cluster.shutdown();
     }
   }

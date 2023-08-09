@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.test.HTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
 import org.apache.hadoop.test.TestDir;
@@ -137,9 +136,8 @@ public class TestHttpFSServerNoACLs extends HTestCase {
     conf.set("httpfs.proxyuser." +
                     HadoopUsersConfTestHelper.getHadoopProxyUser() + ".hosts",
             HadoopUsersConfTestHelper.getHadoopProxyUserHosts());
-    conf.set(HttpFSAuthenticationFilter.HADOOP_HTTP_CONF_PREFIX +
-            AuthenticationFilter.SIGNATURE_SECRET_FILE,
-        secretFile.getAbsolutePath());
+    conf.set("httpfs.authentication.signature.secret.file",
+            secretFile.getAbsolutePath());
 
     File httpfsSite = new File(new File(homeDir, "conf"), "httpfs-site.xml");
     os = new FileOutputStream(httpfsSite);

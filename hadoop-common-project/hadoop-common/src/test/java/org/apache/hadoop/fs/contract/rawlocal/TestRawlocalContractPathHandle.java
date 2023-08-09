@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.contract.AbstractContractPathHandleTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.localfs.LocalFSContract;
 import org.apache.hadoop.fs.contract.rawlocal.RawlocalFSContract;
 
 public class TestRawlocalContractPathHandle

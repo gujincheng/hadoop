@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme;
 import org.apache.hadoop.hdfs.DFSInotifyEventInputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
@@ -67,8 +66,9 @@ import java.util.EnumSet;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HdfsAdmin {
-  final private DistributedFileSystem dfs;
-  public static final FsPermission TRASH_PERMISSION = new FsPermission(
+
+  private DistributedFileSystem dfs;
+  private static final FsPermission TRASH_PERMISSION = new FsPermission(
       FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
 
   /**
@@ -80,10 +80,6 @@ public class HdfsAdmin {
    */
   public HdfsAdmin(URI uri, Configuration conf) throws IOException {
     FileSystem fs = FileSystem.get(uri, conf);
-    if ((fs instanceof ViewFileSystemOverloadScheme)) {
-      fs = ((ViewFileSystemOverloadScheme) fs)
-          .getRawFileSystem(new Path(FileSystem.getDefaultUri(conf)), conf);
-    }
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("'" + uri + "' is not an HDFS URI.");
     } else {
@@ -169,20 +165,6 @@ public class HdfsAdmin {
    */
   public void allowSnapshot(Path path) throws IOException {
     dfs.allowSnapshot(path);
-    if (dfs.isSnapshotTrashRootEnabled()) {
-      dfs.provisionSnapshotTrash(path, TRASH_PERMISSION);
-    }
-  }
-
-  /**
-   * Provision a trash directory for a given snapshottable directory.
-   * @param path the root of the snapshottable directory
-   * @return Path of the provisioned trash root
-   * @throws IOException if the trash directory can not be created.
-   */
-  public Path provisionSnapshotTrash(Path path)
-      throws IOException {
-    return dfs.provisionSnapshotTrash(path, TRASH_PERMISSION);
   }
 
   /**

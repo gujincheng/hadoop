@@ -33,7 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * The Read Buffer Manager for Rest AbfsClient.
@@ -101,7 +101,6 @@ final class ReadBufferManager {
 
   // hide instance constructor
   private ReadBufferManager() {
-    LOGGER.trace("Creating readbuffer manager with HADOOP-18546 patch");
   }
 
 
@@ -455,8 +454,8 @@ final class ReadBufferManager {
    */
   void doneReading(final ReadBuffer buffer, final ReadBufferStatus result, final int bytesActuallyRead) {
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("ReadBufferWorker completed read file {} for offset {} outcome {} bytes {}",
-          buffer.getStream().getPath(),  buffer.getOffset(), result, bytesActuallyRead);
+      LOGGER.trace("ReadBufferWorker completed file {} for offset {} bytes {}",
+          buffer.getStream().getPath(),  buffer.getOffset(), bytesActuallyRead);
     }
     synchronized (this) {
       // If this buffer has already been purged during
@@ -545,6 +544,7 @@ final class ReadBufferManager {
     LOGGER.debug("Purging stale buffers for AbfsInputStream {} ", stream);
     readAheadQueue.removeIf(readBuffer -> readBuffer.getStream() == stream);
     purgeList(stream, completedReadList);
+    purgeList(stream, inProgressList);
   }
 
   /**
@@ -641,10 +641,5 @@ final class ReadBufferManager {
   void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf) {
     freeList.clear();
     completedReadList.add(buf);
-  }
-
-  @VisibleForTesting
-  int getNumBuffers() {
-    return NUM_BUFFERS;
   }
 }

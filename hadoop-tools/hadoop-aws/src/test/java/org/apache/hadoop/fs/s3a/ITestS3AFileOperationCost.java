@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.fs.s3a;
 
+
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
+
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,13 +43,14 @@ import java.util.EnumSet;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Use metrics to assert about the cost of file API calls.
- * Parameterized on directory marker keep vs delete.
+ * Parameterized on guarded vs raw. and directory marker keep vs delete
  */
 @RunWith(Parameterized.class)
 public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
@@ -60,19 +64,25 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {"keep-markers", true},
-        {"delete-markers", false},
+        {"raw-keep-markers", false, true, false},
+        {"raw-delete-markers", false, false, false},
+        {"nonauth-keep-markers", true, true, false},
+        {"auth-delete-markers", true, false, true}
     });
   }
 
-  public ITestS3AFileOperationCost(
-      final String name,
-      final boolean keepMarkers) {
-    super(keepMarkers);
+  public ITestS3AFileOperationCost(final String name,
+      final boolean s3guard,
+      final boolean keepMarkers,
+      final boolean authoritative) {
+    super(s3guard, keepMarkers, authoritative);
   }
 
   /**
    * Test the cost of {@code listLocatedStatus(file)}.
+   * There's a minor inefficiency in that calling this on
+   * a file in S3Guard still executes a LIST call, even
+   * though the file record is in the store.
    */
   @Test
   public void testCostOfLocatedFileStatusOnFile() throws Throwable {
@@ -80,8 +90,11 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Path file = file(methodPath());
     S3AFileSystem fs = getFileSystem();
     verifyMetrics(() -> fs.listLocatedStatus(file),
-        always(FILE_STATUS_FILE_PROBE
-            .plus(LIST_LOCATED_STATUS_LIST_OP)));
+        whenRaw(FILE_STATUS_FILE_PROBE
+            .plus(LIST_LOCATED_STATUS_LIST_OP)),
+        whenAuthoritative(LIST_LOCATED_STATUS_LIST_OP),
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP
+            .plus(S3GUARD_NONAUTH_FILE_STATUS_PROBE)));
   }
 
   @Test
@@ -91,8 +104,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     S3AFileSystem fs = getFileSystem();
     verifyMetrics(() ->
             fs.listLocatedStatus(dir),
-        always(LIST_LOCATED_STATUS_LIST_OP
-            .plus(GET_FILE_STATUS_ON_EMPTY_DIR)));
+        whenRaw(LIST_LOCATED_STATUS_LIST_OP
+            .plus(GET_FILE_STATUS_ON_EMPTY_DIR)),
+        whenAuthoritative(NO_IO),
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));
   }
 
   @Test
@@ -103,7 +118,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Path file = file(new Path(dir, "file.txt"));
     verifyMetrics(() ->
           fs.listLocatedStatus(dir),
-        always(LIST_LOCATED_STATUS_LIST_OP));
+        whenRaw(LIST_LOCATED_STATUS_LIST_OP),
+        whenAuthoritative(NO_IO),
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));
   }
 
   @Test
@@ -114,8 +131,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     touch(fs, file);
     verifyMetrics(() ->
             fs.listFiles(file, true),
-        always(LIST_LOCATED_STATUS_LIST_OP
-            .plus(GET_FILE_STATUS_ON_FILE)));
+        whenRaw(LIST_LOCATED_STATUS_LIST_OP
+            .plus(GET_FILE_STATUS_ON_FILE)),
+        whenAuthoritative(NO_IO),
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));
   }
 
   @Test
@@ -127,8 +146,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     fs.mkdirs(dir);
     verifyMetrics(() ->
             fs.listFiles(dir, true),
-        always(LIST_FILES_LIST_OP
-            .plus(GET_FILE_STATUS_ON_EMPTY_DIR)));
+        whenRaw(LIST_FILES_LIST_OP
+            .plus(GET_FILE_STATUS_ON_EMPTY_DIR)),
+        whenAuthoritative(NO_IO),
+        whenNonauth(LIST_FILES_LIST_OP));
   }
 
   @Test
@@ -141,7 +162,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     touch(fs, file);
     verifyMetrics(() ->
             fs.listFiles(dir, true),
-        always(LIST_FILES_LIST_OP));
+        whenRaw(LIST_FILES_LIST_OP),
+        whenAuthoritative(NO_IO),
+        whenNonauth(LIST_FILES_LIST_OP));
   }
 
   @Test
@@ -151,7 +174,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     S3AFileSystem fs = getFileSystem();
     verifyMetricsIntercepting(FileNotFoundException.class, "",
         () -> fs.listFiles(dir, true),
-        always(LIST_FILES_LIST_OP
+        whenRaw(LIST_FILES_LIST_OP
             .plus(GET_FILE_STATUS_FNFE)));
   }
 
@@ -163,8 +186,11 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     touch(fs, file);
     verifyMetrics(() ->
             fs.listStatus(file),
-        always(LIST_STATUS_LIST_OP
-            .plus(GET_FILE_STATUS_ON_FILE)));
+            whenRaw(LIST_STATUS_LIST_OP
+                    .plus(GET_FILE_STATUS_ON_FILE)),
+            whenAuthoritative(LIST_STATUS_LIST_OP),
+            whenNonauth(LIST_STATUS_LIST_OP
+                .plus(S3GUARD_NONAUTH_FILE_STATUS_PROBE)));
   }
 
   @Test
@@ -175,8 +201,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     fs.mkdirs(dir);
     verifyMetrics(() ->
             fs.listStatus(dir),
-        always(LIST_STATUS_LIST_OP
-            .plus(GET_FILE_STATUS_ON_EMPTY_DIR)));
+            whenRaw(LIST_STATUS_LIST_OP
+            .plus(GET_FILE_STATUS_ON_EMPTY_DIR)),
+            whenAuthoritative(NO_IO),
+            whenNonauth(LIST_STATUS_LIST_OP));
   }
 
   @Test
@@ -189,14 +217,16 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     touch(fs, file);
     verifyMetrics(() ->
             fs.listStatus(dir),
-        always(LIST_STATUS_LIST_OP));
+            whenRaw(LIST_STATUS_LIST_OP),
+            whenAuthoritative(NO_IO),
+            whenNonauth(LIST_STATUS_LIST_OP));
   }
 
   @Test
   public void testCostOfGetFileStatusOnFile() throws Throwable {
     describe("performing getFileStatus on a file");
     Path simpleFile = file(methodPath());
-    S3AFileStatus status = verifyInnerGetFileStatus(simpleFile, true,
+    S3AFileStatus status = verifyRawInnerGetFileStatus(simpleFile, true,
         StatusProbeEnum.ALL,
         GET_FILE_STATUS_ON_FILE);
     assertTrue("not a file: " + status, status.isFile());
@@ -206,13 +236,13 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
   public void testCostOfGetFileStatusOnEmptyDir() throws Throwable {
     describe("performing getFileStatus on an empty directory");
     Path dir = dir(methodPath());
-    S3AFileStatus status = verifyInnerGetFileStatus(dir, true,
+    S3AFileStatus status = verifyRawInnerGetFileStatus(dir, true,
         StatusProbeEnum.ALL,
         GET_FILE_STATUS_ON_DIR_MARKER);
     assertSame("not empty: " + status, Tristate.TRUE,
         status.isEmptyDirectory());
     // but now only ask for the directories and the file check is skipped.
-    verifyInnerGetFileStatus(dir, false,
+    verifyRawInnerGetFileStatus(dir, false,
         StatusProbeEnum.DIRECTORIES,
         FILE_STATUS_DIR_PROBE);
 
@@ -224,7 +254,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
   @Test
   public void testCostOfGetFileStatusOnMissingFile() throws Throwable {
     describe("performing getFileStatus on a missing file");
-    interceptGetFileStatusFNFE(methodPath(), false,
+    interceptRawGetFileStatusFNFE(methodPath(), false,
         StatusProbeEnum.ALL,
         GET_FILE_STATUS_FNFE);
   }
@@ -232,7 +262,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
   @Test
   public void testCostOfRootFileStatus() throws Throwable {
     Path root = path("/");
-    S3AFileStatus rootStatus = verifyInnerGetFileStatus(
+    S3AFileStatus rootStatus = verifyRawInnerGetFileStatus(
             root,
             false,
             StatusProbeEnum.ALL,
@@ -245,7 +275,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Assertions.assertThat(rootStatus.isEmptyDirectory())
             .isEqualTo(Tristate.UNKNOWN);
 
-    rootStatus = verifyInnerGetFileStatus(
+    rootStatus = verifyRawInnerGetFileStatus(
             root,
             true,
             StatusProbeEnum.ALL,
@@ -275,7 +305,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     describe("performing getFileStatus on a non-empty directory");
     Path dir = dir(methodPath());
     file(new Path(dir, "simple.txt"));
-    S3AFileStatus status = verifyInnerGetFileStatus(dir, true,
+    S3AFileStatus status = verifyRawInnerGetFileStatus(dir, true,
         StatusProbeEnum.ALL,
         GET_FILE_STATUS_ON_DIR);
     assertEmptyDirStatus(status, Tristate.FALSE);
@@ -319,23 +349,24 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
   @Test
   public void testDirProbes() throws Throwable {
     describe("Test directory probe cost");
+    assumeUnguarded();
     S3AFileSystem fs = getFileSystem();
     // Create the empty directory.
     Path emptydir = dir(methodPath());
 
     // head probe fails
-    interceptGetFileStatusFNFE(emptydir, false,
+    interceptRawGetFileStatusFNFE(emptydir, false,
         StatusProbeEnum.HEAD_ONLY,
         FILE_STATUS_FILE_PROBE);
 
     // a LIST will find it and declare as empty
-    S3AFileStatus status = verifyInnerGetFileStatus(emptydir, true,
+    S3AFileStatus status = verifyRawInnerGetFileStatus(emptydir, true,
         StatusProbeEnum.LIST_ONLY,
         FILE_STATUS_DIR_PROBE);
     assertEmptyDirStatus(status, Tristate.TRUE);
 
     // skip all probes and expect no operations to take place
-    interceptGetFileStatusFNFE(emptydir, false,
+    interceptRawGetFileStatusFNFE(emptydir, false,
         EnumSet.noneOf(StatusProbeEnum.class),
         NO_IO);
 
@@ -344,16 +375,17 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     String emptyDirTrailingSlash = fs.pathToKey(emptydir.getParent())
         + "/" + emptydir.getName() +  "/";
     // A HEAD request does not probe for keys with a trailing /
-    interceptOperation(FileNotFoundException.class, "",
+    interceptRaw(FileNotFoundException.class, "",
         NO_IO, () ->
         fs.s3GetFileStatus(emptydir, emptyDirTrailingSlash,
-            StatusProbeEnum.HEAD_ONLY, false));
+            StatusProbeEnum.HEAD_ONLY, null, false));
 
     // but ask for a directory marker and you get the entry
-    status = verify(FILE_STATUS_DIR_PROBE, () ->
+    status = verifyRaw(FILE_STATUS_DIR_PROBE, () ->
         fs.s3GetFileStatus(emptydir,
             emptyDirTrailingSlash,
             StatusProbeEnum.LIST_ONLY,
+            null,
             true));
     assertEquals(emptydir, status.getPath());
     assertEmptyDirStatus(status, Tristate.TRUE);
@@ -365,13 +397,80 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
     intercept(IllegalArgumentException.class, "", () ->
             fs.s3GetFileStatus(new Path("/something"), "/something",
-                StatusProbeEnum.HEAD_ONLY, true));
+                StatusProbeEnum.HEAD_ONLY, null, true));
+  }
+  @Test
+  public void testCreateCost() throws Throwable {
+    describe("Test file creation cost -raw only");
+    assumeUnguarded();
+    Path testFile = methodPath();
+    // when overwrite is false, the path is checked for existence.
+    create(testFile, false,
+        CREATE_FILE_NO_OVERWRITE);
+    // but when true: only the directory checks take place.
+    create(testFile, true, CREATE_FILE_OVERWRITE);
+  }
+
+  @Test
+  public void testCreateCostFileExists() throws Throwable {
+    describe("Test cost of create file failing with existing file");
+    assumeUnguarded();
+    Path testFile = file(methodPath());
+
+    // now there is a file there, an attempt with overwrite == false will
+    // fail on the first HEAD.
+    interceptRaw(FileAlreadyExistsException.class, "",
+        FILE_STATUS_FILE_PROBE,
+        () -> file(testFile, false));
+  }
+
+  @Test
+  public void testCreateCostDirExists() throws Throwable {
+    describe("Test cost of create file failing with existing dir");
+    assumeUnguarded();
+    Path testFile = dir(methodPath());
+
+    // now there is a file there, an attempt with overwrite == false will
+    // fail on the first HEAD.
+    interceptRaw(FileAlreadyExistsException.class, "",
+        GET_FILE_STATUS_ON_DIR_MARKER,
+        () -> file(testFile, false));
+  }
+
+  /**
+   * Use the builder API.
+   * This always looks for a parent unless the caller says otherwise.
+   */
+  @Test
+  public void testCreateBuilder() throws Throwable {
+    describe("Test builder file creation cost -raw only");
+    assumeUnguarded();
+    Path testFile = methodPath();
+    dir(testFile.getParent());
+
+    // builder defaults to looking for parent existence (non-recursive)
+    buildFile(testFile, false,  false,
+        GET_FILE_STATUS_FNFE                // destination file
+            .plus(FILE_STATUS_DIR_PROBE));  // parent dir
+    // recursive = false and overwrite=true:
+    // only make sure the dest path isn't a directory.
+    buildFile(testFile, true, true,
+        FILE_STATUS_DIR_PROBE);
+
+    // now there is a file there, an attempt with overwrite == false will
+    // fail on the first HEAD.
+    interceptRaw(FileAlreadyExistsException.class, "",
+        GET_FILE_STATUS_ON_FILE,
+        () -> buildFile(testFile, false, true,
+            GET_FILE_STATUS_ON_FILE));
   }
 
   @Test
   public void testCostOfGlobStatus() throws Throwable {
     describe("Test globStatus has expected cost");
     S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+
     Path basePath = path("testCostOfGlobStatus/nextFolder/");
 
     // create a bunch of files
@@ -383,7 +482,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     fs.globStatus(basePath.suffix("/*"));
     // 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
-    verify(LIST_STATUS_LIST_OP,
+    verifyRaw(LIST_STATUS_LIST_OP,
         () -> fs.globStatus(basePath.suffix("/*")));
   }
 
@@ -391,6 +490,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
   public void testCostOfGlobStatusNoSymlinkResolution() throws Throwable {
     describe("Test globStatus does not attempt to resolve symlinks");
     S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+
     Path basePath = path("testCostOfGlobStatusNoSymlinkResolution/f/");
 
     // create a single file, globStatus returning a single file on a pattern
@@ -400,7 +501,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     // unguarded: 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
     // no additional operations from symlink resolution
-    verify(LIST_STATUS_LIST_OP,
+    verifyRaw(LIST_STATUS_LIST_OP,
         () -> fs.globStatus(basePath.suffix("/*")));
   }
 

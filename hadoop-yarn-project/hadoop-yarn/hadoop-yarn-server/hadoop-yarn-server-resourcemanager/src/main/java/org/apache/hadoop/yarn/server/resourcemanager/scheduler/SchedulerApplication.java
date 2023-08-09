@@ -30,20 +30,16 @@ public class SchedulerApplication<T extends SchedulerApplicationAttempt> {
   private final String user;
   private volatile T currentAttempt;
   private volatile Priority priority;
-  private boolean unmanagedAM;
 
-  public SchedulerApplication(Queue queue, String user, boolean unmanagedAM) {
+  public SchedulerApplication(Queue queue, String user) {
     this.queue = queue;
     this.user = user;
-    this.unmanagedAM = unmanagedAM;
     this.priority = null;
   }
 
-  public SchedulerApplication(Queue queue, String user, Priority priority,
-      boolean unmanagedAM) {
+  public SchedulerApplication(Queue queue, String user, Priority priority) {
     this.queue = queue;
     this.user = user;
-    this.unmanagedAM = unmanagedAM;
     this.priority = priority;
   }
 
@@ -68,7 +64,7 @@ public class SchedulerApplication<T extends SchedulerApplicationAttempt> {
   }
 
   public void stop(RMAppState rmAppFinalState) {
-    queue.getMetrics().finishApp(user, rmAppFinalState, isUnmanagedAM());
+    queue.getMetrics().finishApp(user, rmAppFinalState);
   }
 
   public Priority getPriority() {
@@ -84,7 +80,4 @@ public class SchedulerApplication<T extends SchedulerApplicationAttempt> {
     }
   }
 
-  public boolean isUnmanagedAM() {
-    return unmanagedAM;
-  }
 }

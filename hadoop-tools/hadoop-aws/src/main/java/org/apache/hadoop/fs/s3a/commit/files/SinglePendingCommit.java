@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.commit.files;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
@@ -34,18 +33,17 @@ import java.util.Map;
 import com.amazonaws.services.s3.model.PartETag;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
-import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.validateCollectionClass;
 import static org.apache.hadoop.fs.s3a.commit.ValidationFailure.verify;
@@ -69,8 +67,8 @@ import static org.apache.hadoop.util.StringUtils.join;
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommit>
-    implements Iterable<String> {
+public class SinglePendingCommit extends PersistentCommitData
+    implements Iterable<String>, IOStatisticsSource {
 
   /**
    * Serialization ID: {@value}.
@@ -141,45 +139,20 @@ public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommi
    * @return a serializer.
    */
   public static JsonSerialization<SinglePendingCommit> serializer() {
-    return new JsonSerialization<>(SinglePendingCommit.class, false, false);
+    return new JsonSerialization<>(SinglePendingCommit.class, false, true);
   }
 
   /**
    * Load an instance from a file, then validate it.
    * @param fs filesystem
    * @param path path
-   * @param status nullable status of file to load
-   * @param serDeser serializer; if null use the shared static one.
    * @return the loaded instance
    * @throws IOException IO failure
    * @throws ValidationFailure if the data is invalid
    */
-  public static SinglePendingCommit load(FileSystem fs,
-      Path path,
-      FileStatus status,
-      JsonSerialization<SinglePendingCommit> serDeser)
+  public static SinglePendingCommit load(FileSystem fs, Path path)
       throws IOException {
-    return load(fs, path, serDeser, null);
-  }
-
-  /**
-   * Load an instance from a file, then validate it.
-   * @param fs filesystem
-   * @param path path
-   * @param serDeser deserializer
-   * @param status status of file to load or null
-   * @return the loaded instance
-   * @throws IOException IO failure
-   * @throws ValidationFailure if the data is invalid
-   */
-  public static SinglePendingCommit load(FileSystem fs,
-      Path path,
-      JsonSerialization<SinglePendingCommit> serDeser,
-      @Nullable FileStatus status)
-      throws IOException {
-    JsonSerialization<SinglePendingCommit> jsonSerialization =
-        serDeser != null ? serDeser : serializer();
-    SinglePendingCommit instance = jsonSerialization.load(fs, path, status);
+    SinglePendingCommit instance = serializer().load(fs, path);
     instance.filename = path.toString();
     instance.validate();
     return instance;
@@ -273,16 +246,15 @@ public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommi
   }
 
   @Override
-  public byte[] toBytes(JsonSerialization<SinglePendingCommit> serializer) throws IOException {
+  public byte[] toBytes() throws IOException {
     validate();
-    return serializer.toBytes(this);
+    return serializer().toBytes(this);
   }
 
   @Override
-  public IOStatistics save(final FileSystem fs,
-      final Path path,
-      final JsonSerialization<SinglePendingCommit> serializer) throws IOException {
-    return saveFile(fs, path, this, serializer, true);
+  public void save(FileSystem fs, Path path, boolean overwrite)
+      throws IOException {
+    serializer().save(fs, path, this, overwrite);
   }
 
   /**

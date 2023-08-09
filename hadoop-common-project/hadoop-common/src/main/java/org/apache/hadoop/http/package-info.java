@@ -15,10 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * Support for embedded HTTP services.
- */
 @InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 package org.apache.hadoop.http;

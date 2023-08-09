@@ -44,12 +44,9 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
  * implementing only the deprecated method will work.
  * See https://github.com/apache/hbase-filesystem
  *
- * @deprecated This interface will be replaced by one which uses the AWS SDK V2 S3 client as part of
- * upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.LimitedPrivate("HBoss")
 @InterfaceStability.Evolving
-@Deprecated
 public interface S3ClientFactory {
 
   /**
@@ -104,7 +101,7 @@ public interface S3ClientFactory {
     private boolean pathStyleAccess;
 
     /**
-     * Permit requests to requester pays buckets.
+     * This is in the settings awaiting wiring up and testing.
      */
     private boolean requesterPays;
 
@@ -117,12 +114,6 @@ public interface S3ClientFactory {
      * Suffix to UA.
      */
     private String userAgentSuffix = "";
-
-    /**
-     * S3A path.
-     * added in HADOOP-18330
-     */
-    private URI pathUri;
 
     /**
      * List of request handlers to include in the chain
@@ -177,7 +168,7 @@ public interface S3ClientFactory {
     }
 
     /**
-     * Set requester pays option.
+     * Requester pays option. Not yet wired up.
      * @param value new value
      * @return the builder
      */
@@ -272,27 +263,6 @@ public interface S3ClientFactory {
      */
     public Map<String, String> getHeaders() {
       return headers;
-    }
-
-    /**
-     * Get the full s3 path.
-     * added in HADOOP-18330
-     * @return path URI
-     */
-    public URI getPathUri() {
-      return pathUri;
-    }
-
-    /**
-     * Set full s3a path.
-     * added in HADOOP-18330
-     * @param value new value
-     * @return the builder
-     */
-    public S3ClientCreationParameters withPathUri(
-        final URI value) {
-      pathUri = value;
-      return this;
     }
   }
 }

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -41,8 +40,8 @@ class ProfilingFileIoEvents {
   static final Logger LOG =
       LoggerFactory.getLogger(ProfilingFileIoEvents.class);
 
-  private volatile boolean isEnabled;
-  private volatile int sampleRangeMax;
+  private final boolean isEnabled;
+  private final int sampleRangeMax;
 
   public ProfilingFileIoEvents(@Nullable Configuration conf) {
     if (conf != null) {
@@ -50,7 +49,15 @@ class ProfilingFileIoEvents {
           DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
           DFSConfigKeys
               .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_DEFAULT);
-      setSampleRangeMax(fileIOSamplingPercentage);
+      isEnabled = Util.isDiskStatsEnabled(fileIOSamplingPercentage);
+      if (fileIOSamplingPercentage > 100) {
+        LOG.warn(DFSConfigKeys
+            .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY +
+            " value cannot be more than 100. Setting value to 100");
+        fileIOSamplingPercentage = 100;
+      }
+      sampleRangeMax = (int) ((double) fileIOSamplingPercentage / 100 *
+          Integer.MAX_VALUE);
     } else {
       isEnabled = false;
       sampleRangeMax = 0;
@@ -137,27 +144,5 @@ class ProfilingFileIoEvents {
       }
     }
     return null;
-  }
-
-  public void setSampleRangeMax(int fileIOSamplingPercentage) {
-    isEnabled = Util.isDiskStatsEnabled(fileIOSamplingPercentage);
-    if (fileIOSamplingPercentage > 100) {
-      LOG.warn(DFSConfigKeys
-          .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY +
-          " value cannot be more than 100. Setting value to 100");
-      fileIOSamplingPercentage = 100;
-    }
-    sampleRangeMax = (int) ((double) fileIOSamplingPercentage / 100 *
-        Integer.MAX_VALUE);
-  }
-
-  @VisibleForTesting
-  public boolean getDiskStatsEnabled() {
-    return isEnabled;
-  }
-
-  @VisibleForTesting
-  public int getSampleRangeMax() {
-    return sampleRangeMax;
   }
 }

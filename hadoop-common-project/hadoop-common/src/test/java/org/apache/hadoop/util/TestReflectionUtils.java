@@ -25,11 +25,10 @@ import java.net.URLClassLoader;
 import java.util.HashMap;
 import java.util.List;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.*;
 
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -165,36 +164,8 @@ public class TestReflectionUtils {
     final String title = "title";
     ReflectionUtils.logThreadInfo(logger, title, 0L);
 
-    Assertions.assertThat(logCapturer.getOutput())
-        .contains("Process Thread Dump: " + title);
-  }
-
-  @Test
-  public void testNewInstanceForNonDefaultConstructor() {
-    Object x = ReflectionUtils.newInstance(
-        NoDefaultCtor.class, null, new Class[] {int.class}, 1);
-    assertTrue(x instanceof NoDefaultCtor);
-  }
-
-  @Test
-  public void testNewInstanceForNonDefaultConstructorWithException() {
-    try {
-      ReflectionUtils.newInstance(
-          NoDefaultCtor.class, null, new Class[]{int.class}, 1, 2);
-      fail("Should have failed before this point");
-    } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains(
-          "1 parameters are required but 2 arguments are provided", e);
-    }
-
-    try {
-      ReflectionUtils.newInstance(
-          NoDefaultCtor.class, null, new Class[]{int.class});
-      fail("Should have failed before this point");
-    } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains(
-          "1 parameters are required but 0 arguments are provided", e);
-    }
+    assertThat(logCapturer.getOutput(),
+        containsString("Process Thread Dump: " + title));
   }
 
   // Used for testGetDeclaredFieldsIncludingInherited

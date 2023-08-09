@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshUserToGroupsMappingsRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshUserToGroupsMappingsRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 
@@ -29,12 +27,12 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable
-public class RefreshUserToGroupsMappingsRequestPBImpl extends RefreshUserToGroupsMappingsRequest {
+public class RefreshUserToGroupsMappingsRequestPBImpl 
+extends RefreshUserToGroupsMappingsRequest {
 
-  private RefreshUserToGroupsMappingsRequestProto proto =
-      RefreshUserToGroupsMappingsRequestProto.getDefaultInstance();
-  private RefreshUserToGroupsMappingsRequestProto.Builder builder = null;
-  private boolean viaProto = false;
+  RefreshUserToGroupsMappingsRequestProto proto = RefreshUserToGroupsMappingsRequestProto.getDefaultInstance();
+  RefreshUserToGroupsMappingsRequestProto.Builder builder = null;
+  boolean viaProto = false;
   
   public RefreshUserToGroupsMappingsRequestPBImpl() {
     builder = RefreshUserToGroupsMappingsRequestProto.newBuilder();
@@ -58,46 +56,16 @@ public class RefreshUserToGroupsMappingsRequestPBImpl extends RefreshUserToGroup
 
   @Override
   public boolean equals(Object other) {
-
-    if (!(other instanceof RefreshUserToGroupsMappingsRequest)) {
+    if (other == null)
       return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
     }
-
-    RefreshUserToGroupsMappingsRequestPBImpl otherImpl = this.getClass().cast(other);
-    return new EqualsBuilder()
-        .append(this.getProto(), otherImpl.getProto())
-        .isEquals();
+    return false;
   }
 
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
-  }
-
-  private synchronized void maybeInitBuilder() {
-    if (viaProto || builder == null) {
-      builder = RefreshUserToGroupsMappingsRequestProto.newBuilder(proto);
-    }
-    viaProto = false;
-  }
-
-  @Override
-  public String getSubClusterId() {
-    RefreshUserToGroupsMappingsRequestProtoOrBuilder p = viaProto ? proto : builder;
-    boolean hasSubClusterId = p.hasSubClusterId();
-    if (hasSubClusterId) {
-      return p.getSubClusterId();
-    }
-    return null;
-  }
-
-  @Override
-  public void setSubClusterId(String subClusterId) {
-    maybeInitBuilder();
-    if (subClusterId == null) {
-      builder.clearSubClusterId();
-      return;
-    }
-    builder.setSubClusterId(subClusterId);
   }
 }

@@ -22,7 +22,8 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.util.Preconditions;
+
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * {@link LocatedFileStatus} extended to also carry an ETag.
@@ -37,7 +38,7 @@ public class AbfsLocatedFileStatus extends LocatedFileStatus implements EtagSour
   private final String etag;
 
   public AbfsLocatedFileStatus(FileStatus status, BlockLocation[] locations) {
-    super(Preconditions.checkNotNull(status), locations);
+    super(checkNotNull(status), locations);
     if (status instanceof EtagSource) {
       this.etag = ((EtagSource) status).getEtag();
     } else {

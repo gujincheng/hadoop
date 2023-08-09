@@ -18,18 +18,15 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import java.io.PrintWriter;
-import javax.servlet.http.HttpServletResponse;
-
-import com.google.inject.Injector;
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlPage;
+import java.io.PrintWriter;
+import javax.servlet.http.HttpServletResponse;
+import com.google.inject.Injector;
 
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import org.junit.Test;
+import static org.mockito.Mockito.*;
 
 public class TestSubViews {
 
@@ -64,8 +61,7 @@ public class TestSubViews {
     }
   }
 
-  @Test
-  void testSubView() throws Exception {
+  @Test public void testSubView() throws Exception {
     Injector injector = WebAppTests.createMockInjector(this);
     injector.getInstance(MainView.class).render();
 

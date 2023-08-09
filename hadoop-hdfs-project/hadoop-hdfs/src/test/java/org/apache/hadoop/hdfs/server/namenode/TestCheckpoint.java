@@ -44,7 +44,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Supplier;
 
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
@@ -86,7 +85,6 @@ import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.event.Level;
 import org.junit.After;
@@ -97,8 +95,10 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
 /**
@@ -1140,7 +1140,6 @@ public class TestCheckpoint {
    * Tests save namespace.
    */
   @Test
-  @SuppressWarnings("deprecation")
   public void testSaveNamespace() throws IOException {
     MiniDFSCluster cluster = null;
     DistributedFileSystem fs = null;
@@ -2614,7 +2613,7 @@ public class TestCheckpoint {
   }
 
   private static CheckpointStorage spyOnSecondaryImage(SecondaryNameNode secondary1) {
-    CheckpointStorage spy = Mockito.spy((CheckpointStorage)secondary1.getFSImage());
+    CheckpointStorage spy = Mockito.spy((CheckpointStorage)secondary1.getFSImage());;
     secondary1.setFSImage(spy);
     return spy;
   }

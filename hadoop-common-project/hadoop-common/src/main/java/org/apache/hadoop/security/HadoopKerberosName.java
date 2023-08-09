@@ -45,7 +45,7 @@ public class HadoopKerberosName extends KerberosName {
 
   /**
    * Create a name from the full Kerberos principal name.
-   * @param name name.
+   * @param name
    */
   public HadoopKerberosName(String name) {
     super(name);
@@ -58,7 +58,7 @@ public class HadoopKerberosName extends KerberosName {
    * method should be invoked directly.
    * 
    * @param conf the new configuration
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public static void setConfiguration(Configuration conf) throws IOException {
     final String defaultRule;

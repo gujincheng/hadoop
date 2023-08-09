@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.event;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -150,10 +150,6 @@ public class EventDispatcher<T extends Event> extends
     shouldExitOnError = false;
   }
 
-  public void setMetrics(EventTypeMetrics metrics) {
-    this.metrics = metrics;
-  }
-
   protected long getEventProcessorId() {
     return this.eventProcessor.getId();
   }
@@ -162,7 +158,8 @@ public class EventDispatcher<T extends Event> extends
     return this.stopped;
   }
 
-  public int getEventQueueSize() {
-    return eventQueue.size();
+  public void setMetrics(EventTypeMetrics metrics) {
+    this.metrics = metrics;
   }
+
 }

@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.qjournal.server;
 import java.io.IOException;
 
 import org.apache.hadoop.metrics2.annotation.Metric;
-import org.apache.hadoop.metrics2.annotation.Metric.Type;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
@@ -98,11 +97,6 @@ class JournalMetrics {
 
   String getName() {
     return "Journal-" + journal.getJournalId();
-  }
-
-  @Metric(value={"JournalId", "Current JournalId"}, type=Type.TAG)
-  public String getJournalId() {
-    return journal.getJournalId();
   }
 
   @Metric("Current writer's epoch")

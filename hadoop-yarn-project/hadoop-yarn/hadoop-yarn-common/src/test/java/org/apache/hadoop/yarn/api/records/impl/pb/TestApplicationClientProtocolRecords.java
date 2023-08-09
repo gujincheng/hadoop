@@ -25,8 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
@@ -38,10 +36,8 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class TestApplicationClientProtocolRecords {
 
@@ -51,7 +47,7 @@ public class TestApplicationClientProtocolRecords {
    *
    */
   @Test
-  void testCLCPBImplNullEnv() throws IOException {
+  public void testCLCPBImplNullEnv() throws IOException {
     Map<String, LocalResource> localResources = Collections.emptyMap();
     Map<String, String> environment = new HashMap<String, String>();
     List<String> commands = Collections.emptyList();
@@ -72,7 +68,7 @@ public class TestApplicationClientProtocolRecords {
     ContainerLaunchContext clcProto = new ContainerLaunchContextPBImpl(
         ((ContainerLaunchContextPBImpl) clc).getProto());
 
-    assertEquals("",
+    Assert.assertEquals("",
         clcProto.getEnvironment().get("testCLCPBImplNullEnv"));
 
   }
@@ -82,7 +78,7 @@ public class TestApplicationClientProtocolRecords {
    * local resource URL.
    */
   @Test
-  void testCLCPBImplNullResourceURL() throws IOException {
+  public void testCLCPBImplNullResourceURL() throws IOException {
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     try {
       LocalResource rsrc_alpha = recordFactory.newRecordInstance(LocalResource.class);
@@ -96,9 +92,9 @@ public class TestApplicationClientProtocolRecords {
       localResources.put("null_url_resource", rsrc_alpha);
       ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
       containerLaunchContext.setLocalResources(localResources);
-      fail("Setting an invalid local resource should be an error!");
+      Assert.fail("Setting an invalid local resource should be an error!");
     } catch (NullPointerException e) {
-      assertTrue(e.getMessage().contains("Null resource URL for local resource"));
+      Assert.assertTrue(e.getMessage().contains("Null resource URL for local resource"));
     }
   }
 
@@ -107,7 +103,7 @@ public class TestApplicationClientProtocolRecords {
    * local resource type.
    */
   @Test
-  void testCLCPBImplNullResourceType() throws IOException {
+  public void testCLCPBImplNullResourceType() throws IOException {
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     try {
       LocalResource resource = recordFactory.newRecordInstance(LocalResource.class);
@@ -121,9 +117,9 @@ public class TestApplicationClientProtocolRecords {
       localResources.put("null_type_resource", resource);
       ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
       containerLaunchContext.setLocalResources(localResources);
-      fail("Setting an invalid local resource should be an error!");
+      Assert.fail("Setting an invalid local resource should be an error!");
     } catch (NullPointerException e) {
-      assertTrue(e.getMessage().contains("Null resource type for local resource"));
+      Assert.assertTrue(e.getMessage().contains("Null resource type for local resource"));
     }
   }
 
@@ -132,7 +128,7 @@ public class TestApplicationClientProtocolRecords {
    * local resource type.
    */
   @Test
-  void testCLCPBImplNullResourceVisibility() throws IOException {
+  public void testCLCPBImplNullResourceVisibility() throws IOException {
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     try {
       LocalResource resource = recordFactory.newRecordInstance(LocalResource.class);
@@ -146,9 +142,9 @@ public class TestApplicationClientProtocolRecords {
       localResources.put("null_visibility_resource", resource);
       ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
       containerLaunchContext.setLocalResources(localResources);
-      fail("Setting an invalid local resource should be an error!");
+      Assert.fail("Setting an invalid local resource should be an error!");
     } catch (NullPointerException e) {
-      assertTrue(e.getMessage().contains("Null resource visibility for local resource"));
+      Assert.assertTrue(e.getMessage().contains("Null resource visibility for local resource"));
     }
   }
 }

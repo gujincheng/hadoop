@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,6 +28,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -31,19 +36,15 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
-import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TimelineStoreTestUtils {
 
@@ -503,24 +504,18 @@ public class TimelineStoreTestUtils {
 
   public void testGetEntities() throws IOException {
     // test getting entities
-    assertEquals(0,
-        getEntities("type_0").size(),
-        "nonzero entities size for nonexistent type");
-    assertEquals(0,
-        getEntities("type_3").size(),
-        "nonzero entities size for nonexistent type");
-    assertEquals(0,
-        getEntities("type_6").size(),
-        "nonzero entities size for nonexistent type");
-    assertEquals(0,
-        getEntitiesWithPrimaryFilter("type_0", userFilter).size(),
-        "nonzero entities size for nonexistent type");
-    assertEquals(0,
-        getEntitiesWithPrimaryFilter("type_3", userFilter).size(),
-        "nonzero entities size for nonexistent type");
-    assertEquals(0,
-        getEntitiesWithPrimaryFilter("type_6", userFilter).size(),
-        "nonzero entities size for nonexistent type");
+    assertEquals("nonzero entities size for nonexistent type", 0,
+        getEntities("type_0").size());
+    assertEquals("nonzero entities size for nonexistent type", 0,
+        getEntities("type_3").size());
+    assertEquals("nonzero entities size for nonexistent type", 0,
+        getEntities("type_6").size());
+    assertEquals("nonzero entities size for nonexistent type", 0,
+        getEntitiesWithPrimaryFilter("type_0", userFilter).size());
+    assertEquals("nonzero entities size for nonexistent type", 0,
+        getEntitiesWithPrimaryFilter("type_3", userFilter).size());
+    assertEquals("nonzero entities size for nonexistent type", 0,
+        getEntitiesWithPrimaryFilter("type_6", userFilter).size());
 
     List<TimelineEntity> entities = getEntities("type_1");
     assertEquals(3, entities.size());
@@ -687,18 +682,15 @@ public class TimelineStoreTestUtils {
 
   public void testGetEntitiesWithPrimaryFilters() throws IOException {
     // test using primary filter
-    assertEquals(0,
+    assertEquals("nonzero entities size for primary filter", 0,
         getEntitiesWithPrimaryFilter("type_1",
-            new NameValuePair("none", "none")).size(),
-        "nonzero entities size for primary filter");
-    assertEquals(0,
+            new NameValuePair("none", "none")).size());
+    assertEquals("nonzero entities size for primary filter", 0,
         getEntitiesWithPrimaryFilter("type_2",
-            new NameValuePair("none", "none")).size(),
-        "nonzero entities size for primary filter");
-    assertEquals(0,
+            new NameValuePair("none", "none")).size());
+    assertEquals("nonzero entities size for primary filter", 0,
         getEntitiesWithPrimaryFilter("type_3",
-            new NameValuePair("none", "none")).size(),
-        "nonzero entities size for primary filter");
+            new NameValuePair("none", "none")).size());
 
     List<TimelineEntity> entities = getEntitiesWithPrimaryFilter("type_1",
         userFilter);
@@ -936,12 +928,13 @@ public class TimelineStoreTestUtils {
     if (primaryFilters == null) {
       assertNull(retrievedEntityInfo.getPrimaryFilters());
     } else {
-      assertEquals(primaryFilters, retrievedEntityInfo.getPrimaryFilters());
+      assertTrue(primaryFilters.equals(
+          retrievedEntityInfo.getPrimaryFilters()));
     }
     if (otherInfo == null) {
       assertNull(retrievedEntityInfo.getOtherInfo());
     } else {
-      assertEquals(otherInfo, retrievedEntityInfo.getOtherInfo());
+      assertTrue(otherInfo.equals(retrievedEntityInfo.getOtherInfo()));
     }
   }
 

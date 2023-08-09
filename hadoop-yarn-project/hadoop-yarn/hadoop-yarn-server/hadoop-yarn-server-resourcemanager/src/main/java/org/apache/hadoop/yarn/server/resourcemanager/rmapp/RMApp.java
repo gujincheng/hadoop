@@ -290,10 +290,8 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   Map<NodeId, LogAggregationReport> getLogAggregationReportsForApp();
 
   LogAggregationStatus getLogAggregationStatusForAppReport();
-
   /**
    * Return the node label expression of the AM container.
-   * @return the node label expression.
    */
   String getAmNodeLabelExpression();
 

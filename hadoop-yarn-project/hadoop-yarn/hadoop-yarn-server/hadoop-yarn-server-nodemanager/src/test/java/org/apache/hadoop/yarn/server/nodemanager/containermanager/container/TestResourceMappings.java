@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.yarn.server.nodemanager.api.deviceplugin.Device;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -102,11 +103,15 @@ public class TestResourceMappings {
    * @throws IOException
    */
   private byte[] toBytes(List<Serializable> resources) throws IOException {
+    ObjectOutputStream oos = null;
     byte[] bytes;
-    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    try (ObjectOutputStream oos = new ObjectOutputStream(bos)) {
+    try {
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      oos = new ObjectOutputStream(bos);
       oos.writeObject(resources);
       bytes = bos.toByteArray();
+    } finally {
+      IOUtils.closeQuietly(oos);
     }
     return bytes;
   }

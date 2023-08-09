@@ -21,20 +21,17 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -42,7 +39,6 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -56,8 +52,6 @@ import static org.mockito.Mockito.verify;
 public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTest {
 
   private static final int TEST_FILES_NUMBER = 1000;
-  private static final Logger LOG = LoggerFactory.getLogger(
-      ITestAbfsListStatusRemoteIterator.class);
 
   public ITestAbfsListStatusRemoteIterator() throws Exception {
   }
@@ -66,11 +60,13 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   public void testAbfsIteratorWithHasNext() throws Exception {
     Path testDir = createTestDirectory();
     setPageSize(10);
-    final List<String> fileNames = createFilesUnderDirectory(testDir);
+    final List<String> fileNames = createFilesUnderDirectory(TEST_FILES_NUMBER,
+        testDir, "testListPath");
 
-    ListingSupport listingSupport = Mockito.spy(getFileSystem().getAbfsStore());
-    RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(testDir,
-        listingSupport, getTestTracingContext(getFileSystem(), true));
+    ListingSupport listngSupport = Mockito.spy(getFileSystem().getAbfsStore());
+    RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(
+        getFileSystem().getFileStatus(testDir), listngSupport,
+        getTestTracingContext(getFileSystem(), true));
     Assertions.assertThat(fsItr)
         .describedAs("RemoteIterator should be instance of "
             + "AbfsListStatusRemoteIterator by default")
@@ -78,12 +74,20 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     int itrCount = 0;
     while (fsItr.hasNext()) {
       FileStatus fileStatus = fsItr.next();
-      verifyIteratorResultContent(fileStatus, fileNames);
+      String pathStr = fileStatus.getPath().toString();
+      fileNames.remove(pathStr);
       itrCount++;
     }
-    verifyIteratorResultCount(itrCount, fileNames);
-    int minNumberOfInvocations = TEST_FILES_NUMBER / 10;
-    verify(listingSupport, Mockito.atLeast(minNumberOfInvocations))
+    Assertions.assertThat(itrCount)
+        .describedAs("Number of iterations should be equal to the files "
+            + "created")
+        .isEqualTo(TEST_FILES_NUMBER);
+    Assertions.assertThat(fileNames.size())
+        .describedAs("After removing every iterm found from the iterator, "
+            + "there should be no more elements in the fileNames")
+        .isEqualTo(0);
+    int minNumberOfInvokations = TEST_FILES_NUMBER / 10;
+    verify(listngSupport, Mockito.atLeast(minNumberOfInvokations))
         .listStatus(any(Path.class), nullable(String.class),
             anyList(), anyBoolean(),
             nullable(String.class),
@@ -94,11 +98,13 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   public void testAbfsIteratorWithoutHasNext() throws Exception {
     Path testDir = createTestDirectory();
     setPageSize(10);
-    final List<String> fileNames = createFilesUnderDirectory(testDir);
+    final List<String> fileNames = createFilesUnderDirectory(TEST_FILES_NUMBER,
+        testDir, "testListPath");
 
-    ListingSupport listingSupport = Mockito.spy(getFileSystem().getAbfsStore());
-    RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(testDir,
-        listingSupport, getTestTracingContext(getFileSystem(), true));
+    ListingSupport listngSupport = Mockito.spy(getFileSystem().getAbfsStore());
+    RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(
+        getFileSystem().getFileStatus(testDir), listngSupport,
+        getTestTracingContext(getFileSystem(), true));
     Assertions.assertThat(fsItr)
         .describedAs("RemoteIterator should be instance of "
             + "AbfsListStatusRemoteIterator by default")
@@ -106,13 +112,25 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     int itrCount = 0;
     for (int i = 0; i < TEST_FILES_NUMBER; i++) {
       FileStatus fileStatus = fsItr.next();
-      verifyIteratorResultContent(fileStatus, fileNames);
+      String pathStr = fileStatus.getPath().toString();
+      fileNames.remove(pathStr);
       itrCount++;
     }
-    LambdaTestUtils.intercept(NoSuchElementException.class, fsItr::next);
-    verifyIteratorResultCount(itrCount, fileNames);
-    int minNumberOfInvocations = TEST_FILES_NUMBER / 10;
-    verify(listingSupport, Mockito.atLeast(minNumberOfInvocations))
+    Assertions.assertThatThrownBy(() -> fsItr.next())
+        .describedAs(
+            "next() should throw NoSuchElementException since next has been "
+                + "called " + TEST_FILES_NUMBER + " times")
+        .isInstanceOf(NoSuchElementException.class);
+    Assertions.assertThat(itrCount)
+        .describedAs("Number of iterations should be equal to the files "
+            + "created")
+        .isEqualTo(TEST_FILES_NUMBER);
+    Assertions.assertThat(fileNames.size())
+        .describedAs("After removing every iterm found from the iterator, "
+            + "there should be no more elements in the fileNames")
+        .isEqualTo(0);
+    int minNumberOfInvokations = TEST_FILES_NUMBER / 10;
+    verify(listngSupport, Mockito.atLeast(minNumberOfInvokations))
         .listStatus(any(Path.class), nullable(String.class),
             anyList(), anyBoolean(),
             nullable(String.class),
@@ -123,8 +141,9 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   public void testWithAbfsIteratorDisabled() throws Exception {
     Path testDir = createTestDirectory();
     setPageSize(10);
-    disableAbfsIterator();
-    final List<String> fileNames = createFilesUnderDirectory(testDir);
+    setEnableAbfsIterator(false);
+    final List<String> fileNames = createFilesUnderDirectory(TEST_FILES_NUMBER,
+        testDir, "testListPath");
 
     RemoteIterator<FileStatus> fsItr =
         getFileSystem().listStatusIterator(testDir);
@@ -135,45 +154,73 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     int itrCount = 0;
     while (fsItr.hasNext()) {
       FileStatus fileStatus = fsItr.next();
-      verifyIteratorResultContent(fileStatus, fileNames);
+      String pathStr = fileStatus.getPath().toString();
+      fileNames.remove(pathStr);
       itrCount++;
     }
-    verifyIteratorResultCount(itrCount, fileNames);
+    Assertions.assertThat(itrCount)
+        .describedAs("Number of iterations should be equal to the files "
+            + "created")
+        .isEqualTo(TEST_FILES_NUMBER);
+    Assertions.assertThat(fileNames.size())
+        .describedAs("After removing every iterm found from the iterator, "
+            + "there should be no more elements in the fileNames")
+        .isEqualTo(0);
   }
 
   @Test
   public void testWithAbfsIteratorDisabledWithoutHasNext() throws Exception {
     Path testDir = createTestDirectory();
     setPageSize(10);
-    disableAbfsIterator();
-    final List<String> fileNames = createFilesUnderDirectory(testDir);
+    setEnableAbfsIterator(false);
+    final List<String> fileNames = createFilesUnderDirectory(TEST_FILES_NUMBER,
+        testDir, "testListPath");
 
-    RemoteIterator<FileStatus> fsItr = getFileSystem().listStatusIterator(
-        testDir);
-    Assertions.assertThat(fsItr).describedAs(
-            "RemoteIterator should not be instance of "
-                + "AbfsListStatusRemoteIterator when it is disabled")
+    RemoteIterator<FileStatus> fsItr =
+        getFileSystem().listStatusIterator(testDir);
+    Assertions.assertThat(fsItr)
+        .describedAs("RemoteIterator should not be instance of "
+            + "AbfsListStatusRemoteIterator when it is disabled")
         .isNotInstanceOf(AbfsListStatusRemoteIterator.class);
-    int itrCount;
-    for (itrCount = 0; itrCount < TEST_FILES_NUMBER; itrCount++) {
+    int itrCount = 0;
+    for (int i = 0; i < TEST_FILES_NUMBER; i++) {
       FileStatus fileStatus = fsItr.next();
-      verifyIteratorResultContent(fileStatus, fileNames);
+      String pathStr = fileStatus.getPath().toString();
+      fileNames.remove(pathStr);
+      itrCount++;
     }
-    LambdaTestUtils.intercept(NoSuchElementException.class, fsItr::next);
-    verifyIteratorResultCount(itrCount, fileNames);
+    Assertions.assertThatThrownBy(() -> fsItr.next())
+        .describedAs(
+            "next() should throw NoSuchElementException since next has been "
+                + "called " + TEST_FILES_NUMBER + " times")
+        .isInstanceOf(NoSuchElementException.class);
+    Assertions.assertThat(itrCount)
+        .describedAs("Number of iterations should be equal to the files "
+            + "created")
+        .isEqualTo(TEST_FILES_NUMBER);
+    Assertions.assertThat(fileNames.size())
+        .describedAs("After removing every iterm found from the iterator, "
+            + "there should be no more elements in the fileNames")
+        .isEqualTo(0);
   }
 
   @Test
   public void testNextWhenNoMoreElementsPresent() throws Exception {
     Path testDir = createTestDirectory();
     setPageSize(10);
-    RemoteIterator<FileStatus> fsItr = new AbfsListStatusRemoteIterator(testDir,
-        getFileSystem().getAbfsStore(),
-        getTestTracingContext(getFileSystem(), true));
+    RemoteIterator fsItr =
+        new AbfsListStatusRemoteIterator(getFileSystem().getFileStatus(testDir),
+            getFileSystem().getAbfsStore(),
+            getTestTracingContext(getFileSystem(), true));
     fsItr = Mockito.spy(fsItr);
     Mockito.doReturn(false).when(fsItr).hasNext();
 
-    LambdaTestUtils.intercept(NoSuchElementException.class, fsItr::next);
+    RemoteIterator<FileStatus> finalFsItr = fsItr;
+    Assertions.assertThatThrownBy(() -> finalFsItr.next())
+        .describedAs(
+        "next() should throw NoSuchElementException if hasNext() return "
+            + "false")
+        .isInstanceOf(NoSuchElementException.class);
   }
 
   @Test
@@ -190,8 +237,8 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   @Test
   public void testHasNextForFile() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testFile = path("testFile");
-    String testFileName = testFile.toString();
+    String testFileName = "testFile";
+    Path testFile = new Path(testFileName);
     getFileSystem().create(testFile);
     setPageSize(10);
     RemoteIterator<FileStatus> fsItr = fs.listStatusIterator(testFile);
@@ -209,47 +256,39 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     getFileSystem().mkdirs(testDir);
 
     String exceptionMessage = "test exception";
-    ListingSupport lsSupport = getMockListingSupport(exceptionMessage);
+    ListingSupport lsSupport =getMockListingSupport(exceptionMessage);
+    RemoteIterator fsItr =
+        new AbfsListStatusRemoteIterator(getFileSystem().getFileStatus(testDir),
+        lsSupport, getTestTracingContext(getFileSystem(), true));
 
-    LambdaTestUtils.intercept(IOException.class,
-        () -> new AbfsListStatusRemoteIterator(testDir, lsSupport,
-            getTestTracingContext(getFileSystem(), true)));
+    Assertions.assertThatThrownBy(() -> fsItr.next())
+        .describedAs(
+        "When ioException is not null and queue is empty exception should be "
+            + "thrown")
+        .isInstanceOf(IOException.class)
+        .hasMessage(exceptionMessage);
   }
 
   @Test
-  public void testNonExistingPath() throws Exception {
+  public void testNonExistingPath() throws Throwable {
     Path nonExistingDir = new Path("nonExistingPath");
-    LambdaTestUtils.intercept(FileNotFoundException.class,
-        () -> getFileSystem().listStatusIterator(nonExistingDir));
-  }
-
-  private void verifyIteratorResultContent(FileStatus fileStatus,
-      List<String> fileNames) {
-    String pathStr = fileStatus.getPath().toString();
-    Assert.assertTrue(
-        String.format("Could not remove path %s from filenames %s", pathStr,
-            fileNames), fileNames.remove(pathStr));
-  }
-
-  private void verifyIteratorResultCount(int itrCount, List<String> fileNames) {
-    Assertions.assertThat(itrCount).describedAs(
-            "Number of iterations should be equal to the files created")
-        .isEqualTo(TEST_FILES_NUMBER);
-    Assertions.assertThat(fileNames)
-        .describedAs("After removing every item found from the iterator, "
-            + "there should be no more elements in the fileNames")
-        .hasSize(0);
+    Assertions.assertThatThrownBy(
+        () -> getFileSystem().listStatusIterator(nonExistingDir)).describedAs(
+        "test the listStatusIterator call on a path which is not "
+            + "present should result in FileNotFoundException")
+        .isInstanceOf(FileNotFoundException.class);
   }
 
   private ListingSupport getMockListingSupport(String exceptionMessage) {
     return new ListingSupport() {
       @Override
-      public FileStatus[] listStatus(Path path, TracingContext tracingContext) {
+      public FileStatus[] listStatus(Path path, TracingContext tracingContext) throws IOException {
         return null;
       }
 
       @Override
-      public FileStatus[] listStatus(Path path, String startFrom, TracingContext tracingContext) {
+      public FileStatus[] listStatus(Path path, String startFrom, TracingContext tracingContext)
+          throws IOException {
         return null;
       }
 
@@ -264,14 +303,15 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   }
 
   private Path createTestDirectory() throws IOException {
-    Path testDirectory = path("testDirectory");
+    String testDirectoryName = "testDirectory" + System.currentTimeMillis();
+    Path testDirectory = new Path(testDirectoryName);
     getFileSystem().mkdirs(testDirectory);
     return testDirectory;
   }
 
-  private void disableAbfsIterator() throws IOException {
+  private void setEnableAbfsIterator(boolean shouldEnable) throws IOException {
     AzureBlobFileSystemStore abfsStore = getAbfsStore(getFileSystem());
-    abfsStore.getAbfsConfiguration().setEnableAbfsListIterator(false);
+    abfsStore.getAbfsConfiguration().setEnableAbfsListIterator(shouldEnable);
   }
 
   private void setPageSize(int pageSize) throws IOException {
@@ -279,21 +319,21 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     abfsStore.getAbfsConfiguration().setListMaxResults(pageSize);
   }
 
-  private List<String> createFilesUnderDirectory(Path rootPath)
+  private List<String> createFilesUnderDirectory(int numFiles, Path rootPath,
+      String filenamePrefix)
       throws ExecutionException, InterruptedException, IOException {
     final List<Future<Void>> tasks = new ArrayList<>();
-    final List<String> fileNames = Collections.synchronizedList(new ArrayList<>());
+    final List<String> fileNames = new ArrayList<>();
     ExecutorService es = Executors.newFixedThreadPool(10);
     try {
-      for (int i = 0; i < ITestAbfsListStatusRemoteIterator.TEST_FILES_NUMBER; i++) {
-        Path filePath = makeQualified(new Path(rootPath, "testListPath" + i));
-        tasks.add(es.submit(() -> {
-          touch(filePath);
-          synchronized (fileNames) {
-            Assert.assertTrue(fileNames.add(filePath.toString()));
-          }
+      for (int i = 0; i < numFiles; i++) {
+        final Path filePath = new Path(rootPath, filenamePrefix + i);
+        Callable<Void> callable = () -> {
+          getFileSystem().create(filePath);
+          fileNames.add(makeQualified(filePath).toString());
           return null;
-        }));
+        };
+        tasks.add(es.submit(callable));
       }
       for (Future<Void> task : tasks) {
         task.get();
@@ -301,10 +341,6 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     } finally {
       es.shutdownNow();
     }
-    LOG.debug(fileNames.toString());
-    Assertions.assertThat(fileNames)
-        .describedAs("File creation incorrect or fileNames not added to list")
-        .hasSize(ITestAbfsListStatusRemoteIterator.TEST_FILES_NUMBER);
     return fileNames;
   }
 

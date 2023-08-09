@@ -23,13 +23,6 @@
 #include "common/optional_wrapper.h"
 
 #include <algorithm>
-#include <memory>
-#include <string>
-
-#include <boost/date_time/posix_time/posix_time_duration.hpp>
-#include <boost/system/error_code.hpp>
-#include <openssl/rand.h>
-#include <openssl/err.h>
 
 namespace hdfs {
 
@@ -38,7 +31,7 @@ using optional = std::experimental::optional<T>;
 
 
 RpcEngine::RpcEngine(std::shared_ptr<IoService> io_service, const Options &options,
-                     const std::shared_ptr<std::string> &client_name, const std::string &user_name,
+                     const std::string &client_name, const std::string &user_name,
                      const char *protocol_name, int protocol_version)
     : io_service_(io_service),
       options_(options),
@@ -116,7 +109,8 @@ std::unique_ptr<const RetryPolicy> RpcEngine::MakeRetryPolicy(const Options &opt
   }
 }
 
-std::unique_ptr<std::string> RpcEngine::getRandomClientId() {
+std::string RpcEngine::getRandomClientId()
+{
   /**
    *  The server is requesting a 16-byte UUID:
    *  https://github.com/c9n/hadoop/blob/master/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/ClientId.java
@@ -125,19 +119,14 @@ std::unique_ptr<std::string> RpcEngine::getRandomClientId() {
    *  https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29
    **/
   std::vector<unsigned char>buf(16);
-  if (RAND_bytes(&buf[0], static_cast<int>(buf.size())) != 1) {
-    const auto *error = ERR_reason_error_string(ERR_get_error());
-    LOG_ERROR(kRPC, << "Unable to generate random client ID, err : " << error);
-    return nullptr;
-  }
+  RAND_pseudo_bytes(&buf[0], buf.size());
 
   //clear the first four bits of byte 6 then set the second bit
   buf[6] = (buf[6] & 0x0f) | 0x40;
 
   //clear the second bit of byte 8 and set the first bit
   buf[8] = (buf[8] & 0xbf) | 0x80;
-  return std::unique_ptr<std::string>(
-      new std::string(reinterpret_cast<const char *>(&buf[0]), buf.size()));
+  return std::string(reinterpret_cast<const char*>(&buf[0]), buf.size());
 }
 
 
@@ -182,7 +171,7 @@ std::shared_ptr<RpcConnection> RpcEngine::NewConnection()
 {
   LOG_DEBUG(kRPC, << "RpcEngine::NewConnection called");
 
-  return std::make_shared<RpcConnectionImpl<boost::asio::ip::tcp::socket>>(shared_from_this());
+  return std::make_shared<RpcConnectionImpl<::asio::ip::tcp::socket>>(shared_from_this());
 }
 
 std::shared_ptr<RpcConnection> RpcEngine::InitializeConnection()
@@ -318,8 +307,8 @@ void RpcEngine::RpcCommsError(
       if (head_action->delayMillis > 0) {
         auto weak_conn = std::weak_ptr<RpcConnection>(conn_);
         retry_timer.expires_from_now(
-            boost::posix_time::milliseconds(head_action->delayMillis));
-        retry_timer.async_wait([this, weak_conn](boost::system::error_code ec) {
+            std::chrono::milliseconds(head_action->delayMillis));
+        retry_timer.async_wait([this, weak_conn](asio::error_code ec) {
           auto strong_conn = weak_conn.lock();
           if ( (!ec) && (strong_conn) ) {
             strong_conn->ConnectAndFlush(last_endpoints_);

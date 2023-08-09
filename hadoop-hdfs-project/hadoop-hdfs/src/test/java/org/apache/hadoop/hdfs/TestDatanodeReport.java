@@ -81,21 +81,21 @@ public class TestDatanodeReport {
       datanode.setUpgradeDomain(ud1);
       hostsFileWriter.initIncludeHosts(
           new DatanodeAdminProperties[]{datanode});
-      cluster.getNamesystem().getBlockManager().getDatanodeManager().refreshNodes(conf);
+      client.refreshNodes();
       DatanodeInfo[] all = client.datanodeReport(DatanodeReportType.ALL);
       assertEquals(all[0].getUpgradeDomain(), ud1);
 
       datanode.setUpgradeDomain(null);
       hostsFileWriter.initIncludeHosts(
           new DatanodeAdminProperties[]{datanode});
-      cluster.getNamesystem().getBlockManager().getDatanodeManager().refreshNodes(conf);
+      client.refreshNodes();
       all = client.datanodeReport(DatanodeReportType.ALL);
       assertEquals(all[0].getUpgradeDomain(), null);
 
       datanode.setUpgradeDomain(ud2);
       hostsFileWriter.initIncludeHosts(
           new DatanodeAdminProperties[]{datanode});
-      cluster.getNamesystem().getBlockManager().getDatanodeManager().refreshNodes(conf);
+      client.refreshNodes();
       all = client.datanodeReport(DatanodeReportType.ALL);
       assertEquals(all[0].getUpgradeDomain(), ud2);
     } finally {
@@ -172,19 +172,8 @@ public class TestDatanodeReport {
         // all bad datanodes
       }
       cluster.triggerHeartbeats(); // IBR delete ack
-      int retries = 0;
-      while (true) {
-        lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
-        if (0 != lb.getLocations().length) {
-          retries++;
-          if (retries > 7) {
-            Assert.fail("getLocatedBlocks failed after 7 retries");
-          }
-          Thread.sleep(2000);
-        } else {
-          break;
-        }
-      }
+      lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
+      assertEquals(0, lb.getLocations().length);
     } finally {
       cluster.shutdown();
     }

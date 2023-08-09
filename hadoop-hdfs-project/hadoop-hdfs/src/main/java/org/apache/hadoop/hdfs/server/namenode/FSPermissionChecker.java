@@ -21,13 +21,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.Stack;
-import java.util.function.LongFunction;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.ipc.CallerContext;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -39,7 +36,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.INodeAttributeProvider.AccessControlEnforcer;
-import org.apache.hadoop.hdfs.server.namenode.INodeAttributeProvider.AuthorizationContext;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -90,25 +86,23 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   private final boolean isSuper;
   private final INodeAttributeProvider attributeProvider;
   private final boolean authorizeWithContext;
-  private final long accessControlEnforcerReportingThresholdMs;
 
   private static ThreadLocal<String> operationType = new ThreadLocal<>();
 
   protected FSPermissionChecker(String fsOwner, String supergroup,
       UserGroupInformation callerUgi,
       INodeAttributeProvider attributeProvider) {
-    this(fsOwner, supergroup, callerUgi, attributeProvider, false, 0);
+    this(fsOwner, supergroup, callerUgi, attributeProvider, false);
   }
 
   protected FSPermissionChecker(String fsOwner, String supergroup,
       UserGroupInformation callerUgi,
       INodeAttributeProvider attributeProvider,
-      boolean useAuthorizationWithContextAPI,
-      long accessControlEnforcerReportingThresholdMs) {
+      boolean useAuthorizationWithContextAPI) {
     this.fsOwner = fsOwner;
     this.supergroup = supergroup;
     this.callerUgi = callerUgi;
-    this.groups = callerUgi.getGroupsSet();
+    this.groups = callerUgi.getGroups();
     user = callerUgi.getShortUserName();
     isSuper = user.equals(fsOwner) || groups.contains(supergroup);
     this.attributeProvider = attributeProvider;
@@ -122,38 +116,6 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     } else {
       authorizeWithContext = useAuthorizationWithContextAPI;
     }
-    this.accessControlEnforcerReportingThresholdMs
-        = accessControlEnforcerReportingThresholdMs;
-  }
-
-  private String checkAccessControlEnforcerSlowness(
-      long elapsedMs, AccessControlEnforcer ace,
-      boolean checkSuperuser, AuthorizationContext context) {
-    return checkAccessControlEnforcerSlowness(elapsedMs,
-        accessControlEnforcerReportingThresholdMs, ace.getClass(), checkSuperuser,
-        context.getPath(), context.getOperationName(),
-        context.getCallerContext());
-  }
-
-  /** @return the warning message if there is any. */
-  static String checkAccessControlEnforcerSlowness(
-      long elapsedMs, long thresholdMs, Class<? extends AccessControlEnforcer> clazz,
-      boolean checkSuperuser, String path, String op, Object caller) {
-    if (!LOG.isWarnEnabled()) {
-      return null;
-    }
-    if (thresholdMs <= 0) {
-      return null;
-    }
-    if (elapsedMs > thresholdMs) {
-      final String message = clazz + " ran for "
-          + elapsedMs + "ms (threshold=" + thresholdMs + "ms) to check "
-          + (checkSuperuser ? "superuser" : "permission")
-          + " on " + path + " for " + op + " from caller " + caller;
-      LOG.warn(message, new Throwable("TRACE"));
-      return message;
-    }
-    return null;
   }
 
   public static void setOperationType(String opType) {
@@ -176,140 +138,23 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     return attributeProvider;
   }
 
-  @FunctionalInterface
-  interface CheckPermission {
-    void run() throws AccessControlException;
-  }
-
-  static String runCheckPermission(CheckPermission checker,
-      LongFunction<String> checkElapsedMs) throws AccessControlException {
-    final String message;
-    final long start = Time.monotonicNow();
-    try {
-      checker.run();
-    } finally {
-      final long end = Time.monotonicNow();
-      message = checkElapsedMs.apply(end - start);
-    }
-    return message;
-  }
-
   private AccessControlEnforcer getAccessControlEnforcer() {
-    final AccessControlEnforcer e = Optional.ofNullable(attributeProvider)
-        .map(p -> p.getExternalAccessControlEnforcer(this))
-        .orElse(this);
-    if (e == this) {
-      return this;
-    }
-    // For an external AccessControlEnforcer, check for slowness.
-    return new AccessControlEnforcer() {
-      @Override
-      public void checkPermission(
-          String filesystemOwner, String superGroup, UserGroupInformation ugi,
-          INodeAttributes[] inodeAttrs, INode[] inodes, byte[][] pathByNameArr,
-          int snapshotId, String path, int ancestorIndex, boolean doCheckOwner,
-          FsAction ancestorAccess, FsAction parentAccess, FsAction access,
-          FsAction subAccess, boolean ignoreEmptyDir)
-          throws AccessControlException {
-        runCheckPermission(
-            () -> e.checkPermission(filesystemOwner, superGroup, ugi,
-                inodeAttrs, inodes, pathByNameArr, snapshotId, path,
-                ancestorIndex, doCheckOwner, ancestorAccess, parentAccess,
-                access, subAccess, ignoreEmptyDir),
-            elapsedMs -> checkAccessControlEnforcerSlowness(elapsedMs,
-                accessControlEnforcerReportingThresholdMs,
-                e.getClass(), false, path, operationType.get(),
-                CallerContext.getCurrent()));
-      }
-
-      @Override
-      public void checkPermissionWithContext(AuthorizationContext context)
-          throws AccessControlException {
-        runCheckPermission(
-            () -> e.checkPermissionWithContext(context),
-            elapsedMs -> checkAccessControlEnforcerSlowness(elapsedMs,
-                e, false, context));
-      }
-
-      @Override
-      public void checkSuperUserPermissionWithContext(
-          AuthorizationContext context) throws AccessControlException {
-        runCheckPermission(
-            () -> e.checkSuperUserPermissionWithContext(context),
-            elapsedMs -> checkAccessControlEnforcerSlowness(elapsedMs,
-                e, true, context));
-      }
-    };
-  }
-
-  private AuthorizationContext getAuthorizationContextForSuperUser(
-      String path) {
-    String opType = operationType.get();
-
-    AuthorizationContext.Builder builder =
-        new INodeAttributeProvider.AuthorizationContext.Builder();
-    builder.fsOwner(fsOwner).
-        supergroup(supergroup).
-        callerUgi(callerUgi).
-        operationName(opType).
-        callerContext(CallerContext.getCurrent());
-
-    // Add path to the context builder only if it is not null.
-    if (path != null && !path.isEmpty()) {
-      builder.path(path);
-    }
-
-    return builder.build();
+    return (attributeProvider != null)
+        ? attributeProvider.getExternalAccessControlEnforcer(this) : this;
   }
 
   /**
-   * This method is retained to maintain backward compatibility.
-   * Please use the new method {@link #checkSuperuserPrivilege(String)} to make
-   * sure that the external enforcers have the correct context to audit.
-   *
-   * @throws AccessControlException if the caller is not a super user.
+   * Verify if the caller has the required permission. This will result into 
+   * an exception if the caller is not allowed to access the resource.
    */
-  public void checkSuperuserPrivilege() throws AccessControlException {
-    checkSuperuserPrivilege(null);
-  }
-
-  /**
-   * Checks if the caller has super user privileges.
-   * Throws {@link AccessControlException} for non super users.
-   *
-   * @param path The resource path for which permission is being requested.
-   * @throws AccessControlException if the caller is not a super user.
-   */
-  public void checkSuperuserPrivilege(String path)
+  public void checkSuperuserPrivilege()
       throws AccessControlException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("SUPERUSER ACCESS CHECK: " + this
-          + ", operationName=" + FSPermissionChecker.operationType.get()
-          + ", path=" + path);
+    if (!isSuperUser()) {
+      throw new AccessControlException("Access denied for user " 
+          + getUser() + ". Superuser privilege is required");
     }
-    getAccessControlEnforcer().checkSuperUserPermissionWithContext(
-        getAuthorizationContextForSuperUser(path));
   }
-
-  /**
-   * Calls the external enforcer to notify denial of access to the user with
-   * the given error message. Always throws an ACE with the given message.
-   *
-   * @param path The resource path for which permission is being requested.
-   * @param errorMessage message for the exception.
-   * @throws AccessControlException with the error message.
-   */
-  public void denyUserAccess(String path, String errorMessage)
-      throws AccessControlException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("DENY USER ACCESS: " + this
-          + ", operationName=" + FSPermissionChecker.operationType.get()
-          + ", path=" + path);
-    }
-    getAccessControlEnforcer().denyUserAccess(
-        getAuthorizationContextForSuperUser(path), errorMessage);
-  }
-
+  
   /**
    * Check whether current user have permissions to access the path.
    * Traverse is always checked.
@@ -706,6 +551,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
    * - Default entries may be present, but they are ignored during enforcement.
    *
    * @param inode INodeAttributes accessed inode
+   * @param snapshotId int snapshot ID
    * @param access FsAction requested permission
    * @param mode FsPermission mode from inode
    * @param aclFeature AclFeature of inode
@@ -862,10 +708,6 @@ public class FSPermissionChecker implements AccessControlEnforcer {
           UnresolvedPathException, ParentNotDirectoryException {
     try {
       if (pc == null || pc.isSuperUser()) {
-        if (pc != null) {
-          // call the external enforcer for audit
-          pc.checkSuperuserPrivilege(iip.getPath());
-        }
         checkSimpleTraverse(iip);
       } else {
         pc.checkPermission(iip, false, null, null, null, null, false);

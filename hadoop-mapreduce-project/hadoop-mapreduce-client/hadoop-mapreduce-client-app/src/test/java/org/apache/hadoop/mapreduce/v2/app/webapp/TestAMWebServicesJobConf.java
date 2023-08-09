@@ -44,7 +44,6 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -217,7 +216,7 @@ public class TestAMWebServicesJobConf extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       String xml = response.getEntity(String.class);
-      DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
+      DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
       DocumentBuilder db = dbf.newDocumentBuilder();
       InputSource is = new InputSource();
       is.setCharacterStream(new StringReader(xml));

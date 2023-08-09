@@ -70,7 +70,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
       NodeManagerMetrics metrics, LocalDirsHandlerService dirsHandler) {
     super(context, exec, deletionContext, nodeStatusUpdater, metrics,
         dirsHandler);
-    getDispatcher().disableExitOnDispatchException();
+    dispatcher.disableExitOnDispatchException();
   }
 
   @Override
@@ -78,7 +78,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
   protected ResourceLocalizationService createResourceLocalizationService(
       ContainerExecutor exec, DeletionService deletionContext, Context context,
       NodeManagerMetrics metrics) {
-    return new ResourceLocalizationService(getDispatcher(), exec,
+    return new ResourceLocalizationService(super.dispatcher, exec,
         deletionContext, super.dirsHandler, context, metrics) {
       @Override
       public void handle(LocalizationEvent event) {
@@ -148,7 +148,7 @@ public class DummyContainerManager extends ContainerManagerImpl {
   @SuppressWarnings("unchecked")
   protected ContainersLauncher createContainersLauncher(Context context,
       ContainerExecutor exec) {
-    return new ContainersLauncher(context, getDispatcher(), exec,
+    return new ContainersLauncher(context, super.dispatcher, exec,
                                   super.dirsHandler, this) {
       @Override
       public void handle(ContainersLauncherEvent event) {
@@ -156,12 +156,12 @@ public class DummyContainerManager extends ContainerManagerImpl {
         ContainerId containerId = container.getContainerId();
         switch (event.getType()) {
         case LAUNCH_CONTAINER:
-          getDispatcher().getEventHandler().handle(
+          dispatcher.getEventHandler().handle(
               new ContainerEvent(containerId,
                   ContainerEventType.CONTAINER_LAUNCHED));
           break;
         case CLEANUP_CONTAINER:
-          getDispatcher().getEventHandler().handle(
+          dispatcher.getEventHandler().handle(
               new ContainerExitEvent(containerId,
                   ContainerEventType.CONTAINER_KILLED_ON_REQUEST, 0,
                   "Container exited with exit code 0."));

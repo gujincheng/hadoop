@@ -20,75 +20,71 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 import java.nio.channels.ClosedChannelException;
 
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnProtos.SerializedExceptionProto;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class TestSerializedExceptionPBImpl {
   @Test
-  void testSerializedException() throws Exception {
+  public void testSerializedException() throws Exception {
     SerializedExceptionPBImpl orig = new SerializedExceptionPBImpl();
     orig.init(new Exception("test exception"));
     SerializedExceptionProto proto = orig.getProto();
     SerializedExceptionPBImpl deser = new SerializedExceptionPBImpl(proto);
-    assertEquals(orig, deser);
-    assertEquals(orig.getMessage(), deser.getMessage());
-    assertEquals(orig.getRemoteTrace(), deser.getRemoteTrace());
-    assertEquals(orig.getCause(), deser.getCause());
+    Assert.assertEquals(orig, deser);
+    Assert.assertEquals(orig.getMessage(), deser.getMessage());
+    Assert.assertEquals(orig.getRemoteTrace(), deser.getRemoteTrace());
+    Assert.assertEquals(orig.getCause(), deser.getCause());
   }
 
   @Test
-  void testDeserialize() throws Exception {
+  public void testDeserialize() throws Exception {
     Exception ex = new Exception("test exception");
     SerializedExceptionPBImpl pb = new SerializedExceptionPBImpl();
 
     try {
       pb.deSerialize();
-      fail("deSerialize should throw YarnRuntimeException");
+      Assert.fail("deSerialze should throw YarnRuntimeException");
     } catch (YarnRuntimeException e) {
-      assertEquals(ClassNotFoundException.class,
+      Assert.assertEquals(ClassNotFoundException.class,
           e.getCause().getClass());
     }
 
     pb.init(ex);
-    assertEquals(ex.toString(), pb.deSerialize().toString());
+    Assert.assertEquals(ex.toString(), pb.deSerialize().toString());
   }
 
   @Test
-  void testDeserializeWithDefaultConstructor() {
+  public void testDeserializeWithDefaultConstructor() {
     // Init SerializedException with an Exception with default constructor.
     ClosedChannelException ex = new ClosedChannelException();
     SerializedExceptionPBImpl pb = new SerializedExceptionPBImpl();
     pb.init(ex);
-    assertEquals(ex.getClass(), pb.deSerialize().getClass());
+    Assert.assertEquals(ex.getClass(), pb.deSerialize().getClass());
   }
 
   @Test
-  void testBeforeInit() throws Exception {
+  public void testBeforeInit() throws Exception {
     SerializedExceptionProto defaultProto =
         SerializedExceptionProto.newBuilder().build();
 
     SerializedExceptionPBImpl pb1 = new SerializedExceptionPBImpl();
-    assertNull(pb1.getCause());
+    Assert.assertNull(pb1.getCause());
 
     SerializedExceptionPBImpl pb2 = new SerializedExceptionPBImpl();
-    assertEquals(defaultProto, pb2.getProto());
+    Assert.assertEquals(defaultProto, pb2.getProto());
 
     SerializedExceptionPBImpl pb3 = new SerializedExceptionPBImpl();
-    assertEquals(defaultProto.getTrace(), pb3.getRemoteTrace());
+    Assert.assertEquals(defaultProto.getTrace(), pb3.getRemoteTrace());
   }
 
   @Test
-  void testThrowableDeserialization() {
+  public void testThrowableDeserialization() {
     // java.lang.Error should also be serializable
     Error ex = new Error();
     SerializedExceptionPBImpl pb = new SerializedExceptionPBImpl();
     pb.init(ex);
-    assertEquals(ex.getClass(), pb.deSerialize().getClass());
+    Assert.assertEquals(ex.getClass(), pb.deSerialize().getClass());
   }
 }

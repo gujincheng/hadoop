@@ -109,7 +109,7 @@ import static org.junit.Assert.assertTrue;
 
 public class TestRMAdminService {
 
-  private Configuration configuration;
+  private Configuration configuration;;
   private MockRM rm = null;
   private FileSystem fs;
   private Path workingPath;
@@ -1457,11 +1457,6 @@ public class TestRMAdminService {
     @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
       // Do nothing
-    }
-
-    @Override
-    public Set<String> getGroupsSet(String user) throws IOException {
-      return ImmutableSet.copyOf(group);
     }
 
     public static void updateGroups() {

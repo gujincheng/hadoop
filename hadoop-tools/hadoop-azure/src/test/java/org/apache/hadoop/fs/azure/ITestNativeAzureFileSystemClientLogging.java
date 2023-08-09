@@ -21,13 +21,12 @@ package org.apache.hadoop.fs.azure;
 import java.net.URI;
 import java.util.StringTokenizer;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-
+import org.apache.log4j.Logger;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Test to validate Azure storage client side logging. Tests works only when
@@ -95,8 +94,8 @@ public class ITestNativeAzureFileSystemClientLogging
   @Test
   public void testLoggingEnabled() throws Exception {
 
-    LogCapturer logs =
-        LogCapturer.captureLogs(LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME));
+    LogCapturer logs = LogCapturer.captureLogs(new Log4JLogger(Logger
+        .getRootLogger()));
 
     // Update configuration based on the Test.
     updateFileSystemConfiguration(true);
@@ -117,7 +116,8 @@ public class ITestNativeAzureFileSystemClientLogging
   @Test
   public void testLoggingDisabled() throws Exception {
 
-    LogCapturer logs = LogCapturer.captureLogs(LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME));
+    LogCapturer logs = LogCapturer.captureLogs(new Log4JLogger(Logger
+        .getRootLogger()));
 
     // Update configuration based on the Test.
     updateFileSystemConfiguration(false);

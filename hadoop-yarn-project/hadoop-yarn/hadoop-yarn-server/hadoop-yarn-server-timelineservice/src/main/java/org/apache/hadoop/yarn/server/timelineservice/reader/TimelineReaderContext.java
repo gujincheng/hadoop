@@ -33,8 +33,6 @@ public class TimelineReaderContext extends TimelineContext {
   private String entityId;
   private Long entityIdPrefix;
   private String doAsUser;
-  private boolean genericEntity = false;
-
   public TimelineReaderContext(String clusterId, String userId, String flowName,
       Long flowRunId, String appId, String entityType, String entityId) {
     super(clusterId, userId, flowName, flowRunId, appId);
@@ -57,19 +55,10 @@ public class TimelineReaderContext extends TimelineContext {
     this.doAsUser = doasUser;
   }
 
-  public TimelineReaderContext(String clusterId, String userId, String flowName,
-      Long flowRunId, String appId, String entityType, Long entityIdPrefix,
-      String entityId, String doasUser, boolean genericEntity) {
-    this(clusterId, userId, flowName, flowRunId, appId, entityType,
-        entityIdPrefix, entityId, doasUser);
-    this.genericEntity = genericEntity;
-  }
-
   public TimelineReaderContext(TimelineReaderContext other) {
     this(other.getClusterId(), other.getUserId(), other.getFlowName(),
         other.getFlowRunId(), other.getAppId(), other.getEntityType(),
-        other.getEntityIdPrefix(), other.getEntityId(), other.getDoAsUser(),
-        other.genericEntity);
+        other.getEntityIdPrefix(), other.getEntityId(), other.getDoAsUser());
   }
 
   @Override
@@ -141,14 +130,4 @@ public class TimelineReaderContext extends TimelineContext {
   public void setDoAsUser(String doAsUser) {
     this.doAsUser = doAsUser;
   }
-
-  public boolean isGenericEntity() {
-    return genericEntity;
-  }
-
-  public void setGenericEntity(boolean genericEntity) {
-    this.genericEntity = genericEntity;
-  }
-
-
 }

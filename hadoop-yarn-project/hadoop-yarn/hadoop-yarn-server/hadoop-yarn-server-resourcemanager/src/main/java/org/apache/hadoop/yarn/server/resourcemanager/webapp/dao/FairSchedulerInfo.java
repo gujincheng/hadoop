@@ -45,12 +45,11 @@ public class FairSchedulerInfo extends SchedulerInfo {
     scheduler = fs;
     rootQueue = new FairSchedulerQueueInfo(scheduler.getQueueManager().
         getRootQueue(), scheduler);
-    schedulerName = "Fair Scheduler";
   }
 
   /**
    * Get the fair share assigned to the appAttemptId.
-   * @param appAttemptId the application attempt id
+   * @param appAttemptId
    * @return The fair share assigned to the appAttemptId,
    * <code>FairSchedulerInfo#INVALID_FAIR_SHARE</code> if the scheduler does
    * not know about this application attempt.

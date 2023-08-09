@@ -41,7 +41,8 @@ import org.apache.hadoop.hdfs.server.namenode.TestEditLog;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.Lists;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 public abstract class QJMTestUtil {
   public static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(

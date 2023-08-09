@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +45,6 @@ import org.apache.hadoop.util.DiskChecker;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTP_BIND_HOST_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
-import static org.apache.hadoop.util.Time.now;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -84,7 +83,6 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   private String httpServerURI;
   private final ArrayList<File> localDir = Lists.newArrayList();
   Tracer tracer;
-  private long startTime = 0;
 
   static {
     HdfsConfiguration.init();
@@ -122,11 +120,6 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
 
     return journal;
-  }
-
-  @VisibleForTesting
-  public JournalNodeSyncer getJournalSyncer(String jid) {
-    return journalSyncersById.get(jid);
   }
 
   @VisibleForTesting
@@ -248,7 +241,6 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
       rpcServer = new JournalNodeRpcServer(conf, this);
       rpcServer.start();
-      startTime = now();
     } catch (IOException ioe) {
       //Shutdown JournalNode of JournalNodeRpcServer fails to start
       LOG.error("Failed to start JournalNode.", ioe);
@@ -421,19 +413,6 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   @Override // JournalNodeMXBean
   public String getVersion() {
     return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
-  }
-
-  @Override // JournalNodeMXBean
-  public long getJNStartedTimeInMillis() {
-    return this.startTime;
-  }
-
-  @Override
-  // JournalNodeMXBean
-  public List<String> getStorageInfos() {
-    return journalsById.values().stream()
-        .map(journal -> journal.getStorage().toMapString())
-        .collect(Collectors.toList());
   }
 
   /**

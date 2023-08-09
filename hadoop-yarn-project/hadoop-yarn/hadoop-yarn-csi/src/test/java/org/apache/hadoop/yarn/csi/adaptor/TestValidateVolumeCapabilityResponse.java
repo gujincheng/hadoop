@@ -20,9 +20,8 @@ package org.apache.hadoop.yarn.csi.adaptor;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.ValidateVolumeCapabilitiesResponsePBImpl;
 import org.apache.hadoop.yarn.proto.CsiAdaptorProtos;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * UT for message exchanges.
@@ -30,33 +29,33 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class TestValidateVolumeCapabilityResponse {
 
   @Test
-  void testPBRecord() {
+  public void testPBRecord() {
     CsiAdaptorProtos.ValidateVolumeCapabilitiesResponse proto =
         CsiAdaptorProtos.ValidateVolumeCapabilitiesResponse.newBuilder()
-            .setSupported(true)
-            .setMessage("capability is supported")
-            .build();
+        .setSupported(true)
+        .setMessage("capability is supported")
+        .build();
 
     ValidateVolumeCapabilitiesResponsePBImpl pbImpl =
         new ValidateVolumeCapabilitiesResponsePBImpl(proto);
 
-    assertEquals(true, pbImpl.isSupported());
-    assertEquals("capability is supported", pbImpl.getResponseMessage());
-    assertEquals(proto, pbImpl.getProto());
+    Assert.assertEquals(true, pbImpl.isSupported());
+    Assert.assertEquals("capability is supported", pbImpl.getResponseMessage());
+    Assert.assertEquals(proto, pbImpl.getProto());
   }
 
   @Test
-  void testNewInstance() {
+  public void testNewInstance() {
     ValidateVolumeCapabilitiesResponse pbImpl =
         ValidateVolumeCapabilitiesResponsePBImpl
             .newInstance(false, "capability not supported");
-    assertEquals(false, pbImpl.isSupported());
-    assertEquals("capability not supported",
+    Assert.assertEquals(false, pbImpl.isSupported());
+    Assert.assertEquals("capability not supported",
         pbImpl.getResponseMessage());
 
     CsiAdaptorProtos.ValidateVolumeCapabilitiesResponse proto =
         ((ValidateVolumeCapabilitiesResponsePBImpl) pbImpl).getProto();
-    assertEquals(false, proto.getSupported());
-    assertEquals("capability not supported", proto.getMessage());
+    Assert.assertEquals(false, proto.getSupported());
+    Assert.assertEquals("capability not supported", proto.getMessage());
   }
 }

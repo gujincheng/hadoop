@@ -21,7 +21,7 @@ package org.apache.hadoop.tools;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -44,7 +44,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * DistCp is the main driver-class for DistCpV2.
@@ -127,7 +127,6 @@ public class DistCp extends Configured implements Tool {
    * to target location, by:
    *  1. Creating a list of files to be copied to target.
    *  2. Launching a Map-only job to copy the files. (Delegates to execute().)
-   *  The MR job is not closed as part of run if its a blocking call to run
    * @param argv List of arguments passed to DistCp, from the ToolRunner.
    * @return On success, it returns 0. Else, -1.
    */
@@ -149,10 +148,9 @@ public class DistCp extends Configured implements Tool {
       OptionsParser.usage();      
       return DistCpConstants.INVALID_ARGUMENT;
     }
-
-    Job job = null;
+    
     try {
-      job = execute();
+      execute();
     } catch (InvalidInputException e) {
       LOG.error("Invalid input: ", e);
       return DistCpConstants.INVALID_ARGUMENT;
@@ -168,15 +166,6 @@ public class DistCp extends Configured implements Tool {
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
       return DistCpConstants.UNKNOWN_ERROR;
-    } finally {
-      //Blocking distcp so close the job after its done
-      if (job != null && context.shouldBlock()) {
-        try {
-          job.close();
-        } catch (IOException e) {
-          LOG.error("Exception encountered while closing distcp job", e);
-        }
-      }
     }
     return DistCpConstants.SUCCESS;
   }
@@ -447,9 +436,9 @@ public class DistCp extends Configured implements Tool {
     int exitCode;
     try {
       DistCp distCp = new DistCp();
-      Cleanup cleanup = new Cleanup(distCp);
+      Cleanup CLEANUP = new Cleanup(distCp);
 
-      ShutdownHookManager.get().addShutdownHook(cleanup,
+      ShutdownHookManager.get().addShutdownHook(CLEANUP,
         SHUTDOWN_HOOK_PRIORITY);
       exitCode = ToolRunner.run(getDefaultConf(), distCp, argv);
     }
@@ -473,18 +462,13 @@ public class DistCp extends Configured implements Tool {
     return config;
   }
 
-  /**
-   * Clean the staging folder created by distcp.
-   */
-  protected synchronized void cleanup() {
+  private synchronized void cleanup() {
     try {
       if (metaFolder != null) {
-        synchronized (this) {
-          if (jobFS != null) {
-            jobFS.delete(metaFolder, true);
-          }
-          metaFolder = null;
+        if (jobFS != null) {
+          jobFS.delete(metaFolder, true);
         }
+        metaFolder = null;
       }
     } catch (IOException e) {
       LOG.error("Unable to cleanup meta folder: " + metaFolder, e);

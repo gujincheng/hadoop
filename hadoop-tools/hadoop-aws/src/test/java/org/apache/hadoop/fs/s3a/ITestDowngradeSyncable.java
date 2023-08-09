@@ -44,7 +44,7 @@ public class ITestDowngradeSyncable extends AbstractS3ACostTest {
 
 
   public ITestDowngradeSyncable() {
-    super(true);
+    super(false, true, false);
   }
 
   @Override

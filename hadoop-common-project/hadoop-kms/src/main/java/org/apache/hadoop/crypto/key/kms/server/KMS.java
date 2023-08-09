@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -52,12 +52,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.hadoop.crypto.key.kms.server.KMSACLs.INVALIDATE_CACHE_TYPES;
 import static org.apache.hadoop.util.KMSUtil.checkNotEmpty;
 import static org.apache.hadoop.util.KMSUtil.checkNotNull;
 
@@ -95,12 +93,6 @@ public class KMS {
   private void assertAccess(KMSACLs.Type aclType, UserGroupInformation ugi,
       KMSOp operation, String key) throws AccessControlException {
     KMSWebApp.getACLs().assertAccess(aclType, ugi, operation, key);
-  }
-
-  private void assertAccess(EnumSet<KMSACLs.Type> aclTypes,
-      UserGroupInformation ugi, KMSOp operation, String key)
-      throws AccessControlException {
-    KMSWebApp.getACLs().assertAccess(aclTypes, ugi, operation, key);
   }
 
   private static KeyProvider.KeyVersion removeKeyMaterial(
@@ -278,7 +270,7 @@ public class KMS {
       KMSWebApp.getAdminCallsMeter().mark();
       checkNotEmpty(name, "name");
       UserGroupInformation user = HttpUserGroupInformation.get();
-      assertAccess(INVALIDATE_CACHE_TYPES, user, KMSOp.INVALIDATE_CACHE, name);
+      assertAccess(KMSACLs.Type.ROLLOVER, user, KMSOp.INVALIDATE_CACHE, name);
       LOG.debug("Invalidating cache with key name {}.", name);
 
       user.doAs(new PrivilegedExceptionAction<Void>() {

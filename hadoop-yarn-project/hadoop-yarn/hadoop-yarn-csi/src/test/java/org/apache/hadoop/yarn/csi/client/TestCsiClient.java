@@ -20,63 +20,59 @@ package org.apache.hadoop.yarn.csi.client;
 
 import csi.v0.Csi;
 import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 /**
  * Test class for CSI client.
  */
 public class TestCsiClient {
-  private static final Logger LOG = LoggerFactory.getLogger(TestCsiClient.class);
+
   private static File testRoot = null;
   private static String domainSocket = null;
   private static FakeCsiDriver driver = null;
 
-  @BeforeAll
+  @BeforeClass
   public static void setUp() throws IOException {
-    // Use /tmp to fix bind failure caused by the long file name
-    File tmpDir = new File(System.getProperty("java.io.tmpdir"));
+    File testDir = GenericTestUtils.getTestDir();
     testRoot = Files
-        .createTempDirectory(tmpDir.toPath(), "test").toFile();
+        .createTempDirectory(testDir.toPath(), "test").toFile();
     File socketPath = new File(testRoot, "csi.sock");
     FileUtils.forceMkdirParent(socketPath);
     domainSocket = "unix://" + socketPath.getAbsolutePath();
-    LOG.info("Create unix domain socket: {}", domainSocket);
     driver = new FakeCsiDriver(domainSocket);
   }
 
-  @AfterAll
+  @AfterClass
   public static void tearDown() throws IOException {
     if (testRoot != null) {
       FileUtils.deleteDirectory(testRoot);
     }
   }
 
-  @BeforeEach
+  @Before
   public void beforeMethod() {
     // Skip tests on non-linux systems
     String osName = System.getProperty("os.name").toLowerCase();
-    Assumptions.assumeTrue(osName.contains("nix") || osName.contains("nux"));
+    Assume.assumeTrue(osName.contains("nix") || osName.contains("nux"));
   }
 
   @Test
-  void testIdentityService() throws IOException {
+  public void testIdentityService() throws IOException {
     try {
       driver.start();
       CsiClient client = new CsiClientImpl(domainSocket);
       Csi.GetPluginInfoResponse response = client.getPluginInfo();
-      assertEquals("fake-csi-identity-service", response.getName());
+      Assert.assertEquals("fake-csi-identity-service", response.getName());
     } finally {
       driver.stop();
     }

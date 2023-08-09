@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,8 +53,9 @@ public class LogAggregationFileControllerFactory {
       LogAggregationFileControllerFactory.class);
   private final Pattern p = Pattern.compile(
       "^[A-Za-z_]+[A-Za-z0-9_]*$");
-  private final LinkedList<LogAggregationFileController> controllers = new LinkedList<>();
-  private final Configuration conf;
+  private LinkedList<LogAggregationFileController> controllers
+      = new LinkedList<>();
+  private Configuration conf;
 
   /**
    * Construct the LogAggregationFileControllerFactory object.
@@ -64,59 +65,77 @@ public class LogAggregationFileControllerFactory {
     this.conf = conf;
     Collection<String> fileControllers = conf.getStringCollection(
         YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS);
+    List<String> controllerClassName = new ArrayList<>();
+
     Map<String, String> controllerChecker = new HashMap<>();
 
-    for (String controllerName : fileControllers) {
-      validateAggregatedFileControllerName(controllerName);
+    for (String fileController : fileControllers) {
+      Preconditions.checkArgument(validateAggregatedFileControllerName(
+          fileController), "The FileControllerName: " + fileController
+          + " set in " + YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS
+          +" is invalid." + "The valid File Controller name should only "
+          + "contain a-zA-Z0-9_ and can not start with numbers");
 
-      validateConflictingControllers(conf, controllerChecker, controllerName);
-      DeterminedControllerClassName className =
-          new DeterminedControllerClassName(conf, controllerName);
-      LogAggregationFileController controller = createFileControllerInstance(conf,
-          controllerName, className);
-      controller.initialize(conf, controllerName);
-      controllers.add(controller);
-    }
-  }
-
-  private LogAggregationFileController createFileControllerInstance(
-      Configuration conf,
-      String fileController, DeterminedControllerClassName className) {
-    Class<? extends LogAggregationFileController> clazz = conf.getClass(
-        className.configKey, null, LogAggregationFileController.class);
-    if (clazz == null) {
-      throw new RuntimeException("No class defined for " + fileController);
-    }
-    LogAggregationFileController instance = ReflectionUtils.newInstance(clazz, conf);
-    if (instance == null) {
-      throw new RuntimeException("No object created for " + className.value);
-    }
-    return instance;
-  }
-
-  private void validateConflictingControllers(
-      Configuration conf, Map<String, String> controllerChecker, String fileController) {
-    DeterminedLogAggregationRemoteDir remoteDir =
-        new DeterminedLogAggregationRemoteDir(conf, fileController);
-    DeterminedLogAggregationSuffix suffix =
-        new DeterminedLogAggregationSuffix(conf, fileController);
-    String dirSuffix = remoteDir.value + "-" + suffix.value;
-    if (controllerChecker.containsKey(dirSuffix)) {
-      if (remoteDir.usingDefault && suffix.usingDefault) {
-        String fileControllerStr = controllerChecker.get(dirSuffix);
-        List<String> controllersList = new ArrayList<>();
-        controllersList.add(fileControllerStr);
-        controllersList.add(fileController);
-        fileControllerStr = StringUtils.join(controllersList, ",");
-        controllerChecker.put(dirSuffix, fileControllerStr);
-      } else {
-        String conflictController = controllerChecker.get(dirSuffix);
-        throw new RuntimeException(String.format("The combined value of %s " +
-            "and %s should not be the same as the value set for %s",
-            remoteDir.configKey, suffix.configKey, conflictController));
+      String remoteDirStr = String.format(
+          YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
+          fileController);
+      String remoteDir = conf.get(remoteDirStr);
+      boolean defaultRemoteDir = false;
+      if (remoteDir == null || remoteDir.isEmpty()) {
+        remoteDir = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
+        defaultRemoteDir = true;
       }
-    } else {
-      controllerChecker.put(dirSuffix, fileController);
+      String suffixStr = String.format(
+          YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
+          fileController);
+      String suffix = conf.get(suffixStr);
+      boolean defaultSuffix = false;
+      if (suffix == null || suffix.isEmpty()) {
+        suffix = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
+        defaultSuffix = true;
+      }
+      String dirSuffix = remoteDir + "-" + suffix;
+      if (controllerChecker.containsKey(dirSuffix)) {
+        if (defaultRemoteDir && defaultSuffix) {
+          String fileControllerStr = controllerChecker.get(dirSuffix);
+          List<String> controllersList = new ArrayList<>();
+          controllersList.add(fileControllerStr);
+          controllersList.add(fileController);
+          fileControllerStr = StringUtils.join(controllersList, ",");
+          controllerChecker.put(dirSuffix, fileControllerStr);
+        } else {
+          String conflictController = controllerChecker.get(dirSuffix);
+          throw new RuntimeException("The combined value of " + remoteDirStr
+              + " and " + suffixStr + " should not be the same as the value"
+              + " set for " + conflictController);
+        }
+      } else {
+        controllerChecker.put(dirSuffix, fileController);
+      }
+      String classKey = String.format(
+          YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT,
+          fileController);
+      String className = conf.get(classKey);
+      if (className == null || className.isEmpty()) {
+        throw new RuntimeException("No class configured for "
+            + fileController);
+      }
+      controllerClassName.add(className);
+      Class<? extends LogAggregationFileController> sClass = conf.getClass(
+          classKey, null, LogAggregationFileController.class);
+      if (sClass == null) {
+        throw new RuntimeException("No class defined for " + fileController);
+      }
+      LogAggregationFileController s = ReflectionUtils.newInstance(
+          sClass, conf);
+      if (s == null) {
+        throw new RuntimeException("No object created for "
+            + controllerClassName);
+      }
+      s.initialize(conf, fileController);
+      controllers.add(s);
     }
   }
 
@@ -150,7 +169,8 @@ public class LogAggregationFileControllerFactory {
             return fileController;
           }
         } catch (Exception ex) {
-          diagnosticsMsg.append(ex.getMessage()).append("\n");
+          diagnosticsMsg.append(ex.getMessage() + "\n");
+          continue;
         }
       }
     }
@@ -164,26 +184,19 @@ public class LogAggregationFileControllerFactory {
           return fileController;
         }
       } catch (Exception ex) {
-        diagnosticsMsg.append(ex.getMessage()).append("\n");
+        diagnosticsMsg.append(ex.getMessage() + "\n");
+        continue;
       }
     }
 
     throw new IOException(diagnosticsMsg.toString());
   }
 
-  private void validateAggregatedFileControllerName(String name) {
-    boolean valid;
+  private boolean validateAggregatedFileControllerName(String name) {
     if (name == null || name.trim().isEmpty()) {
-      valid = false;
-    } else {
-      valid = p.matcher(name).matches();
+      return false;
     }
-
-    Preconditions.checkArgument(valid,
-            String.format("The FileControllerName: %s set in " +
-                            "%s is invalid.The valid File Controller name should only contain " +
-                            "a-zA-Z0-9_ and cannot start with numbers", name,
-                    YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS));
+    return p.matcher(name).matches();
   }
 
   @Private
@@ -191,65 +204,5 @@ public class LogAggregationFileControllerFactory {
   public LinkedList<LogAggregationFileController>
       getConfiguredLogAggregationFileControllerList() {
     return this.controllers;
-  }
-
-  private static class DeterminedLogAggregationRemoteDir {
-    private String value;
-    private boolean usingDefault = false;
-    private final String configKey;
-
-    DeterminedLogAggregationRemoteDir(Configuration conf,
-        String fileController) {
-      configKey = String.format(
-          YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
-          fileController);
-      String remoteDir = conf.get(configKey);
-
-      if (remoteDir == null || remoteDir.isEmpty()) {
-        this.value = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
-        this.usingDefault = true;
-      } else {
-        this.value = remoteDir;
-      }
-    }
-  }
-
-  private static class DeterminedLogAggregationSuffix {
-    private String value;
-    private boolean usingDefault = false;
-    private final String configKey;
-
-    DeterminedLogAggregationSuffix(Configuration conf,
-        String fileController) {
-      configKey = String.format(
-          YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
-          fileController);
-      String suffix = conf.get(configKey);
-      if (suffix == null || suffix.isEmpty()) {
-        this.value = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
-        this.usingDefault = true;
-      } else {
-        this.value = suffix;
-      }
-    }
-  }
-
-  private static class DeterminedControllerClassName {
-    private final String configKey;
-    private final String value;
-
-    DeterminedControllerClassName(Configuration conf,
-        String fileController) {
-      this.configKey = String.format(
-          YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT,
-          fileController);
-      this.value = conf.get(configKey);
-      if (value == null || value.isEmpty()) {
-        throw new RuntimeException("No class configured for "
-            + fileController);
-      }
-    }
   }
 }

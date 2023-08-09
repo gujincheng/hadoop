@@ -73,12 +73,16 @@ public final class RoleTestUtils {
       =  statement(true, S3_ALL_BUCKETS, S3_GET_BUCKET_LOCATION);
 
   /**
-   * This is AWS policy removes read access from S3.
+   * This is AWS policy removes read access from S3, leaves S3Guard access up.
+   * This will allow clients to use S3Guard list/HEAD operations, even
+   * the ability to write records, but not actually access the underlying
+   * data.
    * The client does need {@link RolePolicies#S3_GET_BUCKET_LOCATION} to
    * get the bucket location.
    */
   public static final Policy RESTRICTED_POLICY = policy(
-      DENY_S3_GET_OBJECT, ALLOW_S3_GET_BUCKET_LOCATION);
+      DENY_S3_GET_OBJECT, STATEMENT_ALL_DDB, ALLOW_S3_GET_BUCKET_LOCATION
+      );
 
   private RoleTestUtils() {
   }
@@ -146,7 +150,6 @@ public final class RoleTestUtils {
    * @param roleARN ARN of role
    * @return the new configuration
    */
-  @SuppressWarnings("deprecation")
   public static Configuration newAssumedRoleConfig(
       final Configuration srcConf,
       final String roleARN) {

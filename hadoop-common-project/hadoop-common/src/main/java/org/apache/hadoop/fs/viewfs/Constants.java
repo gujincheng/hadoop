@@ -35,7 +35,7 @@ public interface Constants {
    * Prefix for the config variable for the ViewFs mount-table path.
    */
   String CONFIG_VIEWFS_MOUNTTABLE_PATH = CONFIG_VIEWFS_PREFIX + ".path";
-
+ 
   /**
    * Prefix for the home dir for the mount table - if not specified
    * then the hadoop default value (/user) is used.
@@ -54,16 +54,11 @@ public interface Constants {
   public static final String CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE = "default";
 
   /**
-   * Config to enable nested mount point in viewfs
-   */
-  String CONFIG_NESTED_MOUNT_POINT_SUPPORTED = CONFIG_VIEWFS_PREFIX + ".nested.mount.point.supported";
-
-  /**
    * Config variable full prefix for the default mount table.
    */
-  public static final String CONFIG_VIEWFS_PREFIX_DEFAULT_MOUNT_TABLE =
+  public static final String CONFIG_VIEWFS_PREFIX_DEFAULT_MOUNT_TABLE = 
           CONFIG_VIEWFS_PREFIX + "." + CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
-
+  
   /**
    * Config variable for specifying a simple link
    */
@@ -87,15 +82,15 @@ public interface Constants {
 
   /**
    * Config variable for specifying a merge of the root of the mount-table
-   *  with the root of another file system.
+   *  with the root of another file system. 
    */
   String CONFIG_VIEWFS_LINK_MERGE_SLASH = "linkMergeSlash";
 
   /**
    * Config variable for specifying a regex link which uses regular expressions
    * as source and target could use group captured in src.
-   * E.g. {@literal (^/(?<firstDir>\\w+), /prefix-${firstDir}) =>
-   *   (/path1/file1 => /prefix-path1/file1)}
+   * E.g. (^/(?<firstDir>\\w+), /prefix-${firstDir}) =>
+   *   (/path1/file1 => /prefix-path1/file1)
    */
   String CONFIG_VIEWFS_LINK_REGEX = "linkRegex";
 
@@ -130,18 +125,4 @@ public interface Constants {
       "fs.viewfs.ignore.port.in.mount.table.name";
 
   boolean CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT = false;
-
-  String CONFIG_VIEWFS_MOUNTTABLE_LOADER_IMPL =
-      CONFIG_VIEWFS_PREFIX + ".config.loader.impl";
-
-  Class<? extends MountTableConfigLoader>
-      DEFAULT_MOUNT_TABLE_CONFIG_LOADER_IMPL =
-      HCFSMountTableConfigLoader.class;
-
-  /**
-   * Force ViewFileSystem to return a trashRoot that is inside a mount point.
-   */
-  String CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT =
-      "fs.viewfs.trash.force-inside-mount-point";
-  boolean CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT = false;
 }

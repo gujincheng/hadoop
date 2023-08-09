@@ -43,7 +43,7 @@ class URLDispatcher extends SimpleChannelInboundHandler<HttpRequest> {
   @Override
   protected void channelRead0(ChannelHandlerContext ctx, HttpRequest req)
       throws Exception {
-    String uri = req.uri();
+    String uri = req.getUri();
     ChannelPipeline p = ctx.pipeline();
     if (uri.startsWith(WEBHDFS_PREFIX)) {
       WebHdfsHandler h = new WebHdfsHandler(conf, confForCreate);

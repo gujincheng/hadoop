@@ -22,12 +22,15 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.Assert;
+
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -42,19 +45,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptHistoryData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationHistoryData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerHistoryData;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestFileSystemApplicationHistoryStore extends
     ApplicationHistoryStoreTestUtils {
@@ -65,7 +61,7 @@ public class TestFileSystemApplicationHistoryStore extends
   private FileSystem fs;
   private Path fsWorkingPath;
 
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     fs = new RawLocalFileSystem();
     initAndStartStore(fs);
@@ -79,7 +75,8 @@ public class TestFileSystemApplicationHistoryStore extends
         new Path("target",
           TestFileSystemApplicationHistoryStore.class.getSimpleName());
     fs.delete(fsWorkingPath, true);
-    conf.set(YarnConfiguration.FS_APPLICATION_HISTORY_STORE_URI, fsWorkingPath.toString());
+    conf.set(YarnConfiguration.FS_APPLICATION_HISTORY_STORE_URI,
+      fsWorkingPath.toString());
     store = new FileSystemApplicationHistoryStore() {
       @Override
       protected FileSystem getFileSystem(Path path, Configuration conf) {
@@ -90,7 +87,7 @@ public class TestFileSystemApplicationHistoryStore extends
     store.start();
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     store.stop();
     fs.delete(fsWorkingPath, true);
@@ -98,7 +95,7 @@ public class TestFileSystemApplicationHistoryStore extends
   }
 
   @Test
-  void testReadWriteHistoryData() throws IOException {
+  public void testReadWriteHistoryData() throws IOException {
     LOG.info("Starting testReadWriteHistoryData");
     testWriteHistoryData(5);
     testReadHistoryData(5);
@@ -149,56 +146,58 @@ public class TestFileSystemApplicationHistoryStore extends
       int num, boolean missingContainer, boolean missingApplicationAttempt)
           throws IOException {
     // read application history data
-    assertEquals(num, store.getAllApplications().size());
+    Assert.assertEquals(num, store.getAllApplications().size());
     for (int i = 1; i <= num; ++i) {
       ApplicationId appId = ApplicationId.newInstance(0, i);
       ApplicationHistoryData appData = store.getApplication(appId);
-      assertNotNull(appData);
-      assertEquals(appId.toString(), appData.getApplicationName());
-      assertEquals(appId.toString(), appData.getDiagnosticsInfo());
+      Assert.assertNotNull(appData);
+      Assert.assertEquals(appId.toString(), appData.getApplicationName());
+      Assert.assertEquals(appId.toString(), appData.getDiagnosticsInfo());
 
       // read application attempt history data
-      assertEquals(num, store.getApplicationAttempts(appId).size());
+      Assert.assertEquals(num, store.getApplicationAttempts(appId).size());
       for (int j = 1; j <= num; ++j) {
         ApplicationAttemptId appAttemptId =
             ApplicationAttemptId.newInstance(appId, j);
         ApplicationAttemptHistoryData attemptData =
             store.getApplicationAttempt(appAttemptId);
-        assertNotNull(attemptData);
-        assertEquals(appAttemptId.toString(), attemptData.getHost());
+        Assert.assertNotNull(attemptData);
+        Assert.assertEquals(appAttemptId.toString(), attemptData.getHost());
         
         if (missingApplicationAttempt && j == num) {
-          assertNull(attemptData.getDiagnosticsInfo());
+          Assert.assertNull(attemptData.getDiagnosticsInfo());
           continue;
         } else {
-          assertEquals(appAttemptId.toString(),
+          Assert.assertEquals(appAttemptId.toString(),
               attemptData.getDiagnosticsInfo());
         }
 
         // read container history data
-        assertEquals(num, store.getContainers(appAttemptId).size());
+        Assert.assertEquals(num, store.getContainers(appAttemptId).size());
         for (int k = 1; k <= num; ++k) {
           ContainerId containerId = ContainerId.newContainerId(appAttemptId, k);
           ContainerHistoryData containerData = store.getContainer(containerId);
-          assertNotNull(containerData);
-          assertEquals(Priority.newInstance(containerId.getId()), containerData.getPriority());
+          Assert.assertNotNull(containerData);
+          Assert.assertEquals(Priority.newInstance(containerId.getId()),
+            containerData.getPriority());
           if (missingContainer && k == num) {
-            assertNull(containerData.getDiagnosticsInfo());
+            Assert.assertNull(containerData.getDiagnosticsInfo());
           } else {
-            assertEquals(containerId.toString(),
+            Assert.assertEquals(containerId.toString(),
                 containerData.getDiagnosticsInfo());
           }
         }
         ContainerHistoryData masterContainer =
             store.getAMContainer(appAttemptId);
-        assertNotNull(masterContainer);
-        assertEquals(ContainerId.newContainerId(appAttemptId, 1), masterContainer.getContainerId());
+        Assert.assertNotNull(masterContainer);
+        Assert.assertEquals(ContainerId.newContainerId(appAttemptId, 1),
+          masterContainer.getContainerId());
       }
     }
   }
 
   @Test
-  void testWriteAfterApplicationFinish() throws IOException {
+  public void testWriteAfterApplicationFinish() throws IOException {
     LOG.info("Starting testWriteAfterApplicationFinish");
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     writeApplicationStartData(appId);
@@ -208,34 +207,34 @@ public class TestFileSystemApplicationHistoryStore extends
         ApplicationAttemptId.newInstance(appId, 1);
     try {
       writeApplicationAttemptStartData(appAttemptId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains("is not opened"));
+      Assert.assertTrue(e.getMessage().contains("is not opened"));
     }
     try {
       writeApplicationAttemptFinishData(appAttemptId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains("is not opened"));
+      Assert.assertTrue(e.getMessage().contains("is not opened"));
     }
     // write container history data
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     try {
       writeContainerStartData(containerId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains("is not opened"));
+      Assert.assertTrue(e.getMessage().contains("is not opened"));
     }
     try {
       writeContainerFinishData(containerId);
-      fail();
+      Assert.fail();
     } catch (IOException e) {
-      assertTrue(e.getMessage().contains("is not opened"));
+      Assert.assertTrue(e.getMessage().contains("is not opened"));
     }
   }
 
   @Test
-  void testMassiveWriteContainerHistoryData() throws IOException {
+  public void testMassiveWriteContainerHistoryData() throws IOException {
     LOG.info("Starting testMassiveWriteContainerHistoryData");
     long mb = 1024 * 1024;
     long usedDiskBefore = fs.getContentSummary(fsWorkingPath).getLength() / mb;
@@ -250,25 +249,25 @@ public class TestFileSystemApplicationHistoryStore extends
     }
     writeApplicationFinishData(appId);
     long usedDiskAfter = fs.getContentSummary(fsWorkingPath).getLength() / mb;
-    assertTrue((usedDiskAfter - usedDiskBefore) < 20);
+    Assert.assertTrue((usedDiskAfter - usedDiskBefore) < 20);
   }
 
   @Test
-  void testMissingContainerHistoryData() throws IOException {
+  public void testMissingContainerHistoryData() throws IOException {
     LOG.info("Starting testMissingContainerHistoryData");
     testWriteHistoryData(3, true, false);
     testReadHistoryData(3, true, false);
   }
-
+  
   @Test
-  void testMissingApplicationAttemptHistoryData() throws IOException {
+  public void testMissingApplicationAttemptHistoryData() throws IOException {
     LOG.info("Starting testMissingApplicationAttemptHistoryData");
     testWriteHistoryData(3, false, true);
     testReadHistoryData(3, false, true);
   }
 
   @Test
-  void testInitExistingWorkingDirectoryInSafeMode() throws Exception {
+  public void testInitExistingWorkingDirectoryInSafeMode() throws Exception {
     LOG.info("Starting testInitExistingWorkingDirectoryInSafeMode");
     tearDown();
 
@@ -281,7 +280,7 @@ public class TestFileSystemApplicationHistoryStore extends
     try {
       initAndStartStore(fileSystem);
     } catch (Exception e) {
-      fail("Exception should not be thrown: " + e);
+      Assert.fail("Exception should not be thrown: " + e);
     }
 
     // Make sure that directory creation was not attempted
@@ -290,7 +289,7 @@ public class TestFileSystemApplicationHistoryStore extends
   }
 
   @Test
-  void testInitNonExistingWorkingDirectoryInSafeMode() throws Exception {
+  public void testInitNonExistingWorkingDirectoryInSafeMode() throws Exception {
     LOG.info("Starting testInitNonExistingWorkingDirectoryInSafeMode");
     tearDown();
 
@@ -303,7 +302,7 @@ public class TestFileSystemApplicationHistoryStore extends
 
     try {
       initAndStartStore(fileSystem);
-      fail("Exception should have been thrown");
+      Assert.fail("Exception should have been thrown");
     } catch (Exception e) {
       // Expected failure
     }

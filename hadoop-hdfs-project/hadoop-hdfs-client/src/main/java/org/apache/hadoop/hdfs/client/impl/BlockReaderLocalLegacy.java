@@ -244,9 +244,9 @@ class BlockReaderLocalLegacy implements BlockReader {
     } catch (IOException e) {
       // remove from cache
       localDatanodeInfo.removeBlockLocalPathInfo(blk);
-      LOG.warn("BlockReaderLocalLegacy: Removing {}"
-          + " from cache because local file {}"
-          + " could not be opened.", blk, pathinfo.getBlockPath());
+      LOG.warn("BlockReaderLocalLegacy: Removing " + blk
+          + " from cache because local file " + pathinfo.getBlockPath()
+          + " could not be opened.");
       throw e;
     } finally {
       if (localBlockReader == null) {

@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
-import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.ClientErrors;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase.ClientResults;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
@@ -77,12 +76,11 @@ class MockedStagingCommitter extends StagingCommitter {
   }
 
   @Override
-  protected SuccessData maybeCreateSuccessMarker(JobContext context,
+  protected void maybeCreateSuccessMarker(JobContext context,
       List<String> filenames,
       final IOStatisticsSnapshot ioStatistics)
       throws IOException {
      //skipped
-    return null;
   }
 
   public ClientResults getResults() throws IOException {

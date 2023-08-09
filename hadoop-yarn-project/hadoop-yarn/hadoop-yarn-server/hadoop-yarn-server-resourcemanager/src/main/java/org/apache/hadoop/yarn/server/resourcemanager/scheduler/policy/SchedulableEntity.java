@@ -29,43 +29,35 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 public interface SchedulableEntity {
   
   /**
-   * Id - each entity must have a unique id.
-   * @return id.
+   * Id - each entity must have a unique id
    */
   public String getId();
   
   /**
    * Compare the passed SchedulableEntity to this one for input order.
    * Input order is implementation defined and should reflect the 
-   * correct ordering for first-in first-out processing.
-   *
-   * @param other SchedulableEntity.
-   * @return correct ordering.
+   * correct ordering for first-in first-out processing
    */
   public int compareInputOrderTo(SchedulableEntity other);
   
   /**
-   * View of Resources wanted and consumed by the entity.
-   * @return ResourceUsage.
+   * View of Resources wanted and consumed by the entity
    */
   public ResourceUsage getSchedulingResourceUsage();
   
   /**
-   * Get the priority of the application.
-   * @return priority of the application.
+   * Get the priority of the application
    */
   public Priority getPriority();
 
   /**
    * Whether application was running before RM restart.
-   * @return true, application was running before RM restart;
-   * otherwise false.
    */
   public boolean isRecovering();
 
   /**
    * Get partition corresponding to this entity.
-   * @return partition node label.
+   * @return partition
    */
   String getPartition();
 

@@ -18,29 +18,44 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .queuemanagement;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .QueueManagementDynamicEditPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractAutoCreatedLeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueueConfig;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueManagementPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .SchedulerDynamicEditException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .AbstractAutoCreatedLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .AutoCreatedLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .AutoCreatedLeafQueueConfig;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .AutoCreatedQueueManagementPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueManagementChange;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .CapacitySchedulerContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .ManagedParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
+    .QueueManagementChange;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
+    .FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
-import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -65,7 +80,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
 public class GuaranteedOrZeroCapacityOverTimePolicy
     implements AutoCreatedQueueManagementPolicy {
 
-  private static final int DEFAULT_QUEUE_PRINT_SIZE_LIMIT = 25;
+  private CapacitySchedulerContext scheduler;
   private ManagedParentQueue managedParentQueue;
 
   private static final Logger LOG =
@@ -119,7 +134,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       return false;
     }
 
-    public boolean createLeafQueueStateIfNotExists(AbstractLeafQueue leafQueue,
+    public boolean createLeafQueueStateIfNotExists(LeafQueue leafQueue,
         String partition) {
       return addLeafQueueStateIfNotExists(leafQueue.getQueuePath(), partition,
           new LeafQueueStatePerPartition());
@@ -250,8 +265,38 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     }
   }
 
+  /**
+   * Comparator that orders applications by their submit time
+   */
+  private class PendingApplicationComparator
+      implements Comparator<FiCaSchedulerApp> {
+
+    @Override
+    public int compare(FiCaSchedulerApp app1, FiCaSchedulerApp app2) {
+      RMApp rmApp1 = scheduler.getRMContext().getRMApps().get(
+          app1.getApplicationId());
+      RMApp rmApp2 = scheduler.getRMContext().getRMApps().get(
+          app2.getApplicationId());
+      if (rmApp1 != null && rmApp2 != null) {
+        return Long.compare(rmApp1.getSubmitTime(), rmApp2.getSubmitTime());
+      } else if (rmApp1 != null) {
+        return -1;
+      } else if (rmApp2 != null) {
+        return 1;
+      } else{
+        return 0;
+      }
+    }
+  }
+
+  private PendingApplicationComparator applicationComparator =
+      new PendingApplicationComparator();
+
   @Override
-  public void init(final AbstractParentQueue parentQueue) throws IOException {
+  public void init(final CapacitySchedulerContext schedulerContext,
+      final ParentQueue parentQueue) throws IOException {
+    this.scheduler = schedulerContext;
+
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
@@ -296,136 +341,144 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   /**
-   * Computes / adjusts child queue capacities for auto created leaf queues.
-   * This method computes queue entitlements but does not update LeafQueueState or
-   * queue capacities.
-   * Scheduler calls commitQueueManagementChanges after validation after applying queue changes
-   * and commits to LeafQueueState are done in commitQueueManagementChanges.
+   * Compute/Adjust child queue capacities
+   * for auto created leaf queues
+   * This computes queue entitlements but does not update LeafQueueState or
+   * queue capacities. Scheduler calls commitQueueManagemetChanges after
+   * validation after applying queue changes and commits to LeafQueueState
+   * are done in commitQueueManagementChanges.
    *
    * @return List of Queue Management change suggestions which could potentially
    * be committed/rejected by the scheduler due to validation failures
-   * @throws SchedulerDynamicEditException when compute queueManagement changes fails.
+   * @throws SchedulerDynamicEditException
    */
   @Override
   public List<QueueManagementChange> computeQueueManagementChanges()
       throws SchedulerDynamicEditException {
 
-    // Update template absolute capacities as the capacities could have changed
-    // in weight mode
-    updateTemplateAbsoluteCapacities(managedParentQueue.getQueueCapacities(),
-        (GuaranteedOrZeroCapacityOverTimePolicy)
-            managedParentQueue.getAutoCreatedQueueManagementPolicy());
-
     //TODO : Add support for node labels on leaf queue template configurations
-    //sync / add missing leaf queue(s) if any TO state
+    //synch/add missing leaf queue(s) if any to state
     updateLeafQueueState();
 
     readLock.lock();
     try {
-      LeafQueueEntitlements leafQueueEntitlements = new LeafQueueEntitlements();
+      List<QueueManagementChange> queueManagementChanges = new ArrayList<>();
+      List<FiCaSchedulerApp> pendingApps = getSortedPendingApplications();
+
+      //Map of LeafQueue->QueueCapacities - keep adding the computed
+      // entitlements to this map and finally
+      // build the leaf queue configuration Template for all identified leaf
+      // queues
+      Map<String, QueueCapacities> leafQueueEntitlements = new HashMap<>();
       for (String nodeLabel : leafQueueTemplateNodeLabels) {
-        DeactivatedLeafQueuesByLabel deactivatedLeafQueues =
-            deactivateLeafQueues(nodeLabel, leafQueueEntitlements);
-        deactivatedLeafQueues.printToDebug(LOG);
+        // check if any leaf queues need to be deactivated based on pending
+        // applications
+        float parentAbsoluteCapacity =
+            managedParentQueue.getQueueCapacities().getAbsoluteCapacity(
+                nodeLabel);
+        float leafQueueTemplateAbsoluteCapacity =
+            leafQueueTemplateCapacities.getAbsoluteCapacity(nodeLabel);
+        Map<String, QueueCapacities> deactivatedLeafQueues =
+            deactivateLeafQueuesIfInActive(managedParentQueue, nodeLabel,
+                leafQueueEntitlements);
+
+        if (LOG.isDebugEnabled()) {
+          if ( deactivatedLeafQueues.size() > 0) {
+              LOG.debug("Parent queue = {},  " +
+                   ", nodeLabel = {}, deactivated leaf queues = [{}] ",
+                  managedParentQueue.getQueuePath(), nodeLabel,
+                  deactivatedLeafQueues.size() > 25 ? deactivatedLeafQueues
+                      .size() : deactivatedLeafQueues);
+
+          }
+        }
+
+        float deactivatedCapacity = getTotalDeactivatedCapacity(
+            deactivatedLeafQueues, nodeLabel);
+
+        float sumOfChildQueueActivatedCapacity = parentQueueState.
+            getAbsoluteActivatedChildQueueCapacity(nodeLabel);
 
         //Check if we need to activate anything at all?
-        if (deactivatedLeafQueues.canActivateLeafQueues()) {
-          activateLeafQueues(leafQueueEntitlements, nodeLabel, deactivatedLeafQueues);
+        float availableCapacity =
+            parentAbsoluteCapacity - sumOfChildQueueActivatedCapacity
+                + deactivatedCapacity + EPSILON;
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Parent queue = " + managedParentQueue.getQueuePath()
+              + ", nodeLabel = " + nodeLabel + ", absCapacity = "
+              + parentAbsoluteCapacity + ", leafQueueAbsoluteCapacity = "
+              + leafQueueTemplateAbsoluteCapacity + ", deactivatedCapacity = "
+              + deactivatedCapacity + " , absChildActivatedCapacity = "
+              + sumOfChildQueueActivatedCapacity + ", availableCapacity = "
+              + availableCapacity);
+        }
+
+        if (availableCapacity >= leafQueueTemplateAbsoluteCapacity) {
+          //sort applications across leaf queues by submit time
+          if (pendingApps.size() > 0) {
+            int maxLeafQueuesTobeActivated = getMaxLeavesToBeActivated(
+                availableCapacity, leafQueueTemplateAbsoluteCapacity,
+                pendingApps.size());
+
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Parent queue = " + managedParentQueue.getQueuePath()
+                  +  " : Found " + maxLeafQueuesTobeActivated + " leaf queues"
+                  + " to be activated with " + pendingApps.size() + " apps ");
+            }
+
+            LinkedHashSet<String> leafQueuesToBeActivated = getSortedLeafQueues(
+                nodeLabel, pendingApps, maxLeafQueuesTobeActivated,
+                deactivatedLeafQueues.keySet());
+
+            //Compute entitlement changes for the identified leaf queues
+            // which is appended to the List of computedEntitlements
+            updateLeafQueueCapacitiesByLabel(nodeLabel, leafQueuesToBeActivated,
+                leafQueueEntitlements);
+
+            if (LOG.isDebugEnabled()) {
+              if (leafQueuesToBeActivated.size() > 0) {
+                LOG.debug("Activated leaf queues : [{}]",
+                    leafQueuesToBeActivated.size() < 25 ?
+                    leafQueuesToBeActivated : leafQueuesToBeActivated.size());
+              }
+            }
+          }
         }
       }
 
       //Populate new entitlements
-      return leafQueueEntitlements.mapToQueueManagementChanges((leafQueueName, capacities) -> {
+
+      for (final Iterator<Map.Entry<String, QueueCapacities>> iterator =
+           leafQueueEntitlements.entrySet().iterator(); iterator.hasNext(); ) {
+        Map.Entry<String, QueueCapacities> queueCapacities = iterator.next();
+        String leafQueueName = queueCapacities.getKey();
         AutoCreatedLeafQueue leafQueue =
-            (AutoCreatedLeafQueue) managedParentQueue.getQueueContext().getQueueManager()
+            (AutoCreatedLeafQueue) scheduler.getCapacitySchedulerQueueManager()
                 .getQueue(leafQueueName);
-        AutoCreatedLeafQueueConfig newTemplate = buildTemplate(capacities);
-        return new QueueManagementChange.UpdateQueue(leafQueue, newTemplate);
-      });
+        AutoCreatedLeafQueueConfig newTemplate = buildTemplate(
+            queueCapacities.getValue());
+        queueManagementChanges.add(
+            new QueueManagementChange.UpdateQueue(leafQueue, newTemplate));
+
+      }
+      return queueManagementChanges;
     } finally {
       readLock.unlock();
     }
   }
 
-  private void activateLeafQueues(LeafQueueEntitlements leafQueueEntitlements, String nodeLabel,
-      DeactivatedLeafQueuesByLabel deactivatedLeafQueues) throws SchedulerDynamicEditException {
-    //sort applications across leaf queues by submit time
-    List<FiCaSchedulerApp> pendingApps = getSortedPendingApplications();
-    if (pendingApps.size() > 0) {
-      int maxLeafQueuesTobeActivated = deactivatedLeafQueues.
-          getMaxLeavesToBeActivated(pendingApps.size());
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Parent queue = {}, Found {} leaf queues to be activated with {} aps",
-            managedParentQueue.getQueuePath(), maxLeafQueuesTobeActivated, pendingApps.size());
-      }
-
-      Set<String> leafQueuesToBeActivated = getSortedLeafQueues(
-          nodeLabel, pendingApps, maxLeafQueuesTobeActivated,
-          deactivatedLeafQueues.getQueues());
-
-      // Compute entitlement changes for the identified leaf queues
-      // which is appended to the List of computedEntitlements
-      updateLeafQueueCapacitiesByLabel(nodeLabel, leafQueuesToBeActivated, leafQueueEntitlements);
-
-      if (LOG.isDebugEnabled() && leafQueuesToBeActivated.size() > 0) {
-        LOG.debug("Activated leaf queues : [{}]",
-            getListContentsUpToLimit(leafQueuesToBeActivated));
-      }
+  private float getTotalDeactivatedCapacity(
+      Map<String, QueueCapacities> deactivatedLeafQueues, String nodeLabel) {
+    float deactivatedCapacity = 0;
+    for (Iterator<Map.Entry<String, QueueCapacities>> iterator =
+         deactivatedLeafQueues.entrySet().iterator(); iterator.hasNext(); ) {
+      Map.Entry<String, QueueCapacities> deactivatedQueueCapacity =
+          iterator.next();
+      deactivatedCapacity +=
+          deactivatedQueueCapacity.getValue().getAbsoluteCapacity(nodeLabel);
     }
-  }
-
-  private Object getListContentsUpToLimit(Set<String> leafQueuesToBeActivated) {
-    return leafQueuesToBeActivated.size() < DEFAULT_QUEUE_PRINT_SIZE_LIMIT ?
-        leafQueuesToBeActivated : leafQueuesToBeActivated.size();
-  }
-
-  private Object getMapUpToLimit(Map<String, QueueCapacities> deactivatedLeafQueues) {
-    return deactivatedLeafQueues.size() > DEFAULT_QUEUE_PRINT_SIZE_LIMIT ?
-        deactivatedLeafQueues.size() : deactivatedLeafQueues;
-  }
-
-  private DeactivatedLeafQueuesByLabel deactivateLeafQueues(String nodeLabel,
-      LeafQueueEntitlements leafQueueEntitlements) throws SchedulerDynamicEditException {
-    // check if any leaf queues need to be deactivated based on pending applications
-    float parentAbsoluteCapacity =
-        managedParentQueue.getQueueCapacities().getAbsoluteCapacity(nodeLabel);
-    float leafQueueTemplateAbsoluteCapacity =
-        leafQueueTemplateCapacities.getAbsoluteCapacity(nodeLabel);
-    Map<String, QueueCapacities> deactivatedLeafQueues =
-        deactivateLeafQueuesIfInActive(managedParentQueue, nodeLabel, leafQueueEntitlements);
-
-    if (LOG.isDebugEnabled() && deactivatedLeafQueues.size() > 0) {
-      LOG.debug("Parent queue = {}, nodeLabel = {}, deactivated leaf queues = [{}] ",
-          managedParentQueue.getQueuePath(), nodeLabel,
-          getMapUpToLimit(deactivatedLeafQueues));
-    }
-
-    return new DeactivatedLeafQueuesByLabel(deactivatedLeafQueues,
-        managedParentQueue.getQueuePath(),
-        nodeLabel,
-        parentQueueState.getAbsoluteActivatedChildQueueCapacity(nodeLabel),
-        parentAbsoluteCapacity,
-        leafQueueTemplateAbsoluteCapacity);
-  }
-
-  private void updateTemplateAbsoluteCapacities(QueueCapacities parentQueueCapacities,
-                                                GuaranteedOrZeroCapacityOverTimePolicy policy) {
-    writeLock.lock();
-    try {
-      CSQueueUtils.updateAbsoluteCapacitiesByNodeLabels(
-          policy.leafQueueTemplate.getQueueCapacities(),
-          parentQueueCapacities, policy.leafQueueTemplateNodeLabels,
-          managedParentQueue.getQueueContext().getConfiguration().isLegacyQueueMode());
-      policy.leafQueueTemplateCapacities =
-          policy.leafQueueTemplate.getQueueCapacities();
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  public void updateTemplateAbsoluteCapacities(QueueCapacities queueCapacities) {
-    updateTemplateAbsoluteCapacities(queueCapacities, this);
+    return deactivatedCapacity;
   }
 
   @VisibleForTesting
@@ -436,9 +489,9 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       Set<String> newQueues = new HashSet<>();
 
       for (CSQueue newQueue : managedParentQueue.getChildQueues()) {
-        if (newQueue instanceof AbstractLeafQueue) {
+        if (newQueue instanceof LeafQueue) {
           for (String nodeLabel : leafQueueTemplateNodeLabels) {
-            leafQueueState.createLeafQueueStateIfNotExists((AbstractLeafQueue) newQueue,
+            leafQueueState.createLeafQueueStateIfNotExists((LeafQueue) newQueue,
                 nodeLabel);
             newPartitions.add(nodeLabel);
           }
@@ -527,15 +580,9 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     }
   }
 
-  /**
-   * Map of LeafQueue -> QueueCapacities - keep adding the computed
-   * entitlements to this map and finally
-   * build the leaf queue configuration Template for all identified leaf
-   * queues
-   */
   private Map<String, QueueCapacities> deactivateLeafQueuesIfInActive(
-      AbstractParentQueue parentQueue, String nodeLabel,
-      LeafQueueEntitlements leafQueueEntitlements)
+      ParentQueue parentQueue, String nodeLabel,
+      Map<String, QueueCapacities> leafQueueEntitlements)
       throws SchedulerDynamicEditException {
     Map<String, QueueCapacities> deactivatedQueues = new HashMap<>();
 
@@ -543,11 +590,18 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       AutoCreatedLeafQueue leafQueue = (AutoCreatedLeafQueue) childQueue;
       if (leafQueue != null) {
         if (isActive(leafQueue, nodeLabel) && !hasPendingApps(leafQueue)) {
-          QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueue(leafQueue);
-          updateToZeroCapacity(capacities, nodeLabel, (AbstractLeafQueue) childQueue);
-          deactivatedQueues.put(leafQueue.getQueuePath(), leafQueueTemplateCapacities);
+          if (!leafQueueEntitlements.containsKey(leafQueue.getQueuePath())) {
+            leafQueueEntitlements.put(leafQueue.getQueuePath(),
+                new QueueCapacities(false));
+          }
+
+          QueueCapacities capacities = leafQueueEntitlements.get(
+              leafQueue.getQueuePath());
+          updateToZeroCapacity(capacities, nodeLabel);
+          deactivatedQueues.put(leafQueue.getQueuePath(),
+              leafQueueTemplateCapacities);
         }
-      } else {
+      } else{
         LOG.warn("Could not find queue in scheduler while trying" + " to "
             + "deactivate for " + parentQueue);
       }
@@ -558,16 +612,35 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
   private void updateLeafQueueCapacitiesByLabel(String nodeLabel,
       Set<String> leafQueuesToBeActivated,
-      LeafQueueEntitlements leafQueueEntitlements) {
-    for (String leafQueue : leafQueuesToBeActivated) {
-      QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueueByPath(leafQueue);
+      Map<String, QueueCapacities> leafQueueEntitlements) {
+    for (String curLeafQueue : leafQueuesToBeActivated) {
+      if (!leafQueueEntitlements.containsKey(curLeafQueue)) {
+        leafQueueEntitlements.put(curLeafQueue, new QueueCapacities(false));
+        // Activate queues if capacity is available
+      }
+
+      QueueCapacities capacities = leafQueueEntitlements.get(curLeafQueue);
       updateCapacityFromTemplate(capacities, nodeLabel);
     }
   }
 
+  @VisibleForTesting
+  public int getMaxLeavesToBeActivated(float availableCapacity,
+      float childQueueAbsoluteCapacity, int numPendingApps)
+      throws SchedulerDynamicEditException {
+
+    if (childQueueAbsoluteCapacity > 0) {
+      int numLeafQueuesNeeded = (int) Math.floor(
+          availableCapacity / childQueueAbsoluteCapacity);
+
+      return Math.min(numLeafQueuesNeeded, numPendingApps);
+    }
+    return 0;
+  }
+
   /**
    * Commit queue management changes - which involves updating required state
-   * on parent/underlying leaf queues.
+   * on parent/underlying leaf queues
    *
    * @param queueManagementChanges Queue Management changes to commit
    * @throws SchedulerDynamicEditException when validation fails
@@ -593,32 +666,19 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
         for (String nodeLabel : updatedQueueTemplate.getQueueCapacities()
             .getExistingNodeLabels()) {
-          if (updatedQueueTemplate.getQueueCapacities().getCapacity(nodeLabel) > 0) {
+          if (updatedQueueTemplate.getQueueCapacities().
+              getCapacity(nodeLabel) > 0) {
             if (isActive(leafQueue, nodeLabel)) {
               LOG.debug("Queue is already active. Skipping activation : {}",
                   leafQueue.getQueuePath());
             } else{
               activate(leafQueue, nodeLabel);
             }
-          } else {
+          } else{
             if (!isActive(leafQueue, nodeLabel)) {
               LOG.debug("Queue is already de-activated. Skipping "
                   + "de-activation : {}", leafQueue.getQueuePath());
-            } else {
-              /**
-               * While deactivating queues of type ABSOLUTE_RESOURCE, configured
-               * min resource has to be set based on updated capacity (which is
-               * again based on updated queue entitlements). Otherwise,
-               * ParentQueue#calculateEffectiveResourcesAndCapacity calculations
-               * leads to incorrect results.
-               */
-              leafQueue
-                  .mergeCapacities(updatedQueueTemplate.getQueueCapacities(), leafQueueTemplate.getResourceQuotas());
-              leafQueue.getQueueResourceQuotas()
-                  .setConfiguredMinResource(Resources.multiply(
-                      managedParentQueue.getQueueContext().getClusterResource(),
-                      updatedQueueTemplate
-                          .getQueueCapacities().getCapacity(nodeLabel)));
+            } else{
               deactivate(leafQueue, nodeLabel);
             }
           }
@@ -659,7 +719,8 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   @Override
-  public void reinitialize(final AbstractParentQueue parentQueue) throws IOException {
+  public void reinitialize(CapacitySchedulerContext schedulerContext,
+      final ParentQueue parentQueue) throws IOException {
     if (!(parentQueue instanceof ManagedParentQueue)) {
       throw new IllegalStateException(
           "Expected instance of type " + ManagedParentQueue.class + " found  "
@@ -721,7 +782,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
           updateCapacityFromTemplate(capacities, nodeLabel);
           activate(leafQueue, nodeLabel);
         } else{
-          updateToZeroCapacity(capacities, nodeLabel, leafQueue);
+          updateToZeroCapacity(capacities, nodeLabel);
         }
       }
 
@@ -733,12 +794,10 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   private void updateToZeroCapacity(QueueCapacities capacities,
-      String nodeLabel, AbstractLeafQueue leafQueue) {
+      String nodeLabel) {
     capacities.setCapacity(nodeLabel, 0.0f);
     capacities.setMaximumCapacity(nodeLabel,
         leafQueueTemplateCapacities.getMaximumCapacity(nodeLabel));
-    leafQueue.getQueueResourceQuotas().
-        setConfiguredMinResource(nodeLabel, Resource.newInstance(0, 0));
   }
 
   private void updateCapacityFromTemplate(QueueCapacities capacities,
@@ -747,14 +806,10 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         leafQueueTemplateCapacities.getCapacity(nodeLabel));
     capacities.setMaximumCapacity(nodeLabel,
         leafQueueTemplateCapacities.getMaximumCapacity(nodeLabel));
-    capacities.setAbsoluteCapacity(nodeLabel,
-        leafQueueTemplateCapacities.getAbsoluteCapacity(nodeLabel));
-    capacities.setAbsoluteMaximumCapacity(nodeLabel,
-        leafQueueTemplateCapacities.getAbsoluteMaximumCapacity(nodeLabel));
   }
 
   @VisibleForTesting
-  LeafQueueStatePerPartition getLeafQueueState(AbstractLeafQueue queue,
+  LeafQueueStatePerPartition getLeafQueueState(LeafQueue queue,
       String partition) throws SchedulerDynamicEditException {
     readLock.lock();
     try {
@@ -779,7 +834,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   private List<FiCaSchedulerApp> getSortedPendingApplications() {
     List<FiCaSchedulerApp> apps = new ArrayList<>(
         managedParentQueue.getAllApplications());
-    apps.sort(managedParentQueue.getQueueContext().getApplicationComparator());
+    Collections.sort(apps, applicationComparator);
     return apps;
   }
 
@@ -787,7 +842,6 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     AutoCreatedLeafQueueConfig.Builder templateBuilder =
         new AutoCreatedLeafQueueConfig.Builder();
     templateBuilder.capacities(capacities);
-    templateBuilder.resourceQuotas(managedParentQueue.getLeafQueueTemplate().getResourceQuotas());
     return new AutoCreatedLeafQueueConfig(templateBuilder);
   }
 }

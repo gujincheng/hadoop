@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.fs.shell;
 
-import org.junit.Test;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.Test;
 
 /**
  * Test {@code PrintableString} class.
@@ -28,8 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestPrintableString {
 
   private void expect(String reason, String raw, String expected) {
-    assertThat(new PrintableString(raw).toString()).as(reason)
-        .isEqualTo(expected);
+    assertThat(reason, new PrintableString(raw).toString(), is(expected));
   }
 
   /**

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
@@ -26,12 +25,10 @@ import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.LongAdder;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -109,12 +106,12 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.hadoop.util.Lists;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
-
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -196,9 +193,6 @@ public class FSEditLog implements LogsPurgeable {
 
   protected final OpInstanceCache cache = new OpInstanceCache();
 
-  // Users who can override the client ip
-  private final String[] ipProxyUsers;
-
   /**
    * The edit directories that are shared between primary and secondary.
    */
@@ -250,7 +244,6 @@ public class FSEditLog implements LogsPurgeable {
    * @param editsDirs List of journals to use
    */
   FSEditLog(Configuration conf, NNStorage storage, List<URI> editsDirs) {
-    ipProxyUsers = conf.getStrings(DFS_NAMENODE_IP_PROXY_USERS);
     isSyncRunning = false;
     this.conf = conf;
     this.storage = storage;
@@ -804,10 +797,8 @@ public class FSEditLog implements LogsPurgeable {
   /** Record the RPC IDs if necessary */
   private void logRpcIds(FSEditLogOp op, boolean toLogRpcIds) {
     if (toLogRpcIds) {
-      Pair<byte[], Integer> clientIdAndCallId =
-          NameNode.getClientIdAndCallId(this.ipProxyUsers);
-      op.setRpcClientId(clientIdAndCallId.getLeft());
-      op.setRpcCallId(clientIdAndCallId.getRight());
+      op.setRpcClientId(Server.getClientId());
+      op.setRpcCallId(Server.getCallId());
     }
   }
 
@@ -1205,8 +1196,7 @@ public class FSEditLog implements LogsPurgeable {
 
   /**
    * Log a CacheDirectiveInfo returned from
-   * {@link CacheManager#addDirective(CacheDirectiveInfo, FSPermissionChecker,
-   * EnumSet)}
+   * {@link CacheManager#addDirective(CacheDirectiveInfo, FSPermissionChecker)}
    */
   void logAddCacheDirectiveInfo(CacheDirectiveInfo directive,
       boolean toLogRpcIds) {
@@ -1654,31 +1644,18 @@ public class FSEditLog implements LogsPurgeable {
     endTransaction(start);
   }
 
-  void recoverUnclosedStreams() throws IOException {
-    recoverUnclosedStreams(false);
-  }
-
   /**
    * Run recovery on all journals to recover any unclosed segments
    */
-  synchronized void recoverUnclosedStreams(boolean terminateOnFailure) throws IOException {
+  synchronized void recoverUnclosedStreams() {
     Preconditions.checkState(
         state == State.BETWEEN_LOG_SEGMENTS,
         "May not recover segments - wrong state: %s", state);
     try {
       journalSet.recoverUnfinalizedSegments();
     } catch (IOException ex) {
-      if (terminateOnFailure) {
-        final String msg = "Unable to recover log segments: "
-            + "too few journals successfully recovered.";
-        LOG.error(msg, ex);
-        synchronized (journalSetLock) {
-          IOUtils.cleanupWithLogger(LOG, journalSet);
-        }
-        terminate(1, msg);
-      } else {
-        throw ex;
-      }
+      // All journals have failed, it is handled in logSync.
+      // TODO: are we sure this is OK?
     }
   }
   

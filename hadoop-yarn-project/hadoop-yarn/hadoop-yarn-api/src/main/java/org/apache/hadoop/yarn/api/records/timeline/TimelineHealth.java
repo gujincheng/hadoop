@@ -39,12 +39,12 @@ public class TimelineHealth {
    * Timline health status.
    *
    * RUNNING - Service is up and running
-   * CONNECTION_FAULURE - isConnectionAlive() of reader / writer implementation
+   * READER_CONNECTION_FAULURE - isConnectionAlive() of reader implementation
    *    reported an error
    */
   public enum TimelineHealthStatus {
     RUNNING,
-    CONNECTION_FAILURE
+    READER_CONNECTION_FAILURE
   }
 
   private TimelineHealthStatus healthStatus;

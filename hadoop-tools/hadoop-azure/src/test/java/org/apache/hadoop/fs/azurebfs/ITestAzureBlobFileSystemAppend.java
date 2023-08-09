@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
  */
 public class ITestAzureBlobFileSystemAppend extends
     AbstractAbfsIntegrationTest {
-  private static final String TEST_FILE_PATH = "testfile";
-  private static final String TEST_FOLDER_PATH = "testFolder";
+  private static final Path TEST_FILE_PATH = new Path("testfile");
+  private static final Path TEST_FOLDER_PATH = new Path("testFolder");
 
   public ITestAzureBlobFileSystemAppend() throws Exception {
     super();
@@ -45,15 +45,15 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test(expected = FileNotFoundException.class)
   public void testAppendDirShouldFail() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path filePath = path(TEST_FILE_PATH);
+    final Path filePath = TEST_FILE_PATH;
     fs.mkdirs(filePath);
-    fs.append(filePath, 0).close();
+    fs.append(filePath, 0);
   }
 
   @Test
   public void testAppendWithLength0() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    try(FSDataOutputStream stream = fs.create(path(TEST_FILE_PATH))) {
+    try(FSDataOutputStream stream = fs.create(TEST_FILE_PATH)) {
       final byte[] b = new byte[1024];
       new Random().nextBytes(b);
       stream.write(b, 1000, 0);
@@ -65,29 +65,28 @@ public class ITestAzureBlobFileSystemAppend extends
   @Test(expected = FileNotFoundException.class)
   public void testAppendFileAfterDelete() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path filePath = path(TEST_FILE_PATH);
+    final Path filePath = TEST_FILE_PATH;
     ContractTestUtils.touch(fs, filePath);
     fs.delete(filePath, false);
 
-    fs.append(filePath).close();
+    fs.append(filePath);
   }
 
   @Test(expected = FileNotFoundException.class)
   public void testAppendDirectory() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path folderPath = path(TEST_FOLDER_PATH);
+    final Path folderPath = TEST_FOLDER_PATH;
     fs.mkdirs(folderPath);
-    fs.append(folderPath).close();
+    fs.append(folderPath);
   }
 
   @Test
   public void testTracingForAppend() throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
-    Path testPath = path(TEST_FILE_PATH);
-    fs.create(testPath).close();
+    fs.create(TEST_FILE_PATH);
     fs.registerListener(new TracingHeaderValidator(
         fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
         fs.getFileSystemId(), FSOperationType.APPEND, false, 0));
-    fs.append(testPath, 10);
+    fs.append(TEST_FILE_PATH, 10);
   }
 }

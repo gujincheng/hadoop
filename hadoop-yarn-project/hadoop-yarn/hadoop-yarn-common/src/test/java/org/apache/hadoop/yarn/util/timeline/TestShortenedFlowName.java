@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.yarn.util.timeline;
 
-import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.junit.Assert;
+import org.junit.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.UUID;
 
 /**
  * Test case for limiting flow name size.
@@ -33,22 +31,22 @@ public class TestShortenedFlowName {
   private static final String TEST_FLOW_NAME = "TestFlowName";
 
   @Test
-  void testRemovingUUID() {
+  public void testRemovingUUID() {
     String flowName = TEST_FLOW_NAME + "-" + UUID.randomUUID();
     flowName = TimelineUtils.removeUUID(flowName);
-    assertEquals(TEST_FLOW_NAME, flowName);
+    Assert.assertEquals(TEST_FLOW_NAME, flowName);
   }
 
   @Test
-  void testShortenedFlowName() {
+  public void testShortenedFlowName() {
     YarnConfiguration conf = new YarnConfiguration();
     String flowName = TEST_FLOW_NAME + UUID.randomUUID();
     conf.setInt(YarnConfiguration.FLOW_NAME_MAX_SIZE, 8);
     String shortenedFlowName = TimelineUtils.shortenFlowName(flowName, conf);
-    assertEquals("TestFlow", shortenedFlowName);
+    Assert.assertEquals("TestFlow", shortenedFlowName);
     conf.setInt(YarnConfiguration.FLOW_NAME_MAX_SIZE,
         YarnConfiguration.FLOW_NAME_DEFAULT_MAX_SIZE);
     shortenedFlowName = TimelineUtils.shortenFlowName(flowName, conf);
-    assertEquals(TEST_FLOW_NAME, shortenedFlowName);
+    Assert.assertEquals(TEST_FLOW_NAME, shortenedFlowName);
   }
 }

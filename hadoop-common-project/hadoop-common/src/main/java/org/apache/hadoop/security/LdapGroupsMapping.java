@@ -30,11 +30,9 @@ import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Collection;
@@ -253,10 +251,6 @@ public class LdapGroupsMapping
   public static final String POSIX_GID_ATTR_KEY = LDAP_CONFIG_PREFIX + ".posix.attr.gid.name";
   public static final String POSIX_GID_ATTR_DEFAULT = "gidNumber";
 
-  public static final String GROUP_SEARCH_FILTER_PATTERN =
-      LDAP_CONFIG_PREFIX + ".group.search.filter.pattern";
-  public static final String GROUP_SEARCH_FILTER_PATTERN_DEFAULT = "";
-
   /*
    * Posix attributes
    */
@@ -309,12 +303,12 @@ public class LdapGroupsMapping
   }
 
   private DirContext ctx;
-  private volatile Configuration conf;
+  private Configuration conf;
 
-  private volatile Iterator<String> ldapUrls;
+  private Iterator<String> ldapUrls;
   private String currentLdapUrl;
 
-  private volatile boolean useSsl;
+  private boolean useSsl;
   private String keystore;
   private String keystorePass;
   private String truststore;
@@ -327,22 +321,21 @@ public class LdapGroupsMapping
   private Iterator<BindUserInfo> bindUsers;
   private BindUserInfo currentBindUser;
 
-  private volatile String userbaseDN;
+  private String userbaseDN;
   private String groupbaseDN;
   private String groupSearchFilter;
-  private volatile String userSearchFilter;
-  private volatile String memberOfAttr;
+  private String userSearchFilter;
+  private String memberOfAttr;
   private String groupMemberAttr;
-  private volatile String groupNameAttr;
-  private volatile int groupHierarchyLevels;
-  private volatile String posixUidAttr;
-  private volatile String posixGidAttr;
+  private String groupNameAttr;
+  private int groupHierarchyLevels;
+  private String posixUidAttr;
+  private String posixGidAttr;
   private boolean isPosix;
-  private volatile boolean useOneQuery;
+  private boolean useOneQuery;
   private int numAttempts;
-  private volatile int numAttemptsBeforeFailover;
-  private volatile String ldapCtxFactoryClassName;
-  private volatile String[] groupSearchFilterParams;
+  private int numAttemptsBeforeFailover;
+  private String ldapCtxFactoryClassName;
 
   /**
    * Returns list of groups for a user.
@@ -356,7 +349,38 @@ public class LdapGroupsMapping
    */
   @Override
   public synchronized List<String> getGroups(String user) {
-    return new ArrayList<>(getGroupsSet(user));
+    /*
+     * Normal garbage collection takes care of removing Context instances when
+     * they are no longer in use. Connections used by Context instances being
+     * garbage collected will be closed automatically. So in case connection is
+     * closed and gets CommunicationException, retry some times with new new
+     * DirContext/connection.
+     */
+
+    // Tracks the number of attempts made using the same LDAP server
+    int atemptsBeforeFailover = 1;
+
+    for (int attempt = 1; attempt <= numAttempts; attempt++,
+        atemptsBeforeFailover++) {
+      try {
+        return doGetGroups(user, groupHierarchyLevels);
+      } catch (AuthenticationException e) {
+        switchBindUser(e);
+      } catch (NamingException e) {
+        LOG.warn("Failed to get groups for user {} (attempt={}/{}) using {}. " +
+            "Exception: ", user, attempt, numAttempts, currentLdapUrl, e);
+        LOG.trace("TRACE", e);
+
+        if (failover(atemptsBeforeFailover, numAttemptsBeforeFailover)) {
+          atemptsBeforeFailover = 0;
+        }
+      }
+
+      // Reset ctx so that new DirContext can be created with new connection
+      this.ctx = null;
+    }
+    
+    return Collections.emptyList();
   }
 
   /**
@@ -436,21 +460,15 @@ public class LdapGroupsMapping
    * @throws NamingException if unable to find group names
    */
   @VisibleForTesting
-  Set<String> lookupGroup(SearchResult result, DirContext c,
+  List<String> lookupGroup(SearchResult result, DirContext c,
       int goUpHierarchy)
       throws NamingException {
-    Set<String> groups = new LinkedHashSet<>();
+    List<String> groups = new ArrayList<>();
     Set<String> groupDNs = new HashSet<>();
 
     NamingEnumeration<SearchResult> groupResults;
-
-    String[] resolved = resolveCustomGroupFilterArgs(result);
-    // If custom group filter argument is supplied, use that!!!
-    if (resolved != null) {
-      groupResults =
-          c.search(groupbaseDN, groupSearchFilter, resolved, SEARCH_CONTROLS);
-    } else if (isPosix) {
-      // perform the second LDAP query
+    // perform the second LDAP query
+    if (isPosix) {
       groupResults = lookupPosixGroup(result, c);
     } else {
       String userDn = result.getNameInNamespace();
@@ -468,29 +486,14 @@ public class LdapGroupsMapping
         getGroupNames(groupResult, groups, groupDNs, goUpHierarchy > 0);
       }
       if (goUpHierarchy > 0 && !isPosix) {
-        goUpGroupHierarchy(groupDNs, goUpHierarchy, groups);
+        // convert groups to a set to ensure uniqueness
+        Set<String> groupset = new HashSet<>(groups);
+        goUpGroupHierarchy(groupDNs, goUpHierarchy, groupset);
+        // convert set back to list for compatibility
+        groups = new ArrayList<>(groupset);
       }
     }
     return groups;
-  }
-
-  private String[] resolveCustomGroupFilterArgs(SearchResult result)
-      throws NamingException {
-    if (groupSearchFilterParams != null) {
-      String[] filterElems = new String[groupSearchFilterParams.length];
-      for (int i = 0; i < groupSearchFilterParams.length; i++) {
-        // Specific handling for userDN.
-        if (groupSearchFilterParams[i].equalsIgnoreCase("userDN")) {
-          filterElems[i] = result.getNameInNamespace();
-        } else {
-          filterElems[i] =
-              result.getAttributes().get(groupSearchFilterParams[i]).get()
-                  .toString();
-        }
-      }
-      return filterElems;
-    }
-    return null;
   }
 
   /**
@@ -506,9 +509,10 @@ public class LdapGroupsMapping
    * return an empty string array.
    * @throws NamingException if unable to get group names
    */
-  Set<String> doGetGroups(String user, int goUpHierarchy)
+  List<String> doGetGroups(String user, int goUpHierarchy)
       throws NamingException {
     DirContext c = getDirContext();
+    List<String> groups = new ArrayList<>();
 
     // Search for the user. We'll only ever need to look at the first result
     NamingEnumeration<SearchResult> results = c.search(userbaseDN,
@@ -517,11 +521,10 @@ public class LdapGroupsMapping
     if (!results.hasMoreElements()) {
       LOG.debug("doGetGroups({}) returned no groups because the " +
           "user is not found.", user);
-      return Collections.emptySet();
+      return groups;
     }
     SearchResult result = results.nextElement();
 
-    Set<String> groups = Collections.emptySet();
     if (useOneQuery) {
       try {
         /**
@@ -535,7 +538,6 @@ public class LdapGroupsMapping
               memberOfAttr + "' attribute." +
               "Returned user object: " + result.toString());
         }
-        groups = new LinkedHashSet<>();
         NamingEnumeration groupEnumeration = groupDNAttr.getAll();
         while (groupEnumeration.hasMore()) {
           String groupDN = groupEnumeration.next().toString();
@@ -724,42 +726,6 @@ public class LdapGroupsMapping
   }
 
   @Override
-  public Set<String> getGroupsSet(String user) {
-    /*
-     * Normal garbage collection takes care of removing Context instances when
-     * they are no longer in use. Connections used by Context instances being
-     * garbage collected will be closed automatically. So in case connection is
-     * closed and gets CommunicationException, retry some times with new new
-     * DirContext/connection.
-     */
-
-    // Tracks the number of attempts made using the same LDAP server
-    int atemptsBeforeFailover = 1;
-
-    for (int attempt = 1; attempt <= numAttempts; attempt++,
-        atemptsBeforeFailover++) {
-      try {
-        return doGetGroups(user, groupHierarchyLevels);
-      } catch (AuthenticationException e) {
-        switchBindUser(e);
-      } catch (NamingException e) {
-        LOG.warn("Failed to get groups for user {} (attempt={}/{}) using {}. " +
-            "Exception: ", user, attempt, numAttempts, currentLdapUrl, e);
-        LOG.trace("TRACE", e);
-
-        if (failover(atemptsBeforeFailover, numAttemptsBeforeFailover)) {
-          atemptsBeforeFailover = 0;
-        }
-      }
-
-      // Reset ctx so that new DirContext can be created with new connection
-      this.ctx = null;
-    }
-
-    return Collections.emptySet();
-  }
-
-  @Override
   public synchronized Configuration getConf() {
     return conf;
   }
@@ -812,12 +778,6 @@ public class LdapGroupsMapping
         conf.get(POSIX_UID_ATTR_KEY, POSIX_UID_ATTR_DEFAULT);
     posixGidAttr =
         conf.get(POSIX_GID_ATTR_KEY, POSIX_GID_ATTR_DEFAULT);
-    String groupSearchFilterParamCSV = conf.get(GROUP_SEARCH_FILTER_PATTERN,
-        GROUP_SEARCH_FILTER_PATTERN_DEFAULT);
-    if(groupSearchFilterParamCSV!=null && !groupSearchFilterParamCSV.isEmpty()) {
-      LOG.debug("Using custom group search filters: {}", groupSearchFilterParamCSV);
-      groupSearchFilterParams = groupSearchFilterParamCSV.split(",");
-    }
 
     int dirSearchTimeout = conf.getInt(DIRECTORY_SEARCH_TIMEOUT,
         DIRECTORY_SEARCH_TIMEOUT_DEFAULT);
@@ -832,16 +792,7 @@ public class LdapGroupsMapping
       returningAttributes = new String[] {
           groupNameAttr, posixUidAttr, posixGidAttr};
     }
-
-    // If custom group filter is being used, fetch attributes in the filter
-    // as well.
-    ArrayList<String> customAttributes = new ArrayList<>();
-    if (groupSearchFilterParams != null) {
-      customAttributes.addAll(Arrays.asList(groupSearchFilterParams));
-    }
-    customAttributes.addAll(Arrays.asList(returningAttributes));
-    SEARCH_CONTROLS
-        .setReturningAttributes(customAttributes.toArray(new String[0]));
+    SEARCH_CONTROLS.setReturningAttributes(returningAttributes);
 
     // LDAP_CTX_FACTORY_CLASS_DEFAULT is not open to unnamed modules
     // in Java 11+, so the default value is set to null to avoid

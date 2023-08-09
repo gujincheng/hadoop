@@ -20,7 +20,7 @@ package org.apache.hadoop.registry.secure;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
@@ -93,7 +93,8 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
       logLoginDetails(ALICE_LOCALHOST, client);
       String confFilename = System.getProperty(Environment.JAAS_CONF_KEY);
       assertNotNull("Unset: "+ Environment.JAAS_CONF_KEY, confFilename);
-      String config = FileUtils.readFileToString(new File(confFilename), StandardCharsets.UTF_8);
+      String config = FileUtils.readFileToString(new File(confFilename),
+          Charset.defaultCharset());
       LOG.info("{}=\n{}", confFilename, config);
       RegistrySecurity.setZKSaslClientProperties(ALICE, ALICE_CLIENT_CONTEXT);
     } finally {
@@ -132,7 +133,8 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
   @Test
   public void testKerberosAuth() throws Throwable {
     File krb5conf = getKdc().getKrb5conf();
-    String krbConfig = FileUtils.readFileToString(krb5conf, StandardCharsets.UTF_8);
+    String krbConfig = FileUtils.readFileToString(krb5conf,
+        Charset.defaultCharset());
     LOG.info("krb5.conf at {}:\n{}", krb5conf, krbConfig);
     Subject subject = new Subject();
     Class<?> kerb5LoginClass =

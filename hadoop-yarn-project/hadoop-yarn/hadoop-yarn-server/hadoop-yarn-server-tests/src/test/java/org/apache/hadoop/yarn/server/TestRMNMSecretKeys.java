@@ -22,12 +22,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -38,10 +36,7 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.kerby.util.IOUtil;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.Test;
 
 public class TestRMNMSecretKeys {
   private static final String KRB5_CONF = "java.security.krb5.conf";
@@ -49,7 +44,7 @@ public class TestRMNMSecretKeys {
       System.getProperty("test.build.dir", "target/test-dir"),
           UUID.randomUUID().toString());
 
-  @BeforeAll
+  @BeforeClass
   public static void setup() throws IOException {
     KRB5_CONF_ROOT_DIR.mkdir();
     File krb5ConfFile = new File(KRB5_CONF_ROOT_DIR, "krb5.conf");
@@ -68,18 +63,17 @@ public class TestRMNMSecretKeys {
     System.setProperty(KRB5_CONF, krb5ConfFile.getAbsolutePath());
   }
 
-  @AfterAll
+  @AfterClass
   public static void tearDown() throws IOException {
     KRB5_CONF_ROOT_DIR.delete();
   }
 
-  @Test
-  @Timeout(1000000)
-  void testNMUpdation() throws Exception {
+  @Test(timeout = 1000000)
+  public void testNMUpdation() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     // validating RM NM keys for Unsecured environment
     validateRMNMKeyExchange(conf);
-
+    
     // validating RM NM keys for secured environment
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
@@ -119,30 +113,30 @@ public class TestRMNMSecretKeys {
     
     MasterKey containerTokenMasterKey =
         registrationResponse.getContainerTokenMasterKey();
-    assertNotNull(containerTokenMasterKey, containerToken
-        + "Registration should cause a key-update!");
+    Assert.assertNotNull(containerToken
+        + "Registration should cause a key-update!", containerTokenMasterKey);
     MasterKey nmTokenMasterKey = registrationResponse.getNMTokenMasterKey();
-    assertNotNull(nmTokenMasterKey, nmToken
-        + "Registration should cause a key-update!");
+    Assert.assertNotNull(nmToken
+        + "Registration should cause a key-update!", nmTokenMasterKey);
     
     dispatcher.await();
 
     NodeHeartbeatResponse response = nm.nodeHeartbeat(true);
-    assertNull(response.getContainerTokenMasterKey(),
-        containerToken +
-        "First heartbeat after registration shouldn't get any key updates!");
-    assertNull(response.getNMTokenMasterKey(),
-        nmToken +
-        "First heartbeat after registration shouldn't get any key updates!");
+    Assert.assertNull(containerToken +
+        "First heartbeat after registration shouldn't get any key updates!",
+        response.getContainerTokenMasterKey());
+    Assert.assertNull(nmToken +
+        "First heartbeat after registration shouldn't get any key updates!",
+        response.getNMTokenMasterKey());
     dispatcher.await();
 
     response = nm.nodeHeartbeat(true);
-    assertNull(response.getContainerTokenMasterKey(),
-        containerToken +
-        "Even second heartbeat after registration shouldn't get any key updates!");
-    assertNull(response.getContainerTokenMasterKey(),
-        nmToken +
-        "Even second heartbeat after registration shouldn't get any key updates!");
+    Assert.assertNull(containerToken +
+        "Even second heartbeat after registration shouldn't get any key updates!",
+        response.getContainerTokenMasterKey());
+    Assert.assertNull(nmToken +
+        "Even second heartbeat after registration shouldn't get any key updates!",
+        response.getContainerTokenMasterKey());
     
     dispatcher.await();
 
@@ -152,30 +146,30 @@ public class TestRMNMSecretKeys {
 
     // Heartbeats after roll-over and before activation should be fine.
     response = nm.nodeHeartbeat(true);
-    assertNotNull(response.getContainerTokenMasterKey(),
-        containerToken +
-        "Heartbeats after roll-over and before activation should not err out.");
-    assertNotNull(response.getNMTokenMasterKey(),
-        nmToken +
-        "Heartbeats after roll-over and before activation should not err out.");
+    Assert.assertNotNull(containerToken +
+        "Heartbeats after roll-over and before activation should not err out.",
+        response.getContainerTokenMasterKey());
+    Assert.assertNotNull(nmToken +
+        "Heartbeats after roll-over and before activation should not err out.",
+        response.getNMTokenMasterKey());
     
-    assertEquals(containerTokenMasterKey.getKeyId() + 1,
-        response.getContainerTokenMasterKey().getKeyId(),
-        containerToken +
-        "Roll-over should have incremented the key-id only by one!");
-    assertEquals(nmTokenMasterKey.getKeyId() + 1,
-        response.getNMTokenMasterKey().getKeyId(),
-        nmToken +
-        "Roll-over should have incremented the key-id only by one!");
+    Assert.assertEquals(containerToken +
+        "Roll-over should have incremented the key-id only by one!",
+        containerTokenMasterKey.getKeyId() + 1,
+        response.getContainerTokenMasterKey().getKeyId());
+    Assert.assertEquals(nmToken +
+        "Roll-over should have incremented the key-id only by one!",
+        nmTokenMasterKey.getKeyId() + 1,
+        response.getNMTokenMasterKey().getKeyId());
     dispatcher.await();
 
     response = nm.nodeHeartbeat(true);
-    assertNull(response.getContainerTokenMasterKey(),
-        containerToken +
-        "Second heartbeat after roll-over shouldn't get any key updates!");
-    assertNull(response.getNMTokenMasterKey(),
-        nmToken +
-        "Second heartbeat after roll-over shouldn't get any key updates!");
+    Assert.assertNull(containerToken +
+        "Second heartbeat after roll-over shouldn't get any key updates!",
+        response.getContainerTokenMasterKey());
+    Assert.assertNull(nmToken +
+        "Second heartbeat after roll-over shouldn't get any key updates!",
+        response.getNMTokenMasterKey());
     dispatcher.await();
 
     // Let's force activation
@@ -183,21 +177,21 @@ public class TestRMNMSecretKeys {
     rm.getRMContext().getNMTokenSecretManager().activateNextMasterKey();
 
     response = nm.nodeHeartbeat(true);
-    assertNull(response.getContainerTokenMasterKey(),
-        containerToken
-        + "Activation shouldn't cause any key updates!");
-    assertNull(response.getNMTokenMasterKey(),
-        nmToken
-        + "Activation shouldn't cause any key updates!");
+    Assert.assertNull(containerToken
+        + "Activation shouldn't cause any key updates!",
+        response.getContainerTokenMasterKey());
+    Assert.assertNull(nmToken
+        + "Activation shouldn't cause any key updates!",
+        response.getNMTokenMasterKey());
     dispatcher.await();
 
     response = nm.nodeHeartbeat(true);
-    assertNull(response.getContainerTokenMasterKey(),
-        containerToken +
-        "Even second heartbeat after activation shouldn't get any key updates!");
-    assertNull(response.getNMTokenMasterKey(),
-        nmToken +
-        "Even second heartbeat after activation shouldn't get any key updates!");
+    Assert.assertNull(containerToken +
+        "Even second heartbeat after activation shouldn't get any key updates!",
+        response.getContainerTokenMasterKey());
+    Assert.assertNull(nmToken +
+        "Even second heartbeat after activation shouldn't get any key updates!",
+        response.getNMTokenMasterKey());
     dispatcher.await();
 
     rm.stop();

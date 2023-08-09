@@ -1717,21 +1717,9 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     DatanodeStorageInfo[] targets = replicator.chooseTarget(filename, 1,
         dataNodes[0], new ArrayList<DatanodeStorageInfo>(), false, null,
         BLOCK_SIZE, TestBlockStoragePolicy.POLICY_SUITE.getPolicy(
-            HdfsConstants.StoragePolicy.COLD.value()), null);
+            HdfsConstants.COLD_STORAGE_POLICY_ID), null);
     assertEquals(0, targets.length);
     assertNotEquals(0,
         appender.countLinesWithMessage("NO_REQUIRED_STORAGE_TYPE"));
-  }
-
-  @Test
-  public void testReduceChooseTimesIfNOStaleNode() {
-    for(int i = 0; i < 6; i++) {
-      updateHeartbeatWithUsage(dataNodes[i],
-          2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0L,
-          (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE - 1) * BLOCK_SIZE,
-          0L, 0L, 0L, 0, 0);
-    }
-    assertFalse(dnManager.shouldAvoidStaleDataNodesForWrite());
-    resetHeartbeatForStorages();
   }
 }

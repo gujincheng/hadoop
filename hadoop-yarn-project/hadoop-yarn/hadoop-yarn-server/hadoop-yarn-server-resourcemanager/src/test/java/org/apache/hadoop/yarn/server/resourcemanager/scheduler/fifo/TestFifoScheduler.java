@@ -24,8 +24,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -796,7 +794,7 @@ public class TestFifoScheduler {
     scheduler.handle(new NodeAddedSchedulerEvent(node));
 
     ApplicationId appId = ApplicationId.newInstance(0, 1);
-    scheduler.addApplication(appId, "queue1", "user1", false, false);
+    scheduler.addApplication(appId, "queue1", "user1", false);
 
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
     try {
@@ -955,10 +953,10 @@ public class TestFifoScheduler {
     // Ask for a 1 GB container for app 1
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        "rack1", Resources.createResource(GB), 1,
+        "rack1", BuilderUtils.newResource(GB, 1), 1,
         RMNodeLabelsManager.NO_LABEL));
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        ResourceRequest.ANY, Resources.createResource(GB), 1,
+        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1,
         RMNodeLabelsManager.NO_LABEL));
     fs.allocate(appAttemptId1, ask1, null, emptyId,
         Collections.singletonList(host_1_0), null, NULL_UPDATE_REQUESTS);
@@ -991,7 +989,7 @@ public class TestFifoScheduler {
     // this time, rack0 is also in blacklist, so only host_1_1 is available to
     // be assigned
     ask2.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        ResourceRequest.ANY, Resources.createResource(GB), 1));
+        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1));
     fs.allocate(appAttemptId1, ask2, null, emptyId,
         Collections.singletonList("rack0"), null, NULL_UPDATE_REQUESTS);
 
@@ -1077,14 +1075,14 @@ public class TestFifoScheduler {
     // Ask for a 1 GB container for app 1
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ask1.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        ResourceRequest.ANY, Resources.createResource(GB), 1));
+        ResourceRequest.ANY, BuilderUtils.newResource(GB, 1), 1));
     fs.allocate(appAttemptId1, ask1, null, emptyId,
         null, null, NULL_UPDATE_REQUESTS);
 
     // Ask for a 2 GB container for app 2
     List<ResourceRequest> ask2 = new ArrayList<ResourceRequest>();
     ask2.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
-        ResourceRequest.ANY, Resources.createResource(2 * GB), 1));
+        ResourceRequest.ANY, BuilderUtils.newResource(2 * GB, 1), 1));
     fs.allocate(appAttemptId2, ask2, null, emptyId,
         null, null, NULL_UPDATE_REQUESTS);
 
@@ -1316,13 +1314,6 @@ public class TestFifoScheduler {
             .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
     assertThat(availableResource.getMemorySize()).isEqualTo(0);
     assertThat(availableResource.getVirtualCores()).isEqualTo(0);
-    // Kick off another heartbeat where the RMNodeResourceUpdateEvent would
-    // be skipped for DECOMMISSIONING state since the total resource is
-    // already equal to used resource from the previous heartbeat.
-    when(spyNode.getState()).thenReturn(NodeState.DECOMMISSIONING);
-    resourceManager.getResourceScheduler().handle(
-        new NodeUpdateSchedulerEvent(spyNode));
-    verify(mockDispatcher, times(4)).getEventHandler();
   }
 
   private void checkApplicationResourceUsage(int expected, 

@@ -42,6 +42,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -97,7 +98,7 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1220,9 +1221,13 @@ public class Client {
     Path dst =
         new Path(fs.getHomeDirectory(), suffix);
     if (fileSrcPath == null) {
-      try (FSDataOutputStream ostream = FileSystem.create(fs, dst,
-          new FsPermission((short) 0710))) {
+      FSDataOutputStream ostream = null;
+      try {
+        ostream = FileSystem
+            .create(fs, dst, new FsPermission((short) 0710));
         ostream.writeUTF(resources);
+      } finally {
+        IOUtils.closeQuietly(ostream);
       }
     } else {
       fs.copyFromLocalFile(new Path(fileSrcPath), dst);
@@ -1409,19 +1414,21 @@ public class Client {
     }
     int waitCount = 0;
     LOG.info("Waiting for Client to exit loop");
-    while (isRunning.get()) {
+    while (!isRunning.get()) {
       try {
         Thread.sleep(50);
       } catch (InterruptedException ie) {
         // do nothing
       } finally {
-        if (++waitCount > 2000) {
+        waitCount++;
+        if (isRunning.get() || waitCount > 2000) {
           break;
         }
       }
     }
-    LOG.info("Stopping yarnClient within the DS Client");
+    LOG.info("Stopping yarnClient within the Client");
     yarnClient.stop();
+    yarnClient.waitForServiceToStop(clientTimeout);
     LOG.info("done stopping Client");
   }
 }

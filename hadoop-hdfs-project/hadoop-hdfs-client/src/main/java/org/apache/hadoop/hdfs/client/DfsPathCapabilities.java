@@ -53,7 +53,6 @@ public final class DfsPathCapabilities {
     case CommonPathCapabilities.FS_SNAPSHOTS:
     case CommonPathCapabilities.FS_STORAGEPOLICY:
     case CommonPathCapabilities.FS_XATTRS:
-    case CommonPathCapabilities.FS_TRUNCATE:
       return Optional.of(true);
     case CommonPathCapabilities.FS_SYMLINKS:
       return Optional.of(FileSystem.areSymlinksEnabled());

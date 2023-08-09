@@ -81,8 +81,6 @@ public final class Time {
 
   /**
    * Convert time in millisecond to human readable format.
-   *
-   * @param millis millisecond.
    * @return a human readable string for the input time
    */
   public static String formatTime(long millis) {

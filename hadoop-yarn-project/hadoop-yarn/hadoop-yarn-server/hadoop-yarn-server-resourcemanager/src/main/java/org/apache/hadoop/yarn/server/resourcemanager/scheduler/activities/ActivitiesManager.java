@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -43,14 +43,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.util.SystemClock;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.List;
+import java.util.Set;
 import java.util.*;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 /**
@@ -76,7 +75,7 @@ public class ActivitiesManager extends AbstractService {
       appsAllocation;
   @VisibleForTesting
   ConcurrentMap<ApplicationId, Queue<AppAllocation>> completedAppAllocations;
-  private AtomicInteger recordCount = new AtomicInteger(0);
+  private boolean recordNextAvailableNode = false;
   private List<NodeAllocation> lastAvailableNodeActivities = null;
   private Thread cleanUpThread;
   private long activitiesCleanupIntervalMs;
@@ -87,8 +86,6 @@ public class ActivitiesManager extends AbstractService {
   private final RMContext rmContext;
   private volatile boolean stopped;
   private ThreadLocal<DiagnosticsCollectorManager> diagnosticCollectorManager;
-  private volatile ConcurrentLinkedDeque<Pair<NodeId, List<NodeAllocation>>>
-      lastNActivities;
 
   public ActivitiesManager(RMContext rmContext) {
     super(ActivitiesManager.class.getName());
@@ -105,7 +102,6 @@ public class ActivitiesManager extends AbstractService {
     if (rmContext.getYarnConfiguration() != null) {
       setupConfForCleanup(rmContext.getYarnConfiguration());
     }
-    lastNActivities = new ConcurrentLinkedDeque<>();
   }
 
   private void setupConfForCleanup(Configuration conf) {
@@ -219,30 +215,9 @@ public class ActivitiesManager extends AbstractService {
     return new ActivitiesInfo(allocations, nodeId, groupBy);
   }
 
-
-  public List<ActivitiesInfo> recordAndGetBulkActivitiesInfo(
-      int activitiesCount, RMWSConsts.ActivitiesGroupBy groupBy)
-      throws InterruptedException {
-    recordCount.set(activitiesCount);
-    while (recordCount.get() > 0) {
-      Thread.sleep(1);
-    }
-    Iterator<Pair<NodeId, List<NodeAllocation>>> ite =
-        lastNActivities.iterator();
-    List<ActivitiesInfo> outList = new ArrayList<>();
-    while (ite.hasNext()) {
-      Pair<NodeId, List<NodeAllocation>> pair = ite.next();
-      outList.add(new ActivitiesInfo(pair.getRight(),
-          pair.getLeft().toString(), groupBy));
-    }
-    // reset with new activities
-    lastNActivities = new ConcurrentLinkedDeque<>();
-    return outList;
-  }
-
   public void recordNextNodeUpdateActivities(String nodeId) {
     if (nodeId == null) {
-      recordCount.compareAndSet(0, 1);
+      recordNextAvailableNode = true;
     } else {
       activeRecordedNodes.add(NodeId.fromString(nodeId));
     }
@@ -373,7 +348,7 @@ public class ActivitiesManager extends AbstractService {
   }
 
   void startNodeUpdateRecording(NodeId nodeID) {
-    if (recordCount.get() > 0) {
+    if (recordNextAvailableNode) {
       recordNextNodeUpdateActivities(nodeID.toString());
     }
     // Removing from activeRecordedNodes immediately is to ensure that
@@ -495,17 +470,14 @@ public class ActivitiesManager extends AbstractService {
           allocation.setTimestamp(timestamp);
           allocation.setPartition(partition);
         }
-        if (recordCount.get() > 0) {
-          recordCount.getAndDecrement();
+        if (recordNextAvailableNode) {
+          recordNextAvailableNode = false;
         }
       }
 
       if (shouldRecordThisNode(nodeID)) {
         recordingNodesAllocation.get().remove(nodeID);
         completedNodeAllocations.put(nodeID, value);
-        if (recordCount.get() >= 0) {
-          lastNActivities.add(Pair.of(nodeID, value));
-        }
       }
     }
     // disable diagnostic collector

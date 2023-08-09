@@ -254,7 +254,6 @@ public class TestCSAllocateCustomResource {
         (metrics.getCustomResourceCapability()
             .get(GPU_URI)).longValue(), 0);
     ClusterMetrics.destroy();
-    rm.stop();
   }
 
   /**
@@ -300,9 +299,9 @@ public class TestCSAllocateCustomResource {
     // Define top-level queues
     newConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {"a", "b", "c"});
-    newConf.setMinimumResourceRequirement("", new QueuePath("root", "a"),
+    newConf.setMinimumResourceRequirement("", "root.a",
         aMINRES);
-    newConf.setMaximumResourceRequirement("", new QueuePath("root", "a"),
+    newConf.setMaximumResourceRequirement("", "root.a",
         aMAXRES);
 
     newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,

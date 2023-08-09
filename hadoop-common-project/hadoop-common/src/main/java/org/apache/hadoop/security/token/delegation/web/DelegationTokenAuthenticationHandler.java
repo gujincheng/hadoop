@@ -20,8 +20,9 @@ package org.apache.hadoop.security.token.delegation.web;
 import java.io.IOException;
 import java.io.Writer;
 import java.text.MessageFormat;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -53,7 +54,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * An {@link AuthenticationHandler} that implements Kerberos SPNEGO mechanism
@@ -89,7 +90,7 @@ public abstract class DelegationTokenAuthenticationHandler
 
   public static final String TOKEN_KIND = PREFIX + "token-kind";
 
-  private static final Set<String> DELEGATION_TOKEN_OPS = new HashSet<>();
+  private static final Set<String> DELEGATION_TOKEN_OPS = new HashSet<String>();
 
   public static final String DELEGATION_TOKEN_UGI_ATTRIBUTE =
       "hadoop.security.delegation-token.ugi";
@@ -300,7 +301,8 @@ public abstract class DelegationTokenAuthenticationHandler
                   dt.decodeFromUrlString(tokenToRenew);
                   long expirationTime = tokenManager.renewToken(dt,
                       requestUgi.getShortUserName());
-                  map = Collections.singletonMap("long", expirationTime);
+                  map = new HashMap();
+                  map.put("long", expirationTime);
                 } catch (IOException ex) {
                   throw new AuthenticationException(ex.toString(), ex);
                 }
@@ -356,11 +358,13 @@ public abstract class DelegationTokenAuthenticationHandler
 
   @SuppressWarnings("unchecked")
   private static Map delegationTokenToJSON(Token token) throws IOException {
-    Map json = Collections.singletonMap(
+    Map json = new LinkedHashMap();
+    json.put(
         KerberosDelegationTokenAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON,
         token.encodeToUrlString());
-    Map response = Collections.singletonMap(
-        KerberosDelegationTokenAuthenticator.DELEGATION_TOKEN_JSON, json);
+    Map response = new LinkedHashMap();
+    response.put(KerberosDelegationTokenAuthenticator.DELEGATION_TOKEN_JSON,
+        json);
     return response;
   }
 

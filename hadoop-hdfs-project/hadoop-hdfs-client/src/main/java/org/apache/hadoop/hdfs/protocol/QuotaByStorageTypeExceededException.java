@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.StorageType;
 
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.long2String;
 
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class QuotaByStorageTypeExceededException extends QuotaExceededException {
   protected static final long serialVersionUID = 1L;

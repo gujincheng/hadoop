@@ -57,6 +57,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKeyP
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 /**
  * Timeline entity reader for flow run entities that are stored in the flow run
  * table.
@@ -84,25 +86,18 @@ class FlowRunEntityReader extends TimelineEntityReader {
 
   @Override
   protected void validateParams() {
-    if (getContext() == null) {
-      throw new NullPointerException("context shouldn't be null");
-    }
-    if (getDataToRetrieve() == null) {
-      throw new NullPointerException("data to retrieve shouldn't be null");
-    }
-    if (getContext().getClusterId() == null) {
-      throw new NullPointerException("clusterId shouldn't be null");
-    }
-    if (getContext().getUserId() == null) {
-      throw new NullPointerException("userId shouldn't be null");
-    }
-    if (getContext().getFlowName() == null) {
-      throw new NullPointerException("flowName shouldn't be null");
-    }
+    Preconditions.checkNotNull(getContext(), "context shouldn't be null");
+    Preconditions.checkNotNull(getDataToRetrieve(),
+        "data to retrieve shouldn't be null");
+    Preconditions.checkNotNull(getContext().getClusterId(),
+        "clusterId shouldn't be null");
+    Preconditions.checkNotNull(getContext().getUserId(),
+        "userId shouldn't be null");
+    Preconditions.checkNotNull(getContext().getFlowName(),
+        "flowName shouldn't be null");
     if (isSingleEntityRead()) {
-      if (getContext().getFlowRunId() == null) {
-        throw new NullPointerException("flowRunId shouldn't be null");
-      }
+      Preconditions.checkNotNull(getContext().getFlowRunId(),
+          "flowRunId shouldn't be null");
     }
     EnumSet<Field> fieldsToRetrieve = getDataToRetrieve().getFieldsToRetrieve();
     if (!isSingleEntityRead() && fieldsToRetrieve != null) {
@@ -241,14 +236,14 @@ class FlowRunEntityReader extends TimelineEntityReader {
             "fromid doesn't belong to clusterId=" + context.getClusterId());
       }
       // set start row
-      scan.withStartRow(flowRunRowKey.getRowKey());
+      scan.setStartRow(flowRunRowKey.getRowKey());
 
       // get the bytes for stop row
       flowRunRowKeyPrefix = new FlowRunRowKeyPrefix(context.getClusterId(),
           context.getUserId(), context.getFlowName());
 
       // set stop row
-      scan.withStopRow(
+      scan.setStopRow(
           HBaseTimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(
               flowRunRowKeyPrefix.getRowKeyPrefix()));
     }

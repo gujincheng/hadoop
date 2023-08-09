@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Mount table resolver that supports multiple locations for each mount entry.
@@ -99,9 +99,8 @@ public class MultipleDestinationMountTableResolver extends MountTableResolver {
 
         // Change the order of the name spaces according to the policy
         if (firstNamespace != null) {
-          // Create our own prioritized copy based on the entity in the tree.
-          mountTableResult = PathLocation.prioritizeDestination(
-              mountTableResult, firstNamespace);
+          // This is the entity in the tree, we need to create our own copy
+          mountTableResult = new PathLocation(mountTableResult, firstNamespace);
           LOG.debug("Ordered locations following {} are {}",
               order, mountTableResult);
         } else {

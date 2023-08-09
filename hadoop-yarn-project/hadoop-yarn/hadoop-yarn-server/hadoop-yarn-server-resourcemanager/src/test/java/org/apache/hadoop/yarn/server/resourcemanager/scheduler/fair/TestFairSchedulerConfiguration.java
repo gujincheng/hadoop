@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -124,8 +125,8 @@ public class TestFairSchedulerConfiguration {
 
   @Test
   public void testParseResourceConfigValue() throws Exception {
-    Resource expected = Resources.createResource(5 * 1024, 2);
-    Resource clusterResource = Resources.createResource(10 * 1024, 4);
+    Resource expected = BuilderUtils.newResource(5 * 1024, 2);
+    Resource clusterResource = BuilderUtils.newResource(10 * 1024, 4);
 
     assertEquals(expected,
         parseResourceConfigValue("5120 mb 2 vcores").getResource());
@@ -154,13 +155,13 @@ public class TestFairSchedulerConfiguration {
     assertEquals(expected,
         parseResourceConfigValue("50% Memory, 50% CpU").
             getResource(clusterResource));
-    assertEquals(Resources.createResource(5 * 1024, 4),
+    assertEquals(BuilderUtils.newResource(5 * 1024, 4),
         parseResourceConfigValue("50% memory, 100% cpu").
         getResource(clusterResource));
-    assertEquals(Resources.createResource(5 * 1024, 4),
+    assertEquals(BuilderUtils.newResource(5 * 1024, 4),
         parseResourceConfigValue(" 100% cpu, 50% memory").
         getResource(clusterResource));
-    assertEquals(Resources.createResource(5 * 1024, 0),
+    assertEquals(BuilderUtils.newResource(5 * 1024, 0),
         parseResourceConfigValue("50% memory, 0% cpu").
             getResource(clusterResource));
     assertEquals(expected,
@@ -175,7 +176,7 @@ public class TestFairSchedulerConfiguration {
     assertEquals(expected,
         parseResourceConfigValue("50.% memory, 50.% cpu").
             getResource(clusterResource));
-    assertEquals(Resources.createResource((int)(1024 * 10 * 0.109), 2),
+    assertEquals(BuilderUtils.newResource((int)(1024 * 10 * 0.109), 2),
         parseResourceConfigValue("10.9% memory, 50.6% cpu").
             getResource(clusterResource));
     assertEquals(expected,
@@ -186,8 +187,8 @@ public class TestFairSchedulerConfiguration {
     conf.set(YarnConfiguration.RESOURCE_TYPES, "test1");
     ResourceUtils.resetResourceTypes(conf);
 
-    clusterResource = Resources.createResource(10 * 1024, 4);
-    expected = Resources.createResource(5 * 1024, 2);
+    clusterResource = BuilderUtils.newResource(10 * 1024, 4);
+    expected = BuilderUtils.newResource(5 * 1024, 2);
     expected.setResourceValue("test1", Long.MAX_VALUE);
 
     assertEquals(expected,
@@ -232,7 +233,7 @@ public class TestFairSchedulerConfiguration {
         parseResourceConfigValue(" vcores = 2 , memory-mb = 5120 , "
             + "test1 = 4 ").getResource());
 
-    expected = Resources.createResource(4 * 1024, 3);
+    expected = BuilderUtils.newResource(4 * 1024, 3);
     expected.setResourceValue("test1", 8L);
 
     assertEquals(expected,

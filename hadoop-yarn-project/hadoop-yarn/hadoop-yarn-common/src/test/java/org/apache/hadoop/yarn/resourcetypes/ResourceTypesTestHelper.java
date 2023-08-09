@@ -16,17 +16,16 @@
 
 package org.apache.hadoop.yarn.resourcetypes;
 
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Contains helper methods to create Resource and ResourceInformation objects.
@@ -36,7 +35,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 public final class ResourceTypesTestHelper {
 
   private static final Pattern RESOURCE_VALUE_AND_UNIT_PATTERN =
-      Pattern.compile("(\\d+)([A-Za-z]*)");
+      Pattern.compile("(\\d+)([A-za-z]*)");
 
   private ResourceTypesTestHelper() {}
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.FsPermissionProto;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 /**
  * SnapshotInfo maintains information for a snapshot
@@ -81,20 +82,18 @@ public class SnapshotInfo {
   }
 
   public static class Bean {
-    private final int snapshotID;
+    private final String snapshotID;
     private final String snapshotDirectory;
     private final long modificationTime;
-    private final String status;
 
-    public Bean(int snapshotID, String snapshotDirectory,
-        long modificationTime, boolean isMarkedAsDeleted) {
+    public Bean(String snapshotID, String snapshotDirectory,
+        long modificationTime) {
       this.snapshotID = snapshotID;
       this.snapshotDirectory = snapshotDirectory;
       this.modificationTime = modificationTime;
-      this.status = isMarkedAsDeleted ? "DELETED" : "ACTIVE";
     }
 
-    public int getSnapshotID() {
+    public String getSnapshotID() {
       return snapshotID;
     }
 
@@ -104,10 +103,6 @@ public class SnapshotInfo {
 
     public long getModificationTime() {
       return modificationTime;
-    }
-
-    public String getStatus() {
-      return status;
     }
   }
 }

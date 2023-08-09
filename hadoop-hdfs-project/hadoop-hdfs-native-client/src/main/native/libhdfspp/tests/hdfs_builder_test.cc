@@ -18,9 +18,6 @@
 
 #include "hdfspp/hdfs_ext.h"
 #include "configuration_test.h"
-#include "utils/temp-file.h"
-#include "utils/temp-dir.h"
-
 #include <gmock/gmock.h>
 #include <google/protobuf/stubs/common.h>
 
@@ -30,10 +27,9 @@ using namespace hdfs;
 
 TEST(HdfsBuilderTest, TestStubBuilder) {
   {
-    TestUtils::TempDir tempDir1;
+    TempDir tempDir1;
 
-    hdfsBuilder *builder =
-        hdfsNewBuilderFromDirectory(tempDir1.GetPath().c_str());
+    hdfsBuilder * builder = hdfsNewBuilderFromDirectory(tempDir1.path.c_str());
     hdfsFreeBuilder(builder);
   }
 
@@ -47,12 +43,11 @@ TEST(HdfsBuilderTest, TestRead)
 {
   // Reading string values
   {
-    TestUtils::TempDir tempDir1;
-    TestUtils::TempFile tempFile1(tempDir1.GetPath() + "/core-site.xml");
-    writeSimpleConfig(tempFile1.GetFileName(), "key1", "value1");
+    TempDir tempDir1;
+    TempFile tempFile1(tempDir1.path + "/core-site.xml");
+    writeSimpleConfig(tempFile1.filename, "key1", "value1");
 
-    hdfsBuilder *builder =
-        hdfsNewBuilderFromDirectory(tempDir1.GetPath().c_str());
+    hdfsBuilder * builder = hdfsNewBuilderFromDirectory(tempDir1.path.c_str());
 
     char * readVal = nullptr;
     int result = hdfsBuilderConfGetStr(builder, "key1", &readVal);
@@ -71,12 +66,11 @@ TEST(HdfsBuilderTest, TestRead)
 
   // Reading int values
   {
-    TestUtils::TempDir tempDir1;
-    TestUtils::TempFile tempFile1(tempDir1.GetPath() + "/core-site.xml");
-    writeSimpleConfig(tempFile1.GetFileName(), "key1", "100");
+    TempDir tempDir1;
+    TempFile tempFile1(tempDir1.path + "/core-site.xml");
+    writeSimpleConfig(tempFile1.filename, "key1", "100");
 
-    hdfsBuilder *builder =
-        hdfsNewBuilderFromDirectory(tempDir1.GetPath().c_str());
+    hdfsBuilder * builder = hdfsNewBuilderFromDirectory(tempDir1.path.c_str());
 
     int readVal = -1;
     int result = hdfsBuilderConfGetInt(builder, "key1", &readVal);

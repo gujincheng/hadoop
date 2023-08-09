@@ -17,23 +17,22 @@
 */
 package org.apache.hadoop.yarn.util;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Shell;
+import org.junit.Test;
+
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Shell;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class TestApps {
   @Test
-  void testSetEnvFromInputString() {
+  public void testSetEnvFromInputString() {
     Map<String, String> environment = new HashMap<String, String>();
     environment.put("JAVA_HOME", "/path/jdk");
     String goodEnv = "a1=1,b_2=2,_c=3,d=4,e=,f_win=%JAVA_HOME%"
@@ -65,7 +64,7 @@ public class TestApps {
   }
 
   @Test
-  void testSetEnvFromInputProperty() {
+  public void testSetEnvFromInputProperty() {
     Configuration conf = new Configuration(false);
     Map<String, String> env = new HashMap<>();
     String propName = "mapreduce.map.env";
@@ -92,7 +91,7 @@ public class TestApps {
   }
 
   @Test
-  void testSetEnvFromInputPropertyDefault() {
+  public void testSetEnvFromInputPropertyDefault() {
     Configuration conf = new Configuration(false);
     Map<String, String> env = new HashMap<>();
     String propName = "mapreduce.map.env";
@@ -123,7 +122,7 @@ public class TestApps {
   }
 
   @Test
-  void testSetEnvFromInputPropertyOverrideDefault() {
+  public void testSetEnvFromInputPropertyOverrideDefault() {
     Configuration conf = new Configuration(false);
     Map<String, String> env = new HashMap<>();
 
@@ -153,7 +152,7 @@ public class TestApps {
   }
 
   @Test
-  void testSetEnvFromInputPropertyCommas() {
+  public void testSetEnvFromInputPropertyCommas() {
     Configuration conf = new Configuration(false);
     Map<String, String> env = new HashMap<>();
     String propName = "mapreduce.reduce.env";
@@ -177,7 +176,7 @@ public class TestApps {
   }
 
   @Test
-  void testSetEnvFromInputPropertyNull() {
+  public void testSetEnvFromInputPropertyNull() {
     Configuration conf = new Configuration(false);
     Map<String, String> env = new HashMap<>();
     String propName = "mapreduce.map.env";

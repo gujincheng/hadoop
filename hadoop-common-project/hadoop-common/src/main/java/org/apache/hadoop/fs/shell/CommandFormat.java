@@ -165,7 +165,7 @@ public class CommandFormat {
    * @return Set{@literal <}String{@literal >} of the enabled options
    */
   public Set<String> getOpts() {
-    Set<String> optSet = new HashSet<>();
+    Set<String> optSet = new HashSet<String>();
     for (Map.Entry<String, Boolean> entry : options.entrySet()) {
       if (entry.getValue()) {
         optSet.add(entry.getKey());

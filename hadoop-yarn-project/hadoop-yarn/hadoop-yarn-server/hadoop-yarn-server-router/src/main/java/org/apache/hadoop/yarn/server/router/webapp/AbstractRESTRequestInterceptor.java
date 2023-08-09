@@ -19,22 +19,16 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
-
-import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 
 /**
  * Extends the RequestInterceptor class and provides common functionality which
- * can be used and/or extended by other concrete interceptor classes.
+ * can be used and/or extended by other concrete intercepter classes.
  */
 public abstract class AbstractRESTRequestInterceptor
     implements RESTRequestInterceptor {
 
   private Configuration conf;
   private RESTRequestInterceptor nextInterceptor;
-  private UserGroupInformation user = null;
-  private RouterClientRMService routerClientRMService = null;
 
   /**
    * Sets the {@link RESTRequestInterceptor} in the chain.
@@ -68,10 +62,9 @@ public abstract class AbstractRESTRequestInterceptor
    * Initializes the {@link RESTRequestInterceptor}.
    */
   @Override
-  public void init(String userName) {
-    this.user = RouterServerUtil.setupUser(userName);
+  public void init(String user) {
     if (this.nextInterceptor != null) {
-      this.nextInterceptor.init(userName);
+      this.nextInterceptor.init(user);
     }
   }
 
@@ -93,17 +86,4 @@ public abstract class AbstractRESTRequestInterceptor
     return this.nextInterceptor;
   }
 
-  public UserGroupInformation getUser() {
-    return user;
-  }
-
-  @Override
-  public RouterClientRMService getRouterClientRMService() {
-    return routerClientRMService;
-  }
-
-  @Override
-  public void setRouterClientRMService(RouterClientRMService routerClientRMService) {
-    this.routerClientRMService = routerClientRMService;
-  }
 }

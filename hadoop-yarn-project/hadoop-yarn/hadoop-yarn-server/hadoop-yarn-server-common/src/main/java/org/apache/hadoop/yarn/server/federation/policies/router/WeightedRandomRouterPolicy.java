@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
@@ -33,30 +35,47 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
  * sub-clusters.
  */
 public class WeightedRandomRouterPolicy extends AbstractRouterPolicy {
-  @Override
-  protected SubClusterId chooseSubCluster(
-      String queue, Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
 
-    // note: we cannot pre-compute the weights, as the set of activeSubCluster
+  @Override
+  public SubClusterId getHomeSubcluster(
+      ApplicationSubmissionContext appSubmissionContext,
+      List<SubClusterId> blacklist) throws YarnException {
+
+    // null checks and default-queue behavior
+    validate(appSubmissionContext);
+
+    Map<SubClusterId, SubClusterInfo> activeSubclusters =
+        getActiveSubclusters();
+
+    FederationPolicyUtils.validateSubClusterAvailability(
+        new ArrayList<SubClusterId>(activeSubclusters.keySet()), blacklist);
+
+    // note: we cannot pre-compute the weights, as the set of activeSubcluster
     // changes dynamically (and this would unfairly spread the load to
     // sub-clusters adjacent to an inactive one), hence we need to count/scan
     // the list and based on weight pick the next sub-cluster.
-    Map<SubClusterIdInfo, Float> weights = getPolicyInfo().getRouterPolicyWeights();
+    Map<SubClusterIdInfo, Float> weights =
+        getPolicyInfo().getRouterPolicyWeights();
 
     ArrayList<Float> weightList = new ArrayList<>();
     ArrayList<SubClusterId> scIdList = new ArrayList<>();
     for (Map.Entry<SubClusterIdInfo, Float> entry : weights.entrySet()) {
-      SubClusterIdInfo key = entry.getKey();
-      if (key != null && preSelectSubclusters.containsKey(key.toId())) {
+      if (blacklist != null && blacklist.contains(entry.getKey().toId())) {
+        continue;
+      }
+      if (entry.getKey() != null
+          && activeSubclusters.containsKey(entry.getKey().toId())) {
         weightList.add(entry.getValue());
-        scIdList.add(key.toId());
+        scIdList.add(entry.getKey().toId());
       }
     }
 
     int pickedIndex = FederationPolicyUtils.getWeightedRandom(weightList);
     if (pickedIndex == -1) {
-      throw new FederationPolicyException("No positive weight found on active subclusters");
+      throw new FederationPolicyException(
+          "No positive weight found on active subclusters");
     }
     return scIdList.get(pickedIndex);
   }
+
 }

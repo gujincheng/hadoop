@@ -38,18 +38,12 @@ public abstract class BaseExpression implements Expression, Configurable {
   private String[] usage = { "Not yet implemented" };
   private String[] help = { "Not yet implemented" };
 
-  /**
-   * Sets the usage text for this {@link Expression} .
-   * @param usage usage array.
-   */
+  /** Sets the usage text for this {@link Expression} */
   protected void setUsage(String[] usage) {
     this.usage = usage;
   }
 
-  /**
-   * Sets the help text for this {@link Expression} .
-   * @param help help.
-   */
+  /** Sets the help text for this {@link Expression} */
   protected void setHelp(String[] help) {
     this.help = help;
   }
@@ -98,10 +92,7 @@ public abstract class BaseExpression implements Expression, Configurable {
   /** Children of this expression. */
   private LinkedList<Expression> children = new LinkedList<Expression>();
 
-  /**
-   * Return the options to be used by this expression.
-   * @return options.
-   */
+  /** Return the options to be used by this expression. */
   protected FindOptions getOptions() {
     return (this.options == null) ? new FindOptions() : this.options;
   }
@@ -274,7 +265,6 @@ public abstract class BaseExpression implements Expression, Configurable {
    * @param depth
    *          current depth in the process directories
    * @return FileStatus
-   * @throws IOException raised on errors performing I/O.
    */
   protected FileStatus getFileStatus(PathData item, int depth)
       throws IOException {
@@ -295,8 +285,6 @@ public abstract class BaseExpression implements Expression, Configurable {
    * @param item
    *          PathData
    * @return Path
-   *
-   * @throws IOException raised on errors performing I/O.
    */
   protected Path getPath(PathData item) throws IOException {
     return item.path;
@@ -307,7 +295,6 @@ public abstract class BaseExpression implements Expression, Configurable {
    *
    * @param item PathData
    * @return FileSystem
-   * @throws IOException raised on errors performing I/O.
    */
   protected FileSystem getFileSystem(PathData item) throws IOException {
     return item.fs;

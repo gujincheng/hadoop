@@ -77,8 +77,6 @@ public class NameNodeMetrics {
   MutableCounterLong renameSnapshotOps;
   @Metric("Number of listSnapshottableDirectory operations")
   MutableCounterLong listSnapshottableDirOps;
-  @Metric("Number of listSnapshots operations")
-  MutableCounterLong listSnapshotOps;
   @Metric("Number of snapshotDiffReport operations")
   MutableCounterLong snapshotDiffReportOps;
   @Metric("Number of blockReceivedAndDeleted calls")
@@ -114,7 +112,6 @@ public class NameNodeMetrics {
       disallowSnapshotOps.value() +
       renameSnapshotOps.value() +
       listSnapshottableDirOps.value() +
-      listSnapshotOps.value() +
       createSymlinkOps.value() +
       snapshotDiffReportOps.value();
   }
@@ -327,10 +324,6 @@ public class NameNodeMetrics {
   
   public void incrListSnapshottableDirOps() {
     listSnapshottableDirOps.incr();
-  }
-
-  public void incrListSnapshotsOps() {
-    listSnapshotOps.incr();
   }
   
   public void incrSnapshotDiffReportOps() {

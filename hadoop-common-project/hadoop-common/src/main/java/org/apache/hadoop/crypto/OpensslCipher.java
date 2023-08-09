@@ -28,7 +28,8 @@ import javax.crypto.ShortBufferException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.apache.hadoop.util.Preconditions;
+
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.PerformanceAdvisory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,11 +45,10 @@ public final class OpensslCipher {
       LoggerFactory.getLogger(OpensslCipher.class.getName());
   public static final int ENCRYPT_MODE = 1;
   public static final int DECRYPT_MODE = 0;
-
-  /** Currently only support AES/CTR/NoPadding and SM4/CTR/NoPadding. */
+  
+  /** Currently only support AES/CTR/NoPadding. */
   private enum AlgMode {
-    AES_CTR,
-    SM4_CTR;
+    AES_CTR;
     
     static int get(String algorithm, String mode) 
         throws NoSuchAlgorithmException {
@@ -76,7 +76,6 @@ public final class OpensslCipher {
   private long context = 0;
   private final int alg;
   private final int padding;
-  private long engine;
   
   private static final String loadingFailureReason;
 
@@ -84,14 +83,14 @@ public final class OpensslCipher {
     String loadingFailure = null;
     try {
       if (!NativeCodeLoader.buildSupportsOpenssl()) {
-        PerformanceAdvisory.LOG.warn("Build does not support openssl");
+        PerformanceAdvisory.LOG.debug("Build does not support openssl");
         loadingFailure = "build does not support openssl.";
       } else {
         initIDs();
       }
     } catch (Throwable t) {
       loadingFailure = t.getMessage();
-      LOG.warn("Failed to load OpenSSL Cipher.", t);
+      LOG.debug("Failed to load OpenSSL Cipher.", t);
     } finally {
       loadingFailureReason = loadingFailure;
     }
@@ -101,16 +100,10 @@ public final class OpensslCipher {
     return loadingFailureReason;
   }
   
-  private OpensslCipher(long context, int alg, int padding, long engine) {
+  private OpensslCipher(long context, int alg, int padding) {
     this.context = context;
     this.alg = alg;
     this.padding = padding;
-    this.engine = engine;
-  }
-
-  public static OpensslCipher getInstance(String transformation)
-      throws NoSuchAlgorithmException, NoSuchPaddingException {
-    return getInstance(transformation, null);
   }
   
   /**
@@ -119,8 +112,6 @@ public final class OpensslCipher {
    * 
    * @param transformation the name of the transformation, e.g., 
    * AES/CTR/NoPadding.
-   * @param engineId the openssl engine to use.if not set,
-   * defalut engine will be used.
    * @return OpensslCipher an <code>OpensslCipher</code> object
    * @throws NoSuchAlgorithmException if <code>transformation</code> is null, 
    * empty, in an invalid format, or if Openssl doesn't implement the 
@@ -128,15 +119,13 @@ public final class OpensslCipher {
    * @throws NoSuchPaddingException if <code>transformation</code> contains 
    * a padding scheme that is not available.
    */
-  public static OpensslCipher getInstance(
-      String transformation, String engineId)
+  public static final OpensslCipher getInstance(String transformation) 
       throws NoSuchAlgorithmException, NoSuchPaddingException {
     Transform transform = tokenizeTransformation(transformation);
     int algMode = AlgMode.get(transform.alg, transform.mode);
     int padding = Padding.get(transform.padding);
     long context = initContext(algMode, padding);
-    long engine = (engineId != null) ? initEngine(engineId) : 0;
-    return new OpensslCipher(context, algMode, padding, engine);
+    return new OpensslCipher(context, algMode, padding);
   }
   
   /** Nested class for algorithm, mode and padding. */
@@ -186,7 +175,7 @@ public final class OpensslCipher {
    * @param iv crypto iv
    */
   public void init(int mode, byte[] key, byte[] iv) {
-    context = init(context, mode, alg, padding, key, iv, engine);
+    context = init(context, mode, alg, padding, key, iv);
   }
   
   /**
@@ -225,33 +214,34 @@ public final class OpensslCipher {
     output.position(output.position() + len);
     return len;
   }
-
+  
   /**
    * Finishes a multiple-part operation. The data is encrypted or decrypted,
    * depending on how this cipher was initialized.
    * <p>
+   * 
    * The result is stored in the output buffer. Upon return, the output buffer's
    * position will have advanced by n, where n is the value returned by this
    * method; the output buffer's limit will not have changed.
-   * </p>
+   * <p>
+   * 
    * If <code>output.remaining()</code> bytes are insufficient to hold the result,
    * a <code>ShortBufferException</code> is thrown.
    * <p>
+   * 
    * Upon finishing, this method resets this cipher object to the state it was
    * in when previously initialized. That is, the object is available to encrypt
    * or decrypt more data.
-   * </p>
-   * If any exception is thrown, this cipher object need to be reset before it
+   * <p>
+   * 
+   * If any exception is thrown, this cipher object need to be reset before it 
    * can be used again.
-   *
+   * 
    * @param output the output ByteBuffer
    * @return int number of bytes stored in <code>output</code>
-   * @throws ShortBufferException      if there is insufficient space in the output buffer.
-   * @throws IllegalBlockSizeException This exception is thrown when the length
-   *                                   of data provided to a block cipher is incorrect.
-   * @throws BadPaddingException       This exception is thrown when a particular
-   *                                   padding mechanism is expected for the input
-   *                                   data but the data is not padded properly.
+   * @throws ShortBufferException
+   * @throws IllegalBlockSizeException
+   * @throws BadPaddingException
    */
   public int doFinal(ByteBuffer output) throws ShortBufferException, 
       IllegalBlockSizeException, BadPaddingException {
@@ -265,9 +255,8 @@ public final class OpensslCipher {
   /** Forcibly clean the context. */
   public void clean() {
     if (context != 0) {
-      clean(context, engine);
+      clean(context);
       context = 0;
-      engine = 0;
     }
   }
 
@@ -284,19 +273,17 @@ public final class OpensslCipher {
   private native static void initIDs();
   
   private native static long initContext(int alg, int padding);
-
-  private native static long initEngine(String engineId);
   
   private native long init(long context, int mode, int alg, int padding, 
-      byte[] key, byte[] iv, long engineNum);
-
+      byte[] key, byte[] iv);
+  
   private native int update(long context, ByteBuffer input, int inputOffset, 
       int inputLength, ByteBuffer output, int outputOffset, int maxOutputLength);
   
   private native int doFinal(long context, ByteBuffer output, int offset, 
       int maxOutputLength);
   
-  private native void clean(long ctx, long engineNum);
-
+  private native void clean(long context);
+  
   public native static String getLibraryName();
 }

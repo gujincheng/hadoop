@@ -118,7 +118,7 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
     for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; i++) {
       Configuration dnConf = new HdfsConfiguration(conf);
       // Set up datanode address
-      setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig, 0, 0);
+      setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig);
       if (manageDfsDirs) {
         String dirs = makeDataNodeDirs(i, storageTypes == null ? null : storageTypes[i]);
         dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
@@ -235,9 +235,7 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig,
       boolean checkDataNodeHostConfig,
-      Configuration[] dnConfOverlays,
-      int[] dnHttpPorts,
-      int[] dnIpcPorts) throws IOException {
+      Configuration[] dnConfOverlays) throws IOException {
     startDataNodes(conf, numDataNodes, storageTypes, manageDfsDirs, operation, racks,
         NODE_GROUPS, hosts, storageCapacities, simulatedCapacities, setupHostsFile,
         checkDataNodeAddrConfig, checkDataNodeHostConfig);

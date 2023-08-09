@@ -581,8 +581,8 @@ public class TestEditLogRace {
   }
 
   static SetOwnerOp getSetOwnerOp(OpInstanceCache cache, String group) {
-    SetOwnerOp setOwnerOp = cache.get(OP_SET_OWNER);
-    return setOwnerOp.setSource("/").setUser("u").setGroup(group);
+    return ((SetOwnerOp)cache.get(OP_SET_OWNER))
+        .setSource("/").setUser("u").setGroup(group);
   }
 
   static class BlockingOpMatcher implements ArgumentMatcher<FSEditLogOp> {

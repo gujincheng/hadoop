@@ -123,9 +123,6 @@ class ParameterParser {
 
   Token<DelegationTokenIdentifier> delegationToken() throws IOException {
     String delegation = param(DelegationParam.NAME);
-    if (delegation == null) {
-      return null;
-    }
     final Token<DelegationTokenIdentifier> token = new
       Token<DelegationTokenIdentifier>();
     token.decodeFromUrlString(delegation);

@@ -86,8 +86,6 @@ public final class DistCpConstants {
   public static final String CONF_LABEL_SPLIT_RATIO =
       "distcp.dynamic.split.ratio";
   public static final String CONF_LABEL_DIRECT_WRITE = "distcp.direct.write";
-  public static final String CONF_LABEL_UPDATE_ROOT =
-          "distcp.update.root.attributes";
 
   /* Total bytes to be copied. Updated by copylisting. Unfiltered count */
   public static final String CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED = "mapred.total.bytes.expected";
@@ -122,10 +120,6 @@ public final class DistCpConstants {
   /* DistCp CopyListing class override param */
   public static final String CONF_LABEL_COPY_LISTING_CLASS = "distcp.copy.listing.class";
 
-  /* Traverse directory from diff recursively and add paths to the copyList if true */
-  public static final String CONF_LABEL_DIFF_COPY_LISTING_TRAVERSE_DIRECTORY =
-      "distcp.diff.copy.listing.traverse.directory";
-
   /**
    *  DistCp Filter class override param.
    */
@@ -146,26 +140,6 @@ public final class DistCpConstants {
       "distcp.blocks.per.chunk";
 
   public static final String CONF_LABEL_USE_ITERATOR = "distcp.use.iterator";
-
-  /**
-   * Enabling {@code distcp -update} to use modification time of source and
-   * target file to check while copying same file with same size but
-   * different content.
-   *
-   * The check would verify if the target file is perceived as older than the
-   * source then it indicates that the source has been recently updated and it
-   * is a newer version than what was synced, so we should not skip the copy.
-   * {@value}
-   */
-  public static final String CONF_LABEL_UPDATE_MOD_TIME =
-      "distcp.update.modification.time";
-
-  /**
-   * Default value for 'distcp.update.modification.time' configuration.
-   */
-  public static final boolean CONF_LABEL_UPDATE_MOD_TIME_DEFAULT =
-      true;
-
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
    */

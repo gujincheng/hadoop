@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubA
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 class SubApplicationEntityReader extends GenericEntityReader {
   private static final SubApplicationTableRW SUB_APPLICATION_TABLE =
       new SubApplicationTableRW();
@@ -306,21 +308,15 @@ class SubApplicationEntityReader extends GenericEntityReader {
 
   @Override
   protected void validateParams() {
-    if (getContext() == null) {
-      throw new NullPointerException("context shouldn't be null");
-    }
-    if (getDataToRetrieve() == null) {
-      throw new NullPointerException("data to retrieve shouldn't be null");
-    }
-    if (getContext().getClusterId() == null) {
-      throw new NullPointerException("clusterId shouldn't be null");
-    }
-    if (getContext().getDoAsUser() == null) {
-      throw new NullPointerException("DoAsUser shouldn't be null");
-    }
-    if (getContext().getEntityType() == null) {
-      throw new NullPointerException("entityType shouldn't be null");
-    }
+    Preconditions.checkNotNull(getContext(), "context shouldn't be null");
+    Preconditions.checkNotNull(getDataToRetrieve(),
+        "data to retrieve shouldn't be null");
+    Preconditions.checkNotNull(getContext().getClusterId(),
+        "clusterId shouldn't be null");
+    Preconditions.checkNotNull(getContext().getDoAsUser(),
+        "DoAsUser shouldn't be null");
+    Preconditions.checkNotNull(getContext().getEntityType(),
+        "entityType shouldn't be null");
   }
 
   @Override
@@ -372,7 +368,7 @@ class SubApplicationEntityReader extends GenericEntityReader {
       }
 
       // set start row
-      scan.withStartRow(entityRowKey.getRowKey());
+      scan.setStartRow(entityRowKey.getRowKey());
 
       // get the bytes for stop row
       subApplicationRowKeyPrefix = new SubApplicationRowKeyPrefix(
@@ -380,7 +376,7 @@ class SubApplicationEntityReader extends GenericEntityReader {
           context.getEntityType(), null, null, null);
 
       // set stop row
-      scan.withStopRow(
+      scan.setStopRow(
           HBaseTimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(
               subApplicationRowKeyPrefix.getRowKeyPrefix()));
 

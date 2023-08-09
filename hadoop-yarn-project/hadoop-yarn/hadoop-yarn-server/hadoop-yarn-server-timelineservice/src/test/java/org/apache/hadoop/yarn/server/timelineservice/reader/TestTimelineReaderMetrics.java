@@ -18,14 +18,11 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.yarn.server.timelineservice.metrics.TimelineReaderMetrics;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test TimelineReaderMetrics.
@@ -35,24 +32,24 @@ public class TestTimelineReaderMetrics {
   private TimelineReaderMetrics metrics;
 
   @Test
-  void testTimelineReaderMetrics() {
-    assertNotNull(metrics);
-    assertEquals(10,
+  public void testTimelineReaderMetrics() {
+    Assert.assertNotNull(metrics);
+    Assert.assertEquals(10,
         metrics.getGetEntitiesSuccessLatency().getInterval());
-    assertEquals(10,
+    Assert.assertEquals(10,
         metrics.getGetEntitiesFailureLatency().getInterval());
-    assertEquals(10,
+    Assert.assertEquals(10,
         metrics.getGetEntityTypesSuccessLatency().getInterval());
-    assertEquals(10,
+    Assert.assertEquals(10,
         metrics.getGetEntityTypesFailureLatency().getInterval());
   }
 
-  @BeforeEach
+  @Before
   public void setup() {
     metrics = TimelineReaderMetrics.getInstance();
   }
 
-  @AfterEach
+  @After
   public void tearDown() {
     TimelineReaderMetrics.destroy();
   }

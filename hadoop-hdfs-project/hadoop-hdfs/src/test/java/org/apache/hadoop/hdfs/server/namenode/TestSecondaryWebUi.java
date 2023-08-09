@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -30,6 +31,7 @@ import org.junit.Test;
 import javax.management.*;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.net.URL;
 
 public class TestSecondaryWebUi {
   

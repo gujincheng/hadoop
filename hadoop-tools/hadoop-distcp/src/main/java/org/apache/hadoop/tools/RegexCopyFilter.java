@@ -35,7 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A CopyFilter which compares Java Regex Patterns to each Path to determine
@@ -50,7 +50,6 @@ public class RegexCopyFilter extends CopyFilter {
   /**
    * Constructor, sets up a File object to read filter patterns from and
    * the List to store the patterns.
-   * @param filtersFilename name of the filtersFile
    */
   protected RegexCopyFilter(String filtersFilename) {
     filtersFile = new File(filtersFilename);

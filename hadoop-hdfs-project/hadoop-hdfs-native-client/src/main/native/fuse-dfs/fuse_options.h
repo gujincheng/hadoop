@@ -34,7 +34,6 @@ struct options {
   int private;
   size_t rdbuffer_size;
   int direct_io;
-  int max_background;
 } options;
 
 extern struct fuse_opt dfs_opts[];

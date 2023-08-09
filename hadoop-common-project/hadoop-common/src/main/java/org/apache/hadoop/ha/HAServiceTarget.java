@@ -93,9 +93,6 @@ public abstract class HAServiceTarget {
   
   /**
    * @return a proxy to connect to the target HA Service.
-   * @param timeoutMs timeout in milliseconds.
-   * @param conf Configuration.
-   * @throws IOException raised on errors performing I/O.
    */
   public HAServiceProtocol getProxy(Configuration conf, int timeoutMs)
       throws IOException {
@@ -118,7 +115,7 @@ public abstract class HAServiceTarget {
    * returned proxy defaults to using {@link #getAddress()}, which means this
    * method's behavior is identical to {@link #getProxy(Configuration, int)}.
    *
-   * @param conf configuration.
+   * @param conf Configuration
    * @param timeoutMs timeout in milliseconds
    * @return a proxy to connect to the target HA service for health monitoring
    * @throws IOException if there is an error
@@ -157,9 +154,6 @@ public abstract class HAServiceTarget {
 
   /**
    * @return a proxy to the ZKFC which is associated with this HA service.
-   * @param conf configuration.
-   * @param timeoutMs timeout in milliseconds.
-   * @throws IOException raised on errors performing I/O.
    */
   public ZKFCProtocol getZKFCProxy(Configuration conf, int timeoutMs)
       throws IOException {

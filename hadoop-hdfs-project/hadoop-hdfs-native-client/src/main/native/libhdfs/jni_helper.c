@@ -23,10 +23,9 @@
 #include "platform.h"
 #include "os/mutexes.h"
 #include "os/thread_local_storage.h"
-#include "x-platform/c-api/dirent.h"
-#include "x-platform/types.h"
 
 #include <errno.h>
+#include <dirent.h>
 #include <stdio.h> 
 #include <string.h> 
 
@@ -423,9 +422,9 @@ static ssize_t wildcard_expandPath(const char* path, char* expanded)
 
                 if (expanded != NULL) {
                     // pathLength includes an extra '.'
-                    memcpy(dest, path, pathLength - 1);
+                    strncpy(dest, path, pathLength-1);
                     dest += pathLength - 1;
-                    memcpy(dest, filename, filenameLength);
+                    strncpy(dest, filename, filenameLength);
                     dest += filenameLength;
                     *dest = PATH_SEPARATOR;
                     dest++;
@@ -537,7 +536,7 @@ static ssize_t getClassPath_helper(const char *classpath, char* expandedClasspat
             // +1 for path separator or null terminator
             length += tokenlen + 1;
             if (expandedCP_curr != NULL) {
-                memcpy(expandedCP_curr, cp_token, tokenlen);
+                strncpy(expandedCP_curr, cp_token, tokenlen);
                 expandedCP_curr += tokenlen;
                 *expandedCP_curr = PATH_SEPARATOR;
                 expandedCP_curr++;

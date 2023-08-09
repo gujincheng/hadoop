@@ -264,7 +264,6 @@ public class FindOptions {
 
   /**
    * Return the {@link Configuration} return configuration {@link Configuration}
-   * @return configuration.
    */
   public Configuration getConfiguration() {
     return this.configuration;

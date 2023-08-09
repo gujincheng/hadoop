@@ -56,7 +56,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
-import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -533,7 +532,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -734,7 +733,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
 
   protected String validateGetNewApplicationXMLResponse(String response)
       throws ParserConfigurationException, IOException, SAXException {
-    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(response));
@@ -1066,7 +1065,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
             .constructWebResource("apps", app.getApplicationId().toString(),
               "queue").accept(contentType).get(ClientResponse.class);
       assertResponseStatusCode(Status.OK, response.getStatusInfo());
-      String expectedQueue = "root.default";
+      String expectedQueue = "default";
       if(!isCapacityScheduler) {
         expectedQueue = "root." + webserviceUserName;
       }
@@ -1230,7 +1229,10 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
           continue;
         }
         assertResponseStatusCode(Status.OK, response.getStatusInfo());
-        String expectedQueue = "root.test";
+        String expectedQueue = "test";
+        if(!isCapacityScheduler) {
+          expectedQueue = "root.test";
+        }
         if (mediaType.contains(MediaType.APPLICATION_JSON)) {
           verifyAppQueueJson(response, expectedQueue);
         } else {
@@ -1253,7 +1255,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
               .put(ClientResponse.class);
         assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
         if(isCapacityScheduler) {
-          Assert.assertEquals("root.default", app.getQueue());
+          Assert.assertEquals("default", app.getQueue());
         }
         else {
           Assert.assertEquals("root.someuser", app.getQueue());
@@ -1297,7 +1299,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -1327,7 +1329,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -1464,7 +1466,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));

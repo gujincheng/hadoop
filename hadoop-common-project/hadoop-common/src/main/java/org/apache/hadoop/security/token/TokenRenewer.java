@@ -44,37 +44,25 @@ public abstract class TokenRenewer {
    * cancelled.
    * @param token the token being checked
    * @return true if the token may be renewed or cancelled
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public abstract boolean isManaged(Token<?> token) throws IOException;
-
-    /**
-     * Renew the given token.
-     *
-     * @param token the token being checked.
-     * @param conf configuration.
-     *
-     * @return the new expiration time.
-     * @throws IOException raised on errors performing I/O.
-     * @throws InterruptedException thrown when a thread is waiting, sleeping,
-     *                              or otherwise occupied, and the thread is interrupted,
-     *                              either before or during the activity.
-     */
+  
+  /**
+   * Renew the given token.
+   * @return the new expiration time
+   * @throws IOException
+   * @throws InterruptedException 
+   */
   public abstract long renew(Token<?> token,
                              Configuration conf
                              ) throws IOException, InterruptedException;
-
-    /**
-     * Cancel the given token.
-     *
-     * @param token the token being checked.
-     * @param conf configuration.
-     *
-     * @throws IOException raised on errors performing I/O.
-     * @throws InterruptedException thrown when a thread is waiting, sleeping,
-     *                              or otherwise occupied, and the thread is interrupted,
-     *                              either before or during the activity.
-     */
+  
+  /**
+   * Cancel the given token
+   * @throws IOException
+   * @throws InterruptedException 
+   */
   public abstract void cancel(Token<?> token,
                               Configuration conf
                               ) throws IOException, InterruptedException;

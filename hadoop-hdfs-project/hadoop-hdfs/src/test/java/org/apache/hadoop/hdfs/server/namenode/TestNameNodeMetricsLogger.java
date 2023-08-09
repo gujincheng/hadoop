@@ -19,7 +19,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.function.Supplier;
-import org.apache.hadoop.metrics2.annotation.Metrics;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -27,8 +28,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Appender;
+import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.AsyncAppender;
-
+import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -37,6 +39,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.*;
@@ -67,7 +70,8 @@ public class TestNameNodeMetricsLogger {
   @Test
   public void testMetricsLoggerIsAsync() throws IOException {
     makeNameNode(true);
-    org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(NameNode.METRICS_LOG_NAME);
+    org.apache.log4j.Logger logger =
+        ((Log4JLogger) NameNode.MetricsLog).getLogger();
     @SuppressWarnings("unchecked")
     List<Appender> appenders = Collections.list(logger.getAllAppenders());
     assertTrue(appenders.get(0) instanceof AsyncAppender);
@@ -85,8 +89,8 @@ public class TestNameNodeMetricsLogger {
         "DummyMetrics", metricsProvider);
     makeNameNode(true);     // Log metrics early and often.
     final PatternMatchingAppender appender =
-        (PatternMatchingAppender) org.apache.log4j.Logger.getLogger(NameNode.METRICS_LOG_NAME)
-            .getAppender("PATTERNMATCHERAPPENDER");
+        new PatternMatchingAppender("^.*FakeMetric42.*$");
+    addAppender(NameNode.MetricsLog, appender);
 
     // Ensure that the supplied pattern was matched.
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -114,10 +118,16 @@ public class TestNameNodeMetricsLogger {
     return new TestNameNode(conf);
   }
 
+  private void addAppender(Log log, Appender appender) {
+    org.apache.log4j.Logger logger = ((Log4JLogger) log).getLogger();
+    @SuppressWarnings("unchecked")
+    List<Appender> appenders = Collections.list(logger.getAllAppenders());
+    ((AsyncAppender) appenders.get(0)).addAppender(appender);
+  }
+
   /**
    * A NameNode that stubs out the NameSystem for testing.
    */
-  @Metrics(context="dfs")
   private static class TestNameNode extends NameNode {
     @Override
     protected void loadNamesystem(Configuration conf) throws IOException {
@@ -143,4 +153,37 @@ public class TestNameNodeMetricsLogger {
     }
   }
 
+  /**
+   * An appender that matches logged messages against the given
+   * regular expression.
+   */
+  public static class PatternMatchingAppender extends AppenderSkeleton {
+    private final Pattern pattern;
+    private volatile boolean matched;
+
+    public PatternMatchingAppender(String pattern) {
+      this.pattern = Pattern.compile(pattern);
+      this.matched = false;
+    }
+
+    public boolean isMatched() {
+      return matched;
+    }
+
+    @Override
+    protected void append(LoggingEvent event) {
+      if (pattern.matcher(event.getMessage().toString()).matches()) {
+        matched = true;
+      }
+    }
+
+    @Override
+    public void close() {
+    }
+
+    @Override
+    public boolean requiresLayout() {
+      return false;
+    }
+  }
 }

@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.startupprogress;
 
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.*;
 import static org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgressTestHelper.*;
+import static org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType.*;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.junit.Assert.*;
 

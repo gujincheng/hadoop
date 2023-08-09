@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Reso
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceSet;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -74,7 +73,7 @@ public class MockContainer implements Container {
     this.containerTokenIdentifier =
         BuilderUtils.newContainerTokenIdentifier(BuilderUtils
           .newContainerToken(id, 0, "127.0.0.1", 1234, user,
-            Resources.createResource(1024), currentTime + 10000, 123,
+            BuilderUtils.newResource(1024, 1), currentTime + 10000, 123,
             "password".getBytes(), currentTime));
     this.state = ContainerState.NEW;
   }

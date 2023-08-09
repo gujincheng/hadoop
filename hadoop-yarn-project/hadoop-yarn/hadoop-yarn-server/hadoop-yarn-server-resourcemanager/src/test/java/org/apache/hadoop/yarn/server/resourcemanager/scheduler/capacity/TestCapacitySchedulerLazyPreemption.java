@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -619,7 +619,6 @@ public class TestCapacitySchedulerLazyPreemption
     editPolicy.editSchedule();
     Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
     waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 2);
-    rm1.stop();
   }
 
   @Test (timeout = 60000)

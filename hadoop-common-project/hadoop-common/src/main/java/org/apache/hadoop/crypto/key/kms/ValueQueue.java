@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -63,7 +63,7 @@ public class ValueQueue <E> {
      * @param keyName Key name
      * @param keyQueue Queue that needs to be filled
      * @param numValues number of Values to be added to the queue.
-     * @throws IOException raised on errors performing I/O.
+     * @throws IOException
      */
     public void fillQueueForKey(String keyName,
         Queue<E> keyQueue, int numValues) throws IOException;
@@ -268,7 +268,7 @@ public class ValueQueue <E> {
    * Initializes the Value Queues for the provided keys by calling the
    * fill Method with "numInitValues" values
    * @param keyNames Array of key Names
-   * @throws ExecutionException executionException.
+   * @throws ExecutionException
    */
   public void initializeQueuesForKeys(String... keyNames)
       throws ExecutionException {
@@ -285,8 +285,8 @@ public class ValueQueue <E> {
    * function to add 1 value to Queue and then drain it.
    * @param keyName String key name
    * @return E the next value in the Queue
-   * @throws IOException raised on errors performing I/O.
-   * @throws ExecutionException executionException.
+   * @throws IOException
+   * @throws ExecutionException
    */
   public E getNext(String keyName)
       throws IOException, ExecutionException {
@@ -299,18 +299,19 @@ public class ValueQueue <E> {
    * @param keyName the key to drain the Queue for
    */
   public void drain(String keyName) {
-    Runnable e;
-    while ((e = queue.deleteByName(keyName)) != null) {
-      executor.remove(e);
-    }
-    writeLock(keyName);
     try {
-      LinkedBlockingQueue kq = keyQueues.getIfPresent(keyName);
-      if (kq != null) {
-        kq.clear();
+      Runnable e;
+      while ((e = queue.deleteByName(keyName)) != null) {
+        executor.remove(e);
       }
-    } finally {
-      writeUnlock(keyName);
+      writeLock(keyName);
+      try {
+        keyQueues.get(keyName).clear();
+      } finally {
+        writeUnlock(keyName);
+      }
+    } catch (ExecutionException ex) {
+      //NOP
     }
   }
 
@@ -344,8 +345,8 @@ public class ValueQueue <E> {
    * @param keyName String key name
    * @param num Minimum number of values to return.
    * @return {@literal List<E>} values returned
-   * @throws IOException raised on errors performing I/O.
-   * @throws ExecutionException execution exception.
+   * @throws IOException
+   * @throws ExecutionException
    */
   public List<E> getAtMost(String keyName, int num) throws IOException,
       ExecutionException {

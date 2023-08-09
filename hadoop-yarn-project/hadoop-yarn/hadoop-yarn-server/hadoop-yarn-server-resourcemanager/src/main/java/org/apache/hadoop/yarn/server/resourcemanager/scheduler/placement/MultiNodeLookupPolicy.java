@@ -51,8 +51,6 @@ public interface MultiNodeLookupPolicy<N extends SchedulerNode> {
    *
    * @param nodes
    *          a collection working nm's.
-   * @param partition
-   *          node label
    */
   void addAndRefreshNodesSet(Collection<N> nodes, String partition);
 

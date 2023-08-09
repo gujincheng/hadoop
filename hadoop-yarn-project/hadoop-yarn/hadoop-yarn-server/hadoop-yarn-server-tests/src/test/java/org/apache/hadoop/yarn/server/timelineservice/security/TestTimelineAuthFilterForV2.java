@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.security;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -68,23 +68,25 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
+import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineCollector;
 import org.apache.hadoop.yarn.server.timelineservice.collector.NodeTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_HTTP_AUTH_PREFIX;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Tests timeline authentication filter based security for timeline service v2.
  */
+@RunWith(Parameterized.class)
 public class TestTimelineAuthFilterForV2 {
 
   private static final String FOO_USER = "foo";
@@ -104,8 +106,9 @@ public class TestTimelineAuthFilterForV2 {
 
   // First param indicates whether HTTPS access or HTTP access and second param
   // indicates whether it is kerberos access or token based access.
+  @Parameterized.Parameters
   public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{{false, true}, {false, false},
+    return Arrays.asList(new Object[][] {{false, true}, {false, false},
         {true, false}, {true, true}});
   }
 
@@ -114,14 +117,11 @@ public class TestTimelineAuthFilterForV2 {
   private static String sslConfDir;
   private static Configuration conf;
   private static UserGroupInformation nonKerberosUser;
-
   static {
     try {
       nonKerberosUser = UserGroupInformation.getCurrentUser();
-    } catch (IOException e) {
-    }
+    } catch (IOException e) {}
   }
-
   // Indicates whether HTTPS or HTTP access.
   private boolean withSsl;
   // Indicates whether Kerberos based login is used or token based access is
@@ -129,14 +129,13 @@ public class TestTimelineAuthFilterForV2 {
   private boolean withKerberosLogin;
   private NodeTimelineCollectorManager collectorManager;
   private PerNodeTimelineCollectorsAuxService auxService;
-
-  public void initTestTimelineAuthFilterForV2(boolean withSsl,
+  public TestTimelineAuthFilterForV2(boolean withSsl,
       boolean withKerberosLogin) {
     this.withSsl = withSsl;
     this.withKerberosLogin = withKerberosLogin;
   }
 
-  @BeforeAll
+  @BeforeClass
   public static void setup() {
     try {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), TEST_ROOT_DIR);
@@ -152,11 +151,11 @@ public class TestTimelineAuthFilterForV2 {
       conf = new Configuration(false);
       conf.setClass("fs.file.impl", RawLocalFileSystem.class,
           FileSystem.class);
-      conf.setStrings(TIMELINE_HTTP_AUTH_PREFIX + "type",
+      conf.setStrings(TimelineAuthenticationFilterInitializer.PREFIX + "type",
           "kerberos");
-      conf.set(TIMELINE_HTTP_AUTH_PREFIX +
+      conf.set(TimelineAuthenticationFilterInitializer.PREFIX +
           KerberosAuthenticationHandler.PRINCIPAL, httpSpnegoPrincipal);
-      conf.set(TIMELINE_HTTP_AUTH_PREFIX +
+      conf.set(TimelineAuthenticationFilterInitializer.PREFIX +
           KerberosAuthenticationHandler.KEYTAB,
           httpSpnegoKeytabFile.getAbsolutePath());
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
@@ -182,7 +181,7 @@ public class TestTimelineAuthFilterForV2 {
     }
   }
 
-  @BeforeEach
+  @Before
   public void initialize() throws Exception {
     if (withSsl) {
       conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY,
@@ -222,7 +221,7 @@ public class TestTimelineAuthFilterForV2 {
         appId, UserGroupInformation.getCurrentUser().getUserName());
     if (!withKerberosLogin) {
       AppLevelTimelineCollector collector =
-          (AppLevelTimelineCollector) collectorManager.get(appId);
+          (AppLevelTimelineCollector)collectorManager.get(appId);
       Token<TimelineDelegationTokenIdentifier> token =
           collector.getDelegationTokenForApp();
       token.setService(new Text("localhost" + token.getService().toString().
@@ -244,7 +243,7 @@ public class TestTimelineAuthFilterForV2 {
     return client;
   }
 
-  @AfterAll
+  @AfterClass
   public static void tearDown() throws Exception {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
@@ -252,7 +251,7 @@ public class TestTimelineAuthFilterForV2 {
     FileUtil.fullyDelete(TEST_ROOT_DIR);
   }
 
-  @AfterEach
+  @After
   public void destroy() throws Exception {
     if (auxService != null) {
       auxService.stop();
@@ -319,7 +318,7 @@ public class TestTimelineAuthFilterForV2 {
       String entityType, int numEntities) throws Exception {
     TimelineV2Client client = createTimelineClientForUGI(appId);
     try {
-      // Sync call. Results available immediately.
+    // Sync call. Results available immediately.
       client.putEntities(createEntity("entity1", entityType));
       assertEquals(numEntities, entityTypeDir.listFiles().length);
       verifyEntity(entityTypeDir, "entity1", entityType);
@@ -344,10 +343,8 @@ public class TestTimelineAuthFilterForV2 {
     return false;
   }
 
-  @MethodSource("params")
-  @ParameterizedTest
-  void testPutTimelineEntities(boolean withSsl, boolean withKerberosLogin) throws Exception {
-    initTestTimelineAuthFilterForV2(withSsl, withKerberosLogin);
+  @Test
+  public void testPutTimelineEntities() throws Exception {
     final String entityType = ENTITY_TYPE +
         ENTITY_TYPE_SUFFIX.getAndIncrement();
     ApplicationId appId = ApplicationId.newInstance(0, 1);
@@ -367,8 +364,8 @@ public class TestTimelineAuthFilterForV2 {
         }
       });
     } else {
-      assertTrue(publishWithRetries(appId, entityTypeDir, entityType, 1),
-          "Entities should have been published successfully.");
+      assertTrue("Entities should have been published successfully.",
+          publishWithRetries(appId, entityTypeDir, entityType, 1));
 
       AppLevelTimelineCollector collector =
           (AppLevelTimelineCollector) collectorManager.get(appId);
@@ -380,12 +377,12 @@ public class TestTimelineAuthFilterForV2 {
       // published.
       Thread.sleep(1000);
       // Entities should publish successfully after renewal.
-      assertTrue(publishWithRetries(appId, entityTypeDir, entityType, 2),
-          "Entities should have been published successfully.");
+      assertTrue("Entities should have been published successfully.",
+          publishWithRetries(appId, entityTypeDir, entityType, 2));
       assertNotNull(collector);
       verify(collectorManager.getTokenManagerService(), atLeastOnce()).
           renewToken(eq(collector.getDelegationTokenForApp()),
-          any(String.class));
+              any(String.class));
 
       // Wait to ensure lifetime of token expires and ensure its regenerated
       // automatically.
@@ -396,9 +393,8 @@ public class TestTimelineAuthFilterForV2 {
         }
         Thread.sleep(50);
       }
-      assertNotEquals(token,
-          collector.getDelegationTokenForApp(),
-          "Token should have been regenerated.");
+      assertNotEquals("Token should have been regenerated.", token,
+          collector.getDelegationTokenForApp());
       Thread.sleep(1000);
       // Try publishing with the old token in UGI. Publishing should fail due
       // to invalid token.
@@ -406,8 +402,8 @@ public class TestTimelineAuthFilterForV2 {
         publishAndVerifyEntity(appId, entityTypeDir, entityType, 2);
         fail("Exception should have been thrown due to Invalid Token.");
       } catch (YarnException e) {
-        assertTrue(e.getCause().getMessage().contains("InvalidToken"),
-            "Exception thrown should have been due to Invalid Token.");
+        assertTrue("Exception thrown should have been due to Invalid Token.",
+            e.getCause().getMessage().contains("InvalidToken"));
       }
 
       // Update the regenerated token in UGI and retry publishing entities.
@@ -415,10 +411,10 @@ public class TestTimelineAuthFilterForV2 {
           collector.getDelegationTokenForApp();
       regeneratedToken.setService(new Text("localhost" +
           regeneratedToken.getService().toString().substring(
-              regeneratedToken.getService().toString().indexOf(":"))));
+          regeneratedToken.getService().toString().indexOf(":"))));
       UserGroupInformation.getCurrentUser().addToken(regeneratedToken);
-      assertTrue(publishWithRetries(appId, entityTypeDir, entityType, 2),
-          "Entities should have been published successfully.");
+      assertTrue("Entities should have been published successfully.",
+          publishWithRetries(appId, entityTypeDir, entityType, 2));
       // Token was generated twice, once when app collector was created and
       // later after token lifetime expiry.
       verify(collectorManager.getTokenManagerService(), times(2)).
@@ -436,11 +432,11 @@ public class TestTimelineAuthFilterForV2 {
       }
       Thread.sleep(50);
     }
-    assertNotNull(entities, "Error reading entityTypeDir");
+    assertNotNull("Error reading entityTypeDir", entities);
     assertEquals(2, entities.length);
     verifyEntity(entityTypeDir, "entity2", entityType);
     AppLevelTimelineCollector collector =
-        (AppLevelTimelineCollector) collectorManager.get(appId);
+        (AppLevelTimelineCollector)collectorManager.get(appId);
     assertNotNull(collector);
     auxService.removeApplication(appId);
     verify(collectorManager.getTokenManagerService()).cancelToken(
@@ -450,20 +446,24 @@ public class TestTimelineAuthFilterForV2 {
   private static class DummyNodeTimelineCollectorManager extends
       NodeTimelineCollectorManager {
     private volatile int tokenExpiredCnt = 0;
+    DummyNodeTimelineCollectorManager() {
+      super();
+    }
 
     private int getTokenExpiredCnt() {
       return tokenExpiredCnt;
     }
 
     @Override
-    protected TimelineV2DelegationTokenSecretManagerService createTokenManagerService() {
+    protected TimelineV2DelegationTokenSecretManagerService
+        createTokenManagerService() {
       return spy(new TimelineV2DelegationTokenSecretManagerService() {
         @Override
         protected AbstractDelegationTokenSecretManager
-            <TimelineDelegationTokenIdentifier> createTimelineDelegationTokenSecretManager(long
-            secretKeyInterval,
-            long tokenMaxLifetime, long tokenRenewInterval,
-            long tokenRemovalScanInterval) {
+            <TimelineDelegationTokenIdentifier>
+            createTimelineDelegationTokenSecretManager(long secretKeyInterval,
+                long tokenMaxLifetime, long tokenRenewInterval,
+                long tokenRemovalScanInterval) {
           return spy(new TimelineV2DelegationTokenSecretManager(
               secretKeyInterval, tokenMaxLifetime, tokenRenewInterval, 2000L) {
             @Override

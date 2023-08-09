@@ -26,7 +26,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 
 /**
@@ -185,7 +185,6 @@ public class InstrumentedLock implements Lock {
    *
    * @param acquireTime  - timestamp just after acquiring the lock.
    * @param releaseTime - timestamp just before releasing the lock.
-   * @param checkLockHeld checkLockHeld.
    */
   protected void check(long acquireTime, long releaseTime,
        boolean checkLockHeld) {

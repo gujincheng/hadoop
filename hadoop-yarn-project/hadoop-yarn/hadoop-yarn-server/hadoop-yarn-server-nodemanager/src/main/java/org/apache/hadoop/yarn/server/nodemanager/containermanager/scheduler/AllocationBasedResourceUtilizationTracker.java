@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
@@ -34,9 +33,6 @@ public class AllocationBasedResourceUtilizationTracker implements
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AllocationBasedResourceUtilizationTracker.class);
-
-  private static final long LEFT_SHIFT_MB_IN_BYTES = 20;
-  private static final int RIGHT_SHIFT_BYTES_IN_MB = 20;
 
   private ResourceUtilization containersAllocation;
   private ContainerScheduler scheduler;
@@ -84,34 +80,10 @@ public class AllocationBasedResourceUtilizationTracker implements
    */
   @Override
   public boolean hasResourcesAvailable(Container container) {
-    return hasResourcesAvailable(container.getResource());
-  }
-
-  /**
-   * Converts memory in megabytes to bytes by bitwise left-shifting 20 times.
-   * @param memMB the memory in megabytes
-   * @return the memory in bytes
-   */
-  private static long convertMBToBytes(final long memMB) {
-    return memMB << LEFT_SHIFT_MB_IN_BYTES;
-  }
-
-  /**
-   * Converts memory in bytes to megabytes by bitwise right-shifting 20 times.
-   * @param bytes the memory in bytes
-   * @return the memory in megabytes
-   */
-  private static long convertBytesToMB(final long bytes) {
-    return bytes >> RIGHT_SHIFT_BYTES_IN_MB;
-  }
-
-  @Override
-  public boolean hasResourcesAvailable(Resource resource) {
-    long pMemBytes = convertMBToBytes(resource.getMemorySize());
-    final long vmemBytes = (long)
-        (getContainersMonitor().getVmemRatio() * pMemBytes);
-    return hasResourcesAvailable(
-        pMemBytes, vmemBytes, resource.getVirtualCores());
+    long pMemBytes = container.getResource().getMemorySize() * 1024 * 1024L;
+    return hasResourcesAvailable(pMemBytes,
+        (long) (getContainersMonitor().getVmemRatio()* pMemBytes),
+        container.getResource().getVirtualCores());
   }
 
   private boolean hasResourcesAvailable(long pMemBytes, long vMemBytes,
@@ -120,13 +92,13 @@ public class AllocationBasedResourceUtilizationTracker implements
     if (LOG.isDebugEnabled()) {
       LOG.debug("pMemCheck [current={} + asked={} > allowed={}]",
           this.containersAllocation.getPhysicalMemory(),
-          convertBytesToMB(pMemBytes),
-          convertBytesToMB(
-              getContainersMonitor().getPmemAllocatedForContainers()));
+          (pMemBytes >> 20),
+          (getContainersMonitor().getPmemAllocatedForContainers() >> 20));
     }
     if (this.containersAllocation.getPhysicalMemory() +
-        convertBytesToMB(pMemBytes) > convertBytesToMB(
-            getContainersMonitor().getPmemAllocatedForContainers())) {
+        (int) (pMemBytes >> 20) >
+        (int) (getContainersMonitor()
+            .getPmemAllocatedForContainers() >> 20)) {
       return false;
     }
 
@@ -134,17 +106,15 @@ public class AllocationBasedResourceUtilizationTracker implements
       LOG.debug("before vMemCheck" +
               "[isEnabled={}, current={} + asked={} > allowed={}]",
           getContainersMonitor().isVmemCheckEnabled(),
-          this.containersAllocation.getVirtualMemory(),
-          convertBytesToMB(vMemBytes),
-          convertBytesToMB(
-              getContainersMonitor().getVmemAllocatedForContainers()));
+          this.containersAllocation.getVirtualMemory(), (vMemBytes >> 20),
+          (getContainersMonitor().getVmemAllocatedForContainers() >> 20));
     }
     // Check virtual memory.
     if (getContainersMonitor().isVmemCheckEnabled() &&
         this.containersAllocation.getVirtualMemory() +
-            convertBytesToMB(vMemBytes) >
-            convertBytesToMB(getContainersMonitor()
-                .getVmemAllocatedForContainers())) {
+            (int) (vMemBytes >> 20) >
+            (int) (getContainersMonitor()
+                .getVmemAllocatedForContainers() >> 20)) {
       return false;
     }
 

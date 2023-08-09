@@ -36,6 +36,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,8 +50,6 @@ import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
@@ -174,9 +173,6 @@ public class JsonSerialization<T> {
   @SuppressWarnings("unchecked")
   public synchronized T load(File jsonFile)
       throws IOException, JsonParseException, JsonMappingException {
-    if (!jsonFile.exists()) {
-      throw new FileNotFoundException("No such file: " + jsonFile);
-    }
     if (!jsonFile.isFile()) {
       throw new FileNotFoundException("Not a file: " + jsonFile);
     }
@@ -186,7 +182,7 @@ public class JsonSerialization<T> {
     try {
       return mapper.readValue(jsonFile, classType);
     } catch (IOException e) {
-      LOG.warn("Exception while parsing json file {}", jsonFile, e);
+      LOG.error("Exception while parsing json file {}", jsonFile, e);
       throw e;
     }
   }
@@ -267,9 +263,7 @@ public class JsonSerialization<T> {
     if (status != null && status.getLen() == 0) {
       throw new EOFException("No data in " + path);
     }
-    FutureDataInputStreamBuilder builder = fs.openFile(path)
-        .opt(FS_OPTION_OPENFILE_READ_POLICY,
-            FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE);
+    FutureDataInputStreamBuilder builder = fs.openFile(path);
     if (status != null) {
       builder.withFileStatus(status);
     }
@@ -287,8 +281,7 @@ public class JsonSerialization<T> {
    * @param fs filesystem
    * @param path path
    * @param overwrite should any existing file be overwritten
-   * @param instance instance
-   * @throws IOException IO exception.
+   * @throws IOException IO exception
    */
   public void save(FileSystem fs, Path path, T instance,
       boolean overwrite) throws
@@ -297,12 +290,11 @@ public class JsonSerialization<T> {
   }
 
   /**
-   * Write the JSON as bytes, then close the stream.
-   * @param instance instance to write
+   * Write the JSON as bytes, then close the file.
    * @param dataOutputStream an output stream that will always be closed
    * @throws IOException on any failure
    */
-  public void writeJsonAsBytes(T instance,
+  private void writeJsonAsBytes(T instance,
       OutputStream dataOutputStream) throws IOException {
     try {
       dataOutputStream.write(toBytes(instance));
@@ -326,7 +318,6 @@ public class JsonSerialization<T> {
    * @param bytes byte array
    * @throws IOException IO problems
    * @throws EOFException not enough data
-   * @return byte array.
    */
   public T fromBytes(byte[] bytes) throws IOException {
     return fromJson(new String(bytes, 0, bytes.length, UTF_8));

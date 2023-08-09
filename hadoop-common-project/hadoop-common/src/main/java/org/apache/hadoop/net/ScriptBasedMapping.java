@@ -124,13 +124,12 @@ public class ScriptBasedMapping extends CachedDNSToSwitchMapping {
   }
 
   /**
-   * {@inheritDoc}.
+   * {@inheritDoc}
    * <p>
    * This will get called in the superclass constructor, so a check is needed
    * to ensure that the raw mapping is defined before trying to relaying a null
    * configuration.
-   * </p>
-   * @param conf input Configuration.
+   * @param conf
    */
   @Override
   public void setConf(Configuration conf) {
@@ -213,9 +212,8 @@ public class ScriptBasedMapping extends CachedDNSToSwitchMapping {
     /**
      * Build and execute the resolution command. The command is
      * executed in the directory specified by the system property
-     * "user.dir" if set; otherwise the current working directory is used.
+     * "user.dir" if set; otherwise the current working directory is used
      * @param args a list of arguments
-     * @param commandScriptName input commandScriptName.
      * @return null if the number of arguments is out of range,
      * or the output of the command.
      */

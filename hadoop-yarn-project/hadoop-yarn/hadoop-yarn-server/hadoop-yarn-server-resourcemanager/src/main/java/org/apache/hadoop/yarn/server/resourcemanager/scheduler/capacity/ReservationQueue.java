@@ -33,16 +33,15 @@ import org.slf4j.LoggerFactory;
  *
  */
 public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ReservationQueue.class);
+
+  private static final Logger LOG = LoggerFactory
+      .getLogger(ReservationQueue.class);
 
   private PlanQueue parent;
 
-  public ReservationQueue(CapacitySchedulerQueueContext queueContext, String queueName,
+  public ReservationQueue(CapacitySchedulerContext cs, String queueName,
       PlanQueue parent) throws IOException {
-    super(queueContext, queueName, parent, null);
-    super.setupQueueConfigs(queueContext.getClusterResource());
-
+    super(cs, queueName, parent, null);
     // the following parameters are common to all reservation in the plan
     updateQuotas(parent.getUserLimitForReservation(),
         parent.getUserLimitFactor(),
@@ -76,11 +75,7 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
     }
   }
 
-  public void initializeEntitlements() throws SchedulerDynamicEditException {
-    setEntitlement(new QueueEntitlement(1.0f, 1.0f));
-  }
-
-  private void updateQuotas(float userLimit, float userLimitFactor,
+  private void updateQuotas(int userLimit, float userLimitFactor,
       int maxAppsForReservation, int maxAppsPerUserForReservation) {
     setUserLimit(userLimit);
     setUserLimitFactor(userLimitFactor);
@@ -89,7 +84,8 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
   }
 
   @Override
-  protected void setupConfigurableCapacities() {
-    super.updateAbsoluteCapacities();
+  protected void setupConfigurableCapacities(CapacitySchedulerConfiguration
+      configuration) {
+    super.setupConfigurableCapacities(queueCapacities);
   }
 }

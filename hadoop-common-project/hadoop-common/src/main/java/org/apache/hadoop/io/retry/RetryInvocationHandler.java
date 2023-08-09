@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.io.retry;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.retry.FailoverProxyProvider.ProxyInfo;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
@@ -35,7 +35,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Map;
 
 /**
@@ -45,10 +44,6 @@ import java.util.Map;
 public class RetryInvocationHandler<T> implements RpcInvocationHandler {
   public static final Logger LOG = LoggerFactory.getLogger(
       RetryInvocationHandler.class);
-
-  @VisibleForTesting
-  public static final ThreadLocal<Boolean> SET_CALL_ID_FOR_TEST =
-      ThreadLocal.withInitial(() -> true);
 
   static class Call {
     private final Method method;
@@ -163,7 +158,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
     }
 
     Object invokeMethod() throws Throwable {
-      if (isRpc && SET_CALL_ID_FOR_TEST.get()) {
+      if (isRpc) {
         Client.setCallIdAndRetryCount(callId, counters.retries,
             retryInvocationHandler.asyncCallHandler);
       }
@@ -317,8 +312,6 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
 
   private volatile boolean hasSuccessfulCall = false;
 
-  private HashSet<String> failedAtLeastOnce = new HashSet<>();
-
   private final RetryPolicy defaultPolicy;
   private final Map<String,RetryPolicy> methodNameToPolicyMap;
 
@@ -391,36 +384,28 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
       throw retryInfo.getFailException();
     }
 
-    log(method, retryInfo.isFailover(), counters.failovers, counters.retries, retryInfo.delay, e);
+    log(method, retryInfo.isFailover(), counters.failovers, retryInfo.delay, e);
     return retryInfo;
   }
 
-  private void log(final Method method, final boolean isFailover, final int failovers,
-      final int retries, final long delay, final Exception ex) {
-    boolean info = true;
-    // If this is the first failover to this proxy, skip logging at INFO level
-    if (!failedAtLeastOnce.contains(proxyDescriptor.getProxyInfo().toString()))
-    {
-      failedAtLeastOnce.add(proxyDescriptor.getProxyInfo().toString());
-
-      // If successful calls were made to this proxy, log info even for first
-      // failover
-      info = hasSuccessfulCall || asyncCallHandler.hasSuccessfulCall();
-      if (!info && !LOG.isDebugEnabled()) {
-        return;
-      }
+  private void log(final Method method, final boolean isFailover,
+      final int failovers, final long delay, final Exception ex) {
+    // log info if this has made some successful calls or
+    // this is not the first failover
+    final boolean info = hasSuccessfulCall || failovers != 0
+        || asyncCallHandler.hasSuccessfulCall();
+    if (!info && !LOG.isDebugEnabled()) {
+      return;
     }
 
     final StringBuilder b = new StringBuilder()
-        .append(ex)
-        .append(", while invoking ")
+        .append(ex + ", while invoking ")
         .append(proxyDescriptor.getProxyInfo().getString(method.getName()));
     if (failovers > 0) {
       b.append(" after ").append(failovers).append(" failover attempts");
     }
     b.append(isFailover? ". Trying to failover ": ". Retrying ");
     b.append(delay > 0? "after sleeping for " + delay + "ms.": "immediately.");
-    b.append(" Current retry count: ").append(retries).append(".");
 
     if (info) {
       LOG.info(b.toString());

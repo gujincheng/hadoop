@@ -528,11 +528,4 @@ public class TestPath {
     }
 
   }
-
-  @Test(timeout = 30000)
-  public void testSuffixFromRoot() {
-    Path root = new Path("/");
-    Assert.assertNull(root.getParent());
-    Assert.assertEquals(new Path("/bar"), root.suffix("bar"));
-  }
 }

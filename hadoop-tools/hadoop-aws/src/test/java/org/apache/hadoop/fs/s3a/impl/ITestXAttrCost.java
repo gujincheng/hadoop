@@ -58,7 +58,8 @@ public class ITestXAttrCost extends AbstractS3ACostTest {
   private static final int GET_METADATA_ON_DIR = GET_METADATA_ON_OBJECT * 2;
 
   public ITestXAttrCost() {
-    super(true);
+    // no parameterization here
+    super(false, true, false);
   }
 
   @Test

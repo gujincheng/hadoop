@@ -53,7 +53,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * A service to initialize a
@@ -257,7 +257,6 @@ public class StateStoreService extends CompositeService {
    * Get the record store in this State Store for a given interface.
    *
    * @param recordStoreClass Class of the record store.
-   * @param <T> The type of the record store.
    * @return Registered record store or null if not found.
    */
   public <T extends RecordStore<?>> T getRegisteredRecordStore(
@@ -271,17 +270,6 @@ public class StateStoreService extends CompositeService {
       }
     }
     return null;
-  }
-
-  /**
-   * Get the list of all RecordStores.
-   *
-   * @param <T> The type of the record stores that are returned.
-   * @return a list of each RecordStore.
-   */
-  @SuppressWarnings("unchecked")
-  public <T extends RecordStore<? extends BaseRecord>> List<T> getRecordStores() {
-    return new ArrayList<>((Collection<T>) recordStores.values());
   }
 
   /**
@@ -343,7 +331,7 @@ public class StateStoreService extends CompositeService {
   }
 
   /**
-   * Fetch a unique identifier for this state store instance. Typically, it is
+   * Fetch a unique identifier for this state store instance. Typically it is
    * the address of the router.
    *
    * @return Unique identifier for this store.
@@ -435,7 +423,7 @@ public class StateStoreService extends CompositeService {
     }
     if (success) {
       // Uses local time, not driver time.
-      this.cacheLastUpdateTime = Time.monotonicNow();
+      this.cacheLastUpdateTime = Time.now();
     }
   }
 

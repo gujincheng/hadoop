@@ -22,32 +22,32 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
 
+@RunWith(Parameterized.class)
 public class TestResourceCalculator {
   private static final String EXTRA_RESOURCE_NAME = "test";
 
-  private ResourceCalculator resourceCalculator;
+  private final ResourceCalculator resourceCalculator;
 
+  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> getParameters() {
-    return Arrays.asList(new Object[][]{
-        {"DefaultResourceCalculator", new DefaultResourceCalculator()},
-        {"DominantResourceCalculator", new DominantResourceCalculator()}});
+    return Arrays.asList(new Object[][] {
+        { "DefaultResourceCalculator", new DefaultResourceCalculator() },
+        { "DominantResourceCalculator", new DominantResourceCalculator() } });
   }
 
-  @BeforeEach
+  @Before
   public void setupNoExtraResource() {
     // This has to run before each test because we don't know when
     // setupExtraResource() might be called
@@ -61,38 +61,34 @@ public class TestResourceCalculator {
     ResourceUtils.resetResourceTypes(conf);
   }
 
-  public void initTestResourceCalculator(String name, ResourceCalculator rs) {
+  public TestResourceCalculator(String name, ResourceCalculator rs) {
     this.resourceCalculator = rs;
   }
-
-  @MethodSource("getParameters")
-  @ParameterizedTest(name = "{0}")
-  @Timeout(10000)
-  void testFitsIn(String name, ResourceCalculator rs) {
-
-    initTestResourceCalculator(name, rs);
+  
+  @Test(timeout = 10000)
+  public void testFitsIn() {
 
     if (resourceCalculator instanceof DefaultResourceCalculator) {
-      assertTrue(resourceCalculator.fitsIn(
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(2, 1)));
-      assertTrue(resourceCalculator.fitsIn(
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(2, 2)));
-      assertTrue(resourceCalculator.fitsIn(
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(1, 2)));
-      assertTrue(resourceCalculator.fitsIn(
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(1, 1)));
-      assertFalse(resourceCalculator.fitsIn(
+      Assert.assertFalse(resourceCalculator.fitsIn(
           Resource.newInstance(2, 1), Resource.newInstance(1, 2)));
     } else if (resourceCalculator instanceof DominantResourceCalculator) {
-      assertFalse(resourceCalculator.fitsIn(
+      Assert.assertFalse(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(2, 1)));
-      assertTrue(resourceCalculator.fitsIn(
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(2, 2)));
-      assertTrue(resourceCalculator.fitsIn(
+      Assert.assertTrue(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(1, 2)));
-      assertFalse(resourceCalculator.fitsIn(
+      Assert.assertFalse(resourceCalculator.fitsIn(
           Resource.newInstance(1, 2), Resource.newInstance(1, 1)));
-      assertFalse(resourceCalculator.fitsIn(
+      Assert.assertFalse(resourceCalculator.fitsIn(
           Resource.newInstance(2, 1), Resource.newInstance(1, 2)));
     }
   }
@@ -125,22 +121,22 @@ public class TestResourceCalculator {
       int expected) {
     int actual = resourceCalculator.compare(cluster, res1, res2);
 
-    assertEquals(expected, actual, String.format("Resource comparison did not give the expected "
-        + "result for %s v/s %s", res1.toString(), res2.toString()));
+    assertEquals(String.format("Resource comparison did not give the expected "
+        + "result for %s v/s %s", res1.toString(), res2.toString()),
+        expected, actual);
 
     if (expected != 0) {
       // Try again with args in the opposite order and the negative of the
       // expected result.
       actual = resourceCalculator.compare(cluster, res2, res1);
-      assertEquals(expected * -1, actual, String.format("Resource comparison did not give the "
-          + "expected result for %s v/s %s", res2.toString(), res1.toString()));
+      assertEquals(String.format("Resource comparison did not give the "
+          + "expected result for %s v/s %s", res2.toString(), res1.toString()),
+          expected * -1, actual);
     }
   }
 
-  @MethodSource("getParameters")
-  @ParameterizedTest(name = "{0}")
-  void testCompareWithOnlyMandatory(String name, ResourceCalculator rs) {
-    initTestResourceCalculator(name, rs);
+  @Test
+  public void testCompareWithOnlyMandatory() {
     // This test is necessary because there are optimizations that are only
     // triggered when only the mandatory resources are configured.
 
@@ -177,10 +173,8 @@ public class TestResourceCalculator {
     assertComparison(cluster, newResource(3, 1), newResource(3, 0), 1);
   }
 
-  @MethodSource("getParameters")
-  @ParameterizedTest(name = "{0}")
-  void testCompare(String name, ResourceCalculator rs) {
-    initTestResourceCalculator(name, rs);
+  @Test
+  public void testCompare() {
     // Test with 3 resources
     setupExtraResource();
 
@@ -215,7 +209,7 @@ public class TestResourceCalculator {
   /**
    * Verify compare when one or all the resource are zero.
    */
-  private void testCompareDominantZeroValueResource() {
+  private void testCompareDominantZeroValueResource(){
     Resource cluster = newResource(4L, 4, 0);
     assertComparison(cluster, newResource(2, 1, 1), newResource(1, 1, 2), 1);
     assertComparison(cluster, newResource(2, 2, 1), newResource(1, 2, 2), 1);
@@ -267,11 +261,8 @@ public class TestResourceCalculator {
     assertComparison(cluster, newResource(3, 1, 1), newResource(3, 0, 0), 1);
   }
 
-  @MethodSource("getParameters")
-  @ParameterizedTest(name = "{0}")
-  @Timeout(10000)
-  void testCompareWithEmptyCluster(String name, ResourceCalculator rs) {
-    initTestResourceCalculator(name, rs);
+  @Test(timeout = 10000)
+  public void testCompareWithEmptyCluster() {
     Resource clusterResource = Resource.newInstance(0, 0);
 
     // For lhs == rhs
@@ -325,39 +316,35 @@ public class TestResourceCalculator {
       boolean greaterThan, boolean greaterThanOrEqual, Resource max,
       Resource min) {
 
-    assertEquals(lessThan,
-        Resources.lessThan(resourceCalculator, clusterResource, lhs, rhs),
-        "Less Than operation is wrongly calculated.");
+    assertEquals("Less Than operation is wrongly calculated.", lessThan,
+        Resources.lessThan(resourceCalculator, clusterResource, lhs, rhs));
 
     assertEquals(
+        "Less Than Or Equal To operation is wrongly calculated.",
         lessThanOrEqual, Resources.lessThanOrEqual(resourceCalculator,
-            clusterResource, lhs, rhs), "Less Than Or Equal To operation is wrongly calculated.");
+            clusterResource, lhs, rhs));
 
-    assertEquals(greaterThan,
-        Resources.greaterThan(resourceCalculator, clusterResource, lhs, rhs),
-        "Greater Than operation is wrongly calculated.");
+    assertEquals("Greater Than operation is wrongly calculated.",
+        greaterThan,
+        Resources.greaterThan(resourceCalculator, clusterResource, lhs, rhs));
 
-    assertEquals(greaterThanOrEqual,
-        Resources.greaterThanOrEqual(resourceCalculator, clusterResource, lhs, rhs),
-        "Greater Than Or Equal To operation is wrongly calculated.");
+    assertEquals(
+        "Greater Than Or Equal To operation is wrongly calculated.",
+        greaterThanOrEqual, Resources.greaterThanOrEqual(resourceCalculator,
+            clusterResource, lhs, rhs));
 
-    assertEquals(max,
-        Resources.max(resourceCalculator, clusterResource, lhs, rhs),
-        "Max(value) Operation wrongly calculated.");
+    assertEquals("Max(value) Operation wrongly calculated.", max,
+        Resources.max(resourceCalculator, clusterResource, lhs, rhs));
 
-    assertEquals(min,
-        Resources.min(resourceCalculator, clusterResource, lhs, rhs),
-        "Min(value) operation is wrongly calculated.");
+    assertEquals("Min(value) operation is wrongly calculated.", min,
+        Resources.min(resourceCalculator, clusterResource, lhs, rhs));
   }
 
   /**
    * Test resource normalization.
    */
-  @MethodSource("getParameters")
-  @ParameterizedTest(name = "{0}")
-  @Timeout(10000)
-  void testNormalize(String name, ResourceCalculator rs) {
-    initTestResourceCalculator(name, rs);
+  @Test(timeout = 10000)
+  public void testNormalize() {
     // requested resources value cannot be an arbitrary number.
     Resource ask = Resource.newInstance(1111, 2);
     Resource min = Resource.newInstance(1024, 1);
@@ -433,28 +420,22 @@ public class TestResourceCalculator {
     }
   }
 
-  @MethodSource("getParameters")
-  @ParameterizedTest(name = "{0}")
-  void testDivisionByZeroRatioDenominatorIsZero(String name, ResourceCalculator rs) {
-    initTestResourceCalculator(name, rs);
+  @Test
+  public void testDivisionByZeroRatioDenominatorIsZero() {
     float ratio = resourceCalculator.ratio(newResource(1, 1), newResource(0,
         0));
     assertEquals(Float.POSITIVE_INFINITY, ratio, 0.00001);
   }
 
-  @MethodSource("getParameters")
-  @ParameterizedTest(name = "{0}")
-  void testDivisionByZeroRatioNumeratorAndDenominatorIsZero(String name, ResourceCalculator rs) {
-    initTestResourceCalculator(name, rs);
+  @Test
+  public void testDivisionByZeroRatioNumeratorAndDenominatorIsZero() {
     float ratio = resourceCalculator.ratio(newResource(0, 0), newResource(0,
         0));
     assertEquals(0.0, ratio, 0.00001);
   }
 
-  @MethodSource("getParameters")
-  @ParameterizedTest(name = "{0}")
-  void testFitsInDiagnosticsCollector(String name, ResourceCalculator rs) {
-    initTestResourceCalculator(name, rs);
+  @Test
+  public void testFitsInDiagnosticsCollector() {
     if (resourceCalculator instanceof DefaultResourceCalculator) {
       // required-resource = (0, 0)
       assertEquals(ImmutableSet.of(),
@@ -570,10 +551,8 @@ public class TestResourceCalculator {
     }
   }
 
-  @MethodSource("getParameters")
-  @ParameterizedTest(name = "{0}")
-  void testRatioWithNoExtraResource(String name, ResourceCalculator rs) {
-    initTestResourceCalculator(name, rs);
+  @Test
+  public void testRatioWithNoExtraResource() {
     //setup
     Resource resource1 = newResource(1, 1);
     Resource resource2 = newResource(2, 1);
@@ -591,10 +570,8 @@ public class TestResourceCalculator {
     }
   }
 
-  @MethodSource("getParameters")
-  @ParameterizedTest(name = "{0}")
-  void testRatioWithExtraResource(String name, ResourceCalculator rs) {
-    initTestResourceCalculator(name, rs);
+  @Test
+  public void testRatioWithExtraResource() {
     //setup
     setupExtraResource();
     Resource resource1 = newResource(1, 1, 2);

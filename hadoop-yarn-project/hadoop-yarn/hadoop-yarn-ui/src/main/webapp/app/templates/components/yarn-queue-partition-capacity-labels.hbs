@@ -30,18 +30,6 @@
     <span class="label-value">{{data.absoluteMaxCapacity}}%</span>
   </span>
 </div>
-{{#if data.isWeightMode}}
-<div class="top-1">
-  <span class="yarn-label secondary">
-    <span class="label-key">weight</span>
-    <span class="label-value">{{data.weight}}</span>
-  </span>
-  <span class="yarn-label secondary">
-    <span class="label-key">normalized weight</span>
-    <span class="label-value">{{data.normalizedWeight}}</span>
-  </span>
-</div>
-{{else}}
 <div class="top-1">
   <span class="yarn-label secondary">
     <span class="label-key">configured capacity</span>
@@ -52,7 +40,6 @@
     <span class="label-value">{{data.maxCapacity}}%</span>
   </span>
 </div>
-{{/if}}
 {{#if data.isLeafQueue}}
 <div class="top-1">
   <span class="yarn-label secondary">
@@ -62,13 +49,6 @@
   <span class="yarn-label secondary">
     <span class="label-key">user limit factor</span>
     <span class="label-value">{{data.userLimitFactor}}</span>
-  </span>
-</div>
-{{/if}}
-{{#if data.isFlexibleDynamicQueue}}
-<div class="top-1">
-  <span class="yarn-label secondary">
-    <span class="label-key">flexible dynamic queue</span>
   </span>
 </div>
 {{/if}}

@@ -103,7 +103,7 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
   }
 
   @Override
-  @Test(timeout = 60000)
+  @Test
   public void testAppend() throws IOException {
     AppendTestUtil.testAppend(fs, new Path("/append/f"));
   }

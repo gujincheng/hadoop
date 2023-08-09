@@ -18,13 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
-import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -155,8 +152,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -448,7 +443,7 @@ public class ResourceManager extends CompositeService
 
   protected QueueACLsManager createQueueACLsManager(ResourceScheduler scheduler,
       Configuration conf) {
-    return QueueACLsManager.getQueueACLsManager(scheduler, conf);
+    return new QueueACLsManager(scheduler, conf);
   }
 
   @VisibleForTesting
@@ -472,48 +467,18 @@ public class ResourceManager extends CompositeService
     } else {
       dispatcher = new EventDispatcher(this.scheduler, dispatcherName);
     }
-    dispatcher.
-        setMetrics(GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), SchedulerEventType.class));
+
     return dispatcher;
   }
 
   protected Dispatcher createDispatcher() {
     AsyncDispatcher dispatcher = new AsyncDispatcher("RM Event dispatcher");
-
-    // Add 4 busy event types.
-    GenericEventTypeMetrics
-        nodesListManagerEventTypeMetrics =
+    GenericEventTypeMetrics genericEventTypeMetrics =
         GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), NodesListManagerEventType.class);
-    dispatcher.addMetrics(nodesListManagerEventTypeMetrics,
-        nodesListManagerEventTypeMetrics
-            .getEnumClass());
-
-    GenericEventTypeMetrics
-        rmNodeEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), RMNodeEventType.class);
-    dispatcher.addMetrics(rmNodeEventTypeMetrics,
-        rmNodeEventTypeMetrics
-            .getEnumClass());
-
-    GenericEventTypeMetrics
-        rmAppEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), RMAppEventType.class);
-    dispatcher.addMetrics(rmAppEventTypeMetrics,
-        rmAppEventTypeMetrics
-            .getEnumClass());
-
-    GenericEventTypeMetrics
-        rmAppAttemptEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), RMAppAttemptEventType.class);
-    dispatcher.addMetrics(rmAppAttemptEventTypeMetrics,
-        rmAppAttemptEventTypeMetrics
-            .getEnumClass());
-
+        create(dispatcher.getName(), NodesListManagerEventType.class);
+    // We can add more
+    dispatcher.addMetrics(genericEventTypeMetrics,
+        genericEventTypeMetrics.getEnumClass());
     return dispatcher;
   }
 
@@ -704,32 +669,6 @@ public class ResourceManager extends CompositeService
           + ", " + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS + "="
           + heartbeatIntvl);
     }
-
-    if (HAUtil.isFederationEnabled(conf)) {
-      /*
-       * In Yarn Federation, we need UAMs in secondary sub-clusters to stay
-       * alive when the next attempt AM in home sub-cluster gets launched. If
-       * the previous AM died because the node is lost after NM timeout. It will
-       * already be too late if AM timeout is even shorter.
-       */
-      String rmAmExpiryIntervalMS = conf.get(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS);
-      long amExpireIntvl;
-      if (NumberUtils.isDigits(rmAmExpiryIntervalMS)) {
-        amExpireIntvl = conf.getLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS);
-      } else {
-        amExpireIntvl = conf.getTimeDuration(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS, TimeUnit.MILLISECONDS);
-      }
-
-      if (amExpireIntvl <= expireIntvl) {
-        throw new YarnRuntimeException("When Yarn Federation is enabled, "
-            + "AM expiry interval should be no less than NM expiry interval, "
-            + YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS + "=" + amExpireIntvl
-            + ", " + YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS + "="
-            + expireIntvl);
-      }
-    }
   }
 
   /**
@@ -746,7 +685,6 @@ public class ResourceManager extends CompositeService
     private boolean fromActive = false;
     private StandByTransitionRunnable standByTransitionRunnable;
     private RMNMInfo rmnmInfo;
-    private ScheduledThreadPoolExecutor eventQueueMetricExecutor;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -944,7 +882,6 @@ public class ResourceManager extends CompositeService
         }
         federationStateStoreService = createFederationStateStoreService();
         addIfService(federationStateStoreService);
-        rmAppManager.setFederationStateStoreService(federationStateStoreService);
         LOG.info("Initialized Federation membership.");
       }
 
@@ -969,23 +906,6 @@ public class ResourceManager extends CompositeService
         rmContext.setVolumeManager(volumeManager);
         addIfService(volumeManager);
       }
-
-      eventQueueMetricExecutor = new ScheduledThreadPoolExecutor(1,
-              new ThreadFactoryBuilder().
-              setDaemon(true).setNameFormat("EventQueueSizeMetricThread").
-              build());
-      eventQueueMetricExecutor.scheduleAtFixedRate(new Runnable() {
-        @Override
-        public void run() {
-          int rmEventQueueSize = ((AsyncDispatcher)getRMContext().
-              getDispatcher()).getEventQueueSize();
-          ClusterMetrics.getMetrics().setRmEventQueueSize(rmEventQueueSize);
-          int schedulerEventQueueSize = ((EventDispatcher)schedulerDispatcher).
-              getEventQueueSize();
-          ClusterMetrics.getMetrics().
-              setSchedulerEventQueueSize(schedulerEventQueueSize);
-        }
-      }, 1, 1, TimeUnit.SECONDS);
 
       super.serviceInit(conf);
     }
@@ -1024,13 +944,6 @@ public class ResourceManager extends CompositeService
           RMState state = rmStore.loadState();
           recover(state);
           LOG.info("Recovery ended");
-
-          // Make sure that the App is cleaned up after the RM memory is restored.
-          if (HAUtil.isFederationEnabled(conf)) {
-            federationStateStoreService.
-                createCleanUpFinishApplicationThread("Recovery");
-          }
-
         } catch (Exception e) {
           // the Exception from loadState() needs to be handled for
           // HA and we need to give up master status if we got fenced
@@ -1068,9 +981,6 @@ public class ResourceManager extends CompositeService
         } catch (Exception e) {
           LOG.error("Error closing store.", e);
         }
-      }
-      if (eventQueueMetricExecutor != null) {
-        eventQueueMetricExecutor.shutdownNow();
       }
 
     }
@@ -1476,12 +1386,7 @@ public class ResourceManager extends CompositeService
         IsResourceManagerActiveServlet.PATH_SPEC,
         IsResourceManagerActiveServlet.class);
 
-    try {
-      webApp = builder.start(new RMWebApp(this), uiWebAppContext);
-    } catch (WebAppException e) {
-      webApp = e.getWebApp();
-      throw e;
-    }
+    webApp = builder.start(new RMWebApp(this), uiWebAppContext);
   }
 
   private String getWebAppsPath(String appName) {
@@ -1684,7 +1589,6 @@ public class ResourceManager extends CompositeService
 
   /**
    * Create RMDelegatedNodeLabelsUpdater based on configuration.
-   * @return RMDelegatedNodeLabelsUpdater.
    */
   protected RMDelegatedNodeLabelsUpdater createRMDelegatedNodeLabelsUpdater() {
     if (conf.getBoolean(YarnConfiguration.NODE_LABELS_ENABLED,
@@ -1841,9 +1745,9 @@ public class ResourceManager extends CompositeService
   }
 
   /**
-   * Retrieve RM bind address from configuration.
+   * Retrieve RM bind address from configuration
    * 
-   * @param conf Configuration.
+   * @param conf
    * @return InetSocketAddress
    */
   public static InetSocketAddress getBindAddress(Configuration conf) {
@@ -1854,8 +1758,8 @@ public class ResourceManager extends CompositeService
   /**
    * Deletes the RMStateStore
    *
-   * @param conf Configuration.
-   * @throws Exception error occur.
+   * @param conf
+   * @throws Exception
    */
   @VisibleForTesting
   static void deleteRMStateStore(Configuration conf) throws Exception {
@@ -1906,8 +1810,8 @@ public class ResourceManager extends CompositeService
       confStore.initialize(conf, conf, rmContext);
       confStore.format();
     } else {
-      System.out.println(String.format("Scheduler Configuration format only " +
-          "supported by %s.", MutableConfScheduler.class.getSimpleName()));
+      System.out.println("Scheduler Configuration format only " +
+          "supported by MutableConfScheduler.");
     }
   }
 

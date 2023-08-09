@@ -35,14 +35,13 @@
 #endif
 
 PmdkLibLoader * pmdkLoader;
-// 1 represents loaded. Otherwise, not loaded.
-int pmdkLoaded;
 
 /**
  *  pmdk_load.c
  *  Utility of loading the libpmem library and the required functions.
  *  Building of this codes won't rely on any libpmem source codes, but running
  *  into this will rely on successfully loading of the dynamic library.
+ *
  */
 
 static const char* load_functions() {
@@ -57,10 +56,6 @@ static const char* load_functions() {
   return NULL;
 }
 
-/**
- * It should be idempotent to call this function for checking
- * whether PMDK lib is successfully loaded.
- */
 void load_pmdk_lib(char* err, size_t err_len) {
   const char* errMsg;
   const char* library = NULL;
@@ -72,13 +67,10 @@ void load_pmdk_lib(char* err, size_t err_len) {
 
   err[0] = '\0';
 
-  if (pmdkLoaded == 1) {
+  if (pmdkLoader != NULL) {
     return;
   }
-
-  if (pmdkLoader == NULL) {
-    pmdkLoader = calloc(1, sizeof(PmdkLibLoader));
-  }
+  pmdkLoader = calloc(1, sizeof(PmdkLibLoader));
 
   // Load PMDK library
   #ifdef UNIX
@@ -111,5 +103,4 @@ void load_pmdk_lib(char* err, size_t err_len) {
   }
 
   pmdkLoader->libname = strdup(library);
-  pmdkLoaded = 1;
 }

@@ -18,12 +18,18 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.concurrent.Future;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ExitUtil;
@@ -41,16 +47,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorCon
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class TestPerNodeTimelineCollectorsAuxService {
   private ApplicationAttemptId appAttemptId;
@@ -71,7 +70,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
         1000L);
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Shell.ExitCodeException {
     if (auxService != null) {
       auxService.stop();
@@ -79,7 +78,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
   }
 
   @Test
-  void testAddApplication() throws Exception {
+  public void testAddApplication() throws Exception {
     auxService = createCollectorAndAddApplication();
     // auxService should have a single app
     assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
@@ -87,7 +86,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
   }
 
   @Test
-  void testAddApplicationNonAMContainer() throws Exception {
+  public void testAddApplicationNonAMContainer() throws Exception {
     auxService = createCollector();
 
     ContainerId containerId = getContainerId(2L); // not an AM
@@ -100,7 +99,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
   }
 
   @Test
-  void testRemoveApplication() throws Exception {
+  public void testRemoveApplication() throws Exception {
     auxService = createCollectorAndAddApplication();
     // auxService should have a single app
     assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
@@ -119,7 +118,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
   }
 
   @Test
-  void testRemoveApplicationNonAMContainer() throws Exception {
+  public void testRemoveApplicationNonAMContainer() throws Exception {
     auxService = createCollectorAndAddApplication();
     // auxService should have a single app
     assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()));
@@ -134,9 +133,8 @@ public class TestPerNodeTimelineCollectorsAuxService {
     auxService.close();
   }
 
-  @Test
-  @Timeout(60000)
-  void testLaunch() throws Exception {
+  @Test(timeout = 60000)
+  public void testLaunch() throws Exception {
     ExitUtil.disableSystemExit();
     try {
       auxService =
@@ -194,7 +192,7 @@ public class TestPerNodeTimelineCollectorsAuxService {
             try {
               future.get();
             } catch (Exception e) {
-              fail("Expeption thrown while removing collector");
+              Assert.fail("Expeption thrown while removing collector");
             }
             return future;
           }
@@ -230,9 +228,8 @@ public class TestPerNodeTimelineCollectorsAuxService {
     return ContainerId.newContainerId(appAttemptId, id);
   }
 
-  @Test
-  @Timeout(60000)
-  void testRemoveAppWhenSecondAttemptAMCotainerIsLaunchedSameNode()
+  @Test(timeout = 60000)
+  public void testRemoveAppWhenSecondAttemptAMCotainerIsLaunchedSameNode()
       throws Exception {
     // add first attempt collector
     auxService = createCollectorAndAddApplication();
@@ -244,25 +241,25 @@ public class TestPerNodeTimelineCollectorsAuxService {
         createContainerInitalizationContext(2);
     auxService.initializeContainer(containerInitalizationContext);
 
-    assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()),
-        "Applicatin not found in collectors.");
+    assertTrue("Applicatin not found in collectors.",
+        auxService.hasApplication(appAttemptId.getApplicationId()));
 
     // first attempt stop container
     ContainerTerminationContext context = createContainerTerminationContext(1);
     auxService.stopContainer(context);
 
     // 2nd attempt container removed, still collector should hold application id
-    assertTrue(auxService.hasApplication(appAttemptId.getApplicationId()),
-        "collector has removed application though 2nd attempt"
-            + " is running this node");
+    assertTrue("collector has removed application though 2nd attempt"
+            + " is running this node",
+        auxService.hasApplication(appAttemptId.getApplicationId()));
 
     // second attempt stop container
     context = createContainerTerminationContext(2);
     auxService.stopContainer(context);
 
     // auxService should not have that app
-    assertFalse(auxService.hasApplication(appAttemptId.getApplicationId()),
-        "Application is not removed from collector");
+    assertFalse("Application is not removed from collector",
+        auxService.hasApplication(appAttemptId.getApplicationId()));
     auxService.close();
   }
 

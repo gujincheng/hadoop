@@ -18,6 +18,16 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager.store;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,10 +41,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,16 +48,9 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.sharedcachemanager.AppChecker;
 import org.apache.hadoop.yarn.server.sharedcachemanager.DummyAppChecker;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestInMemorySCMStore extends SCMStoreBaseTest {
 
@@ -63,13 +62,13 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
     return InMemorySCMStore.class;
   }
 
-  @BeforeEach
+  @Before
   public void setup() {
     this.checker = spy(new DummyAppChecker());
     this.store = spy(new InMemorySCMStore(checker));
   }
 
-  @AfterEach
+  @After
   public void cleanup() {
     if (this.store != null) {
       this.store.stop();
@@ -118,7 +117,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
   }
 
   @Test
-  void testAddResourceConcurrency() throws Exception {
+  public void testAddResourceConcurrency() throws Exception {
     startEmptyStore();
     final String key = "key1";
     int count = 5;
@@ -141,7 +140,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
     start.countDown();
     // check the result; they should all agree with the value
     Set<String> results = new HashSet<String>();
-    for (Future<String> future : futures) {
+    for (Future<String> future: futures) {
       results.add(future.get());
     }
     assertSame(1, results.size());
@@ -149,7 +148,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
   }
 
   @Test
-  void testAddResourceRefNonExistentResource() throws Exception {
+  public void testAddResourceRefNonExistentResource() throws Exception {
     startEmptyStore();
     String key = "key1";
     ApplicationId id = createAppId(1, 1L);
@@ -159,7 +158,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
   }
 
   @Test
-  void testRemoveResourceEmptyRefs() throws Exception {
+  public void testRemoveResourceEmptyRefs() throws Exception {
     startEmptyStore();
     String key = "key1";
     String fileName = "foo.jar";
@@ -170,7 +169,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
   }
 
   @Test
-  void testAddResourceRefRemoveResource() throws Exception {
+  public void testAddResourceRefRemoveResource() throws Exception {
     startEmptyStore();
     String key = "key1";
     ApplicationId id = createAppId(1, 1L);
@@ -187,7 +186,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
   }
 
   @Test
-  void testAddResourceRefConcurrency() throws Exception {
+  public void testAddResourceRefConcurrency() throws Exception {
     startEmptyStore();
     final String key = "key1";
     final String user = "user";
@@ -216,7 +215,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
     start.countDown();
     // check the result
     Set<String> results = new HashSet<String>();
-    for (Future<String> future : futures) {
+    for (Future<String> future: futures) {
       results.add(future.get());
     }
     // they should all have the same file name
@@ -229,7 +228,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
   }
 
   @Test
-  void testAddResourceRefAddResourceConcurrency() throws Exception {
+  public void testAddResourceRefAddResourceConcurrency() throws Exception {
     startEmptyStore();
     final String key = "key1";
     final String fileName = "foo.jar";
@@ -266,7 +265,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
   }
 
   @Test
-  void testRemoveRef() throws Exception {
+  public void testRemoveRef() throws Exception {
     startEmptyStore();
     String key = "key1";
     String fileName = "foo.jar";
@@ -288,7 +287,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
   }
 
   @Test
-  void testBootstrapping() throws Exception {
+  public void testBootstrapping() throws Exception {
     Map<String, String> initialCachedResources = startStoreWithResources();
     int count = initialCachedResources.size();
     ApplicationId id = createAppId(1, 1L);
@@ -307,7 +306,7 @@ public class TestInMemorySCMStore extends SCMStoreBaseTest {
   }
 
   @Test
-  void testEvictableWithInitialApps() throws Exception {
+  public void testEvictableWithInitialApps() throws Exception {
     startStoreWithApps();
     assertFalse(store.isResourceEvictable("key", mock(FileStatus.class)));
   }

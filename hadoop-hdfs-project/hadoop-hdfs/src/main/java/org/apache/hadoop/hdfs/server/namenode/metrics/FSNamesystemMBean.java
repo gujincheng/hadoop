@@ -254,18 +254,4 @@ public interface FSNamesystemMBean {
    * @return number of DTs
    */
   long getCurrentTokensCount();
-
-  /**
-   * Returns the number of paths to be processed by storage policy satisfier.
-   *
-   * @return The number of paths to be processed by sps.
-   */
-  int getPendingSPSPaths();
-
-  /**
-   * Get the progress of the reconstruction queues initialisation.
-   *
-   * @return Returns values between 0 and 1 for the progress.
-   */
-  float getReconstructionQueuesInitProgress();
 }

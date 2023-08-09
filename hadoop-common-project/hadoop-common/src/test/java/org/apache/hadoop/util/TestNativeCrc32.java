@@ -28,7 +28,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -48,6 +50,9 @@ public class TestNativeCrc32 {
   private String fileName;
   private ByteBuffer data, checksums;
   private DataChecksum checksum;
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   @Parameters
   public static Collection<Object[]> data() {
@@ -83,12 +88,12 @@ public class TestNativeCrc32 {
   }
 
   @Test
-  public void testVerifyChunkedSumsFail() {
+  public void testVerifyChunkedSumsFail() throws ChecksumException {
     allocateDirectByteBuffers();
     fillDataAndInvalidChecksums();
-    assertThrows(ChecksumException.class,
-        () -> NativeCrc32.verifyChunkedSums(bytesPerChecksum, checksumType.id,
-            checksums, data, fileName, BASE_POSITION));
+    exception.expect(ChecksumException.class);
+    NativeCrc32.verifyChunkedSums(bytesPerChecksum, checksumType.id,
+      checksums, data, fileName, BASE_POSITION);
   }
 
   @Test
@@ -117,14 +122,13 @@ public class TestNativeCrc32 {
   }
 
   @Test
-  public void testVerifyChunkedSumsByteArrayFail() {
+  public void testVerifyChunkedSumsByteArrayFail() throws ChecksumException {
     allocateArrayByteBuffers();
     fillDataAndInvalidChecksums();
-    assertThrows(ChecksumException.class,
-        () -> NativeCrc32.verifyChunkedSumsByteArray(bytesPerChecksum,
-            checksumType.id, checksums.array(), checksums.position(),
-            data.array(), data.position(), data.remaining(), fileName,
-            BASE_POSITION));
+    exception.expect(ChecksumException.class);
+    NativeCrc32.verifyChunkedSumsByteArray(bytesPerChecksum, checksumType.id,
+      checksums.array(), checksums.position(), data.array(), data.position(),
+      data.remaining(), fileName, BASE_POSITION);
   }
 
   @Test
@@ -173,13 +177,13 @@ public class TestNativeCrc32 {
 
   @Test
   @SuppressWarnings("deprecation")
-  public void testNativeVerifyChunkedSumsFail() {
+  public void testNativeVerifyChunkedSumsFail() throws ChecksumException {
     allocateDirectByteBuffers();
     fillDataAndInvalidChecksums();
-    assertThrows(ChecksumException.class,
-        () -> NativeCrc32.nativeVerifyChunkedSums(bytesPerChecksum,
-            checksumType.id, checksums, checksums.position(), data,
-            data.position(), data.remaining(), fileName, BASE_POSITION));
+    exception.expect(ChecksumException.class);
+    NativeCrc32.nativeVerifyChunkedSums(bytesPerChecksum, checksumType.id,
+      checksums, checksums.position(), data, data.position(), data.remaining(),
+      fileName, BASE_POSITION);
   }
 
   /**

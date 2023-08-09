@@ -48,7 +48,6 @@ public interface Schedulable {
   /**
    * Name of job/queue, used for debugging as well as for breaking ties in
    * scheduling order deterministically.
-   * @return Name of job/queue.
    */
   String getName();
 
@@ -56,26 +55,16 @@ public interface Schedulable {
    * Maximum number of resources required by this Schedulable. This is defined as
    * number of currently utilized resources + number of unlaunched resources (that
    * are either not yet launched or need to be speculated).
-   * @return resources required by this Schedulable.
    */
   Resource getDemand();
 
-  /**
-   * Get the aggregate amount of resources consumed by the schedulable.
-   * @return aggregate amount of resources.
-   */
+  /** Get the aggregate amount of resources consumed by the schedulable. */
   Resource getResourceUsage();
 
-  /**
-   * Minimum Resource share assigned to the schedulable.
-   * @return Minimum Resource share.
-   */
+  /** Minimum Resource share assigned to the schedulable. */
   Resource getMinShare();
 
-  /**
-   * Maximum Resource share assigned to the schedulable.
-   * @return Maximum Resource share.
-   */
+  /** Maximum Resource share assigned to the schedulable. */
   Resource getMaxShare();
 
   /**
@@ -88,16 +77,10 @@ public interface Schedulable {
    */
   float getWeight();
 
-  /**
-   * Start time for jobs in FIFO queues; meaningless for QueueSchedulables.
-   * @return Start time for jobs.
-   */
+  /** Start time for jobs in FIFO queues; meaningless for QueueSchedulables.*/
   long getStartTime();
 
- /**
-  * Job priority for jobs in FIFO queues; meaningless for QueueSchedulables.
-  * @return Job priority.
-  */
+ /** Job priority for jobs in FIFO queues; meaningless for QueueSchedulables. */
   Priority getPriority();
 
   /** Refresh the Schedulable's demand and those of its children if any. */
@@ -106,22 +89,13 @@ public interface Schedulable {
   /**
    * Assign a container on this node if possible, and return the amount of
    * resources assigned.
-   *
-   * @param node FSSchedulerNode.
-   * @return the amount of resources assigned.
    */
   Resource assignContainer(FSSchedulerNode node);
 
-  /**
-   * Get the fair share assigned to this Schedulable.
-   * @return the fair share assigned to this Schedulable.
-   */
+  /** Get the fair share assigned to this Schedulable. */
   Resource getFairShare();
 
-  /**
-   * Assign a fair share to this Schedulable.
-   * @param fairShare a fair share to this Schedulable.
-   */
+  /** Assign a fair share to this Schedulable. */
   void setFairShare(Resource fairShare);
 
   /**

@@ -28,7 +28,6 @@ import java.nio.charset.StandardCharsets;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
 import org.apache.hadoop.metrics2.MetricsException;
@@ -215,8 +214,5 @@ public class StatsDSink implements MetricsSink, Closeable {
     }
 
   }
-  @VisibleForTesting
-  void setStatsd(StatsD statsd) {
-    this.statsd = statsd;
-  }
+
 }

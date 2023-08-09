@@ -18,49 +18,48 @@
 
 package org.apache.hadoop.yarn.util;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test class for {@link BoundedAppender}.
  */
 public class TestBoundedAppender {
+  @Rule
+  public ExpectedException expected = ExpectedException.none();
 
   @Test
-  void initWithZeroLimitThrowsException() {
-    Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+  public void initWithZeroLimitThrowsException() {
+    expected.expect(IllegalArgumentException.class);
+    expected.expectMessage("limit should be positive");
 
-      new BoundedAppender(0);
-    });
-    assertTrue(exception.getMessage().contains("limit should be positive"));
+    new BoundedAppender(0);
   }
 
   @Test
-  void nullAppendedNullStringRead() {
+  public void nullAppendedNullStringRead() {
     final BoundedAppender boundedAppender = new BoundedAppender(4);
     boundedAppender.append(null);
 
-    assertEquals("null",
-        boundedAppender.toString(),
-        "null appended, \"null\" read");
+    assertEquals("null appended, \"null\" read", "null",
+        boundedAppender.toString());
   }
 
   @Test
-  void appendBelowLimitOnceValueIsReadCorrectly() {
+  public void appendBelowLimitOnceValueIsReadCorrectly() {
     final BoundedAppender boundedAppender = new BoundedAppender(2);
 
     boundedAppender.append("ab");
 
-    assertEquals("ab",
-        boundedAppender.toString(),
-        "value appended is read correctly");
+    assertEquals("value appended is read correctly", "ab",
+        boundedAppender.toString());
   }
 
   @Test
-  void appendValuesBelowLimitAreReadCorrectlyInFifoOrder() {
+  public void appendValuesBelowLimitAreReadCorrectlyInFifoOrder() {
     final BoundedAppender boundedAppender = new BoundedAppender(3);
 
     boundedAppender.append("ab");
@@ -68,13 +67,13 @@ public class TestBoundedAppender {
     boundedAppender.append("e");
     boundedAppender.append("fg");
 
-    assertEquals(String.format(BoundedAppender.TRUNCATED_MESSAGES_TEMPLATE, 3, 7, "efg"),
-        boundedAppender.toString(),
-        "last values appended fitting limit are read correctly");
+    assertEquals("last values appended fitting limit are read correctly",
+        String.format(BoundedAppender.TRUNCATED_MESSAGES_TEMPLATE, 3, 7, "efg"),
+        boundedAppender.toString());
   }
 
   @Test
-  void appendLastAboveLimitPreservesLastMessagePostfix() {
+  public void appendLastAboveLimitPreservesLastMessagePostfix() {
     final BoundedAppender boundedAppender = new BoundedAppender(3);
 
     boundedAppender.append("ab");
@@ -82,37 +81,35 @@ public class TestBoundedAppender {
     boundedAppender.append("fghij");
 
     assertEquals(
-        String
+        "last value appended above limit postfix is read correctly", String
             .format(BoundedAppender.TRUNCATED_MESSAGES_TEMPLATE, 3, 10, "hij"),
-        boundedAppender.toString(),
-        "last value appended above limit postfix is read correctly");
+        boundedAppender.toString());
   }
 
   @Test
-  void appendMiddleAboveLimitPreservesLastMessageAndMiddlePostfix() {
+  public void appendMiddleAboveLimitPreservesLastMessageAndMiddlePostfix() {
     final BoundedAppender boundedAppender = new BoundedAppender(3);
 
     boundedAppender.append("ab");
     boundedAppender.append("cde");
 
-    assertEquals(String.format(BoundedAppender.TRUNCATED_MESSAGES_TEMPLATE, 3, 5, "cde"),
-        boundedAppender.toString(),
-        "last value appended above limit postfix is read correctly");
+    assertEquals("last value appended above limit postfix is read correctly",
+        String.format(BoundedAppender.TRUNCATED_MESSAGES_TEMPLATE, 3, 5, "cde"),
+        boundedAppender.toString());
 
     boundedAppender.append("fg");
 
     assertEquals(
-        String.format(BoundedAppender.TRUNCATED_MESSAGES_TEMPLATE, 3, 7, "efg"),
-        boundedAppender.toString(),
         "middle value appended above limit postfix and last value are "
-            + "read correctly");
+            + "read correctly",
+        String.format(BoundedAppender.TRUNCATED_MESSAGES_TEMPLATE, 3, 7, "efg"),
+        boundedAppender.toString());
 
     boundedAppender.append("hijkl");
 
     assertEquals(
-        String
+        "last value appended above limit postfix is read correctly", String
             .format(BoundedAppender.TRUNCATED_MESSAGES_TEMPLATE, 3, 12, "jkl"),
-        boundedAppender.toString(),
-        "last value appended above limit postfix is read correctly");
+        boundedAppender.toString());
   }
 }

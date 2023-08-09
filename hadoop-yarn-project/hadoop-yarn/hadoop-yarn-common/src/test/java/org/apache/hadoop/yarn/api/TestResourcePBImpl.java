@@ -20,10 +20,6 @@ package org.apache.hadoop.yarn.api;
 
 import java.io.File;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -33,19 +29,20 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test class to handle various proto related tests for resources.
  */
 public class TestResourcePBImpl {
 
-  @BeforeEach
+  @Before
   public void setup() throws Exception {
     ResourceUtils.resetResourceTypes();
 
@@ -54,7 +51,7 @@ public class TestResourcePBImpl {
     TestResourceUtils.setupResourceTypes(conf, resourceTypesFile);
   }
 
-  @AfterEach
+  @After
   public void teardown() {
     Configuration conf = new YarnConfiguration();
     File source = new File(
@@ -66,80 +63,80 @@ public class TestResourcePBImpl {
   }
 
   @Test
-  void testEmptyResourcePBInit() throws Exception {
+  public void testEmptyResourcePBInit() throws Exception {
     Resource res = new ResourcePBImpl();
     // Assert to check it sets resource value and unit to default.
-    assertEquals(0, res.getMemorySize());
-    assertEquals(ResourceInformation.MEMORY_MB.getUnits(),
+    Assert.assertEquals(0, res.getMemorySize());
+    Assert.assertEquals(ResourceInformation.MEMORY_MB.getUnits(),
         res.getResourceInformation(ResourceInformation.MEMORY_MB.getName())
             .getUnits());
-    assertEquals(ResourceInformation.VCORES.getUnits(),
+    Assert.assertEquals(ResourceInformation.VCORES.getUnits(),
         res.getResourceInformation(ResourceInformation.VCORES.getName())
             .getUnits());
   }
 
   @Test
-  void testResourcePBInitFromOldPB() throws Exception {
+  public void testResourcePBInitFromOldPB() throws Exception {
     YarnProtos.ResourceProto proto =
         YarnProtos.ResourceProto.newBuilder().setMemory(1024).setVirtualCores(3)
             .build();
     // Assert to check it sets resource value and unit to default.
     Resource res = new ResourcePBImpl(proto);
-    assertEquals(1024, res.getMemorySize());
-    assertEquals(3, res.getVirtualCores());
-    assertEquals(ResourceInformation.MEMORY_MB.getUnits(),
+    Assert.assertEquals(1024, res.getMemorySize());
+    Assert.assertEquals(3, res.getVirtualCores());
+    Assert.assertEquals(ResourceInformation.MEMORY_MB.getUnits(),
         res.getResourceInformation(ResourceInformation.MEMORY_MB.getName())
             .getUnits());
-    assertEquals(ResourceInformation.VCORES.getUnits(),
+    Assert.assertEquals(ResourceInformation.VCORES.getUnits(),
         res.getResourceInformation(ResourceInformation.VCORES.getName())
             .getUnits());
   }
 
   @Test
   @SuppressWarnings("deprecation")
-  void testGetMemory() {
+  public void testGetMemory() {
     Resource res = new ResourcePBImpl();
     long memorySize = Integer.MAX_VALUE + 1L;
     res.setMemorySize(memorySize);
 
-    assertEquals(memorySize, res.getMemorySize(), "No need to cast if both are long");
-    assertEquals(Integer.MAX_VALUE, res.getMemory(),
-        "Cast to Integer.MAX_VALUE if the long is greater than " + "Integer.MAX_VALUE");
+    assertEquals("No need to cast if both are long", memorySize,
+        res.getMemorySize());
+    assertEquals("Cast to Integer.MAX_VALUE if the long is greater than "
+            + "Integer.MAX_VALUE", Integer.MAX_VALUE, res.getMemory());
   }
 
   @Test
-  void testGetVirtualCores() {
+  public void testGetVirtualCores() {
     Resource res = new ResourcePBImpl();
     long vcores = Integer.MAX_VALUE + 1L;
     res.getResourceInformation("vcores").setValue(vcores);
 
-    assertEquals(vcores,
-        res.getResourceInformation("vcores").getValue(),
-        "No need to cast if both are long");
-    assertEquals(Integer.MAX_VALUE, res.getVirtualCores(),
-        "Cast to Integer.MAX_VALUE if the long is greater than " + "Integer.MAX_VALUE");
+    assertEquals("No need to cast if both are long", vcores,
+        res.getResourceInformation("vcores").getValue());
+    assertEquals("Cast to Integer.MAX_VALUE if the long is greater than "
+        + "Integer.MAX_VALUE", Integer.MAX_VALUE, res.getVirtualCores());
   }
 
   @Test
-  void testResourcePBWithExtraResources() throws Exception {
+  public void testResourcePBWithExtraResources() throws Exception {
 
     //Resource 'resource1' has been passed as 4T
     //4T should be converted to 4000G
     YarnProtos.ResourceInformationProto riProto =
         YarnProtos.ResourceInformationProto.newBuilder().setType(
             YarnProtos.ResourceTypeInfoProto.newBuilder().
-                setName("resource1").setType(
+            setName("resource1").setType(
                 YarnProtos.ResourceTypesProto.COUNTABLE).getType()).
-            setValue(4).setUnits("T").setKey("resource1").build();
+        setValue(4).setUnits("T").setKey("resource1").build();
 
     YarnProtos.ResourceProto proto =
         YarnProtos.ResourceProto.newBuilder().setMemory(1024).
-            setVirtualCores(3).addResourceValueMap(riProto).build();
+        setVirtualCores(3).addResourceValueMap(riProto).build();
     Resource res = new ResourcePBImpl(proto);
 
-    assertEquals(4000,
+    Assert.assertEquals(4000,
         res.getResourceInformation("resource1").getValue());
-    assertEquals("G",
+    Assert.assertEquals("G",
         res.getResourceInformation("resource1").getUnits());
 
     //Resource 'resource2' has been passed as 4M
@@ -147,18 +144,18 @@ public class TestResourcePBImpl {
     YarnProtos.ResourceInformationProto riProto1 =
         YarnProtos.ResourceInformationProto.newBuilder().setType(
             YarnProtos.ResourceTypeInfoProto.newBuilder().
-                setName("resource2").setType(
+            setName("resource2").setType(
                 YarnProtos.ResourceTypesProto.COUNTABLE).getType()).
-            setValue(4).setUnits("M").setKey("resource2").build();
+        setValue(4).setUnits("M").setKey("resource2").build();
 
     YarnProtos.ResourceProto proto1 =
         YarnProtos.ResourceProto.newBuilder().setMemory(1024).
-            setVirtualCores(3).addResourceValueMap(riProto1).build();
+        setVirtualCores(3).addResourceValueMap(riProto1).build();
     Resource res1 = new ResourcePBImpl(proto1);
 
-    assertEquals(4000000000L,
+    Assert.assertEquals(4000000000L,
         res1.getResourceInformation("resource2").getValue());
-    assertEquals("m",
+    Assert.assertEquals("m",
         res1.getResourceInformation("resource2").getUnits());
 
     //Resource 'resource1' has been passed as 3M
@@ -166,23 +163,23 @@ public class TestResourcePBImpl {
     YarnProtos.ResourceInformationProto riProto2 =
         YarnProtos.ResourceInformationProto.newBuilder().setType(
             YarnProtos.ResourceTypeInfoProto.newBuilder().
-                setName("resource1").setType(
+            setName("resource1").setType(
                 YarnProtos.ResourceTypesProto.COUNTABLE).getType()).
-            setValue(3).setUnits("M").setKey("resource1").build();
+        setValue(3).setUnits("M").setKey("resource1").build();
 
     YarnProtos.ResourceProto proto2 =
         YarnProtos.ResourceProto.newBuilder().setMemory(1024).
-            setVirtualCores(3).addResourceValueMap(riProto2).build();
+        setVirtualCores(3).addResourceValueMap(riProto2).build();
     Resource res2 = new ResourcePBImpl(proto2);
 
-    assertEquals(0,
+    Assert.assertEquals(0,
         res2.getResourceInformation("resource1").getValue());
-    assertEquals("G",
+    Assert.assertEquals("G",
         res2.getResourceInformation("resource1").getUnits());
   }
 
   @Test
-  void testResourceTags() {
+  public void testResourceTags() {
     YarnProtos.ResourceInformationProto riProto =
         YarnProtos.ResourceInformationProto.newBuilder()
             .setType(
@@ -204,19 +201,19 @@ public class TestResourcePBImpl {
             .build();
     Resource res = new ResourcePBImpl(proto);
 
-    assertNotNull(res.getResourceInformation("yarn.io/test-volume"));
-    assertEquals(10,
+    Assert.assertNotNull(res.getResourceInformation("yarn.io/test-volume"));
+    Assert.assertEquals(10,
         res.getResourceInformation("yarn.io/test-volume")
             .getValue());
-    assertEquals("G",
+    Assert.assertEquals("G",
         res.getResourceInformation("yarn.io/test-volume")
             .getUnits());
-    assertEquals(3,
+    Assert.assertEquals(3,
         res.getResourceInformation("yarn.io/test-volume")
             .getTags().size());
-    assertFalse(res.getResourceInformation("yarn.io/test-volume")
+    Assert.assertFalse(res.getResourceInformation("yarn.io/test-volume")
         .getTags().isEmpty());
-    assertTrue(res.getResourceInformation("yarn.io/test-volume")
+    Assert.assertTrue(res.getResourceInformation("yarn.io/test-volume")
         .getAttributes().isEmpty());
 
     boolean protoConvertExpected = false;
@@ -228,13 +225,13 @@ public class TestResourcePBImpl {
             && pf.getTagsCount() == 3;
       }
     }
-    assertTrue(protoConvertExpected,
-        "Expecting resource's protobuf message"
-            + " contains 0 attributes and 3 tags");
+    Assert.assertTrue("Expecting resource's protobuf message"
+        + " contains 0 attributes and 3 tags",
+        protoConvertExpected);
   }
 
   @Test
-  void testResourceAttributes() {
+  public void testResourceAttributes() {
     YarnProtos.ResourceInformationProto riProto =
         YarnProtos.ResourceInformationProto.newBuilder()
             .setType(
@@ -263,19 +260,19 @@ public class TestResourcePBImpl {
             .build();
     Resource res = new ResourcePBImpl(proto);
 
-    assertNotNull(res.getResourceInformation("yarn.io/test-volume"));
-    assertEquals(10,
+    Assert.assertNotNull(res.getResourceInformation("yarn.io/test-volume"));
+    Assert.assertEquals(10,
         res.getResourceInformation("yarn.io/test-volume")
             .getValue());
-    assertEquals("G",
+    Assert.assertEquals("G",
         res.getResourceInformation("yarn.io/test-volume")
             .getUnits());
-    assertEquals(2,
+    Assert.assertEquals(2,
         res.getResourceInformation("yarn.io/test-volume")
             .getAttributes().size());
-    assertTrue(res.getResourceInformation("yarn.io/test-volume")
+    Assert.assertTrue(res.getResourceInformation("yarn.io/test-volume")
         .getTags().isEmpty());
-    assertFalse(res.getResourceInformation("yarn.io/test-volume")
+    Assert.assertFalse(res.getResourceInformation("yarn.io/test-volume")
         .getAttributes().isEmpty());
 
     boolean protoConvertExpected = false;
@@ -287,20 +284,20 @@ public class TestResourcePBImpl {
             && pf.getTagsCount() == 0;
       }
     }
-    assertTrue(protoConvertExpected,
-        "Expecting resource's protobuf message"
-            + " contains 2 attributes and 0 tags");
+    Assert.assertTrue("Expecting resource's protobuf message"
+            + " contains 2 attributes and 0 tags",
+        protoConvertExpected);
   }
 
   @Test
-  void testParsingResourceTags() {
+  public void testParsingResourceTags() {
     ResourceInformation info =
         ResourceUtils.getResourceTypes().get("resource3");
-    assertTrue(info.getAttributes().isEmpty());
-    assertFalse(info.getTags().isEmpty());
+    Assert.assertTrue(info.getAttributes().isEmpty());
+    Assert.assertFalse(info.getTags().isEmpty());
     assertThat(info.getTags()).hasSize(2);
     info.getTags().remove("resource3_tag_1");
     info.getTags().remove("resource3_tag_2");
-    assertTrue(info.getTags().isEmpty());
+    Assert.assertTrue(info.getTags().isEmpty());
   }
 }

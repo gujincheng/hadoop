@@ -79,23 +79,12 @@ public class TestGpuDiscoverer {
   }
 
   private File setupFakeBinary(Configuration conf) {
-    return setupFakeBinary(conf,
-        GpuDiscoverer.DEFAULT_BINARY_NAME, false);
-  }
-
-  private File setupFakeBinary(Configuration conf, String filename,
-      boolean useFullPath) {
     File fakeBinary;
     try {
       fakeBinary = new File(getTestParentFolder(),
-          filename);
+          GpuDiscoverer.DEFAULT_BINARY_NAME);
       touchFile(fakeBinary);
-      if (useFullPath) {
-        conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC,
-            fakeBinary.getAbsolutePath());
-      } else {
-        conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC, getTestParentFolder());
-      }
+      conf.set(YarnConfiguration.NM_GPU_PATH_TO_EXEC, getTestParentFolder());
     } catch (Exception e) {
       throw new RuntimeException("Failed to init fake binary", e);
     }
@@ -523,19 +512,5 @@ public class TestGpuDiscoverer {
     gpuSpy.getGpusUsableByYarn();
 
     verify(gpuSpy, never()).getGpuDeviceInformation();
-  }
-
-  @Test
-  public void testBinaryIsNotNvidiaSmi() throws YarnException {
-    exception.expect(YarnException.class);
-    exception.expectMessage(String.format(
-        "It should point to an %s binary, which is now %s",
-        "nvidia-smi", "badfile"));
-
-    Configuration conf = new Configuration(false);
-    setupFakeBinary(conf, "badfile", true);
-
-    GpuDiscoverer plugin = new GpuDiscoverer();
-    plugin.initialize(conf, binaryHelper);
   }
 }

@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import java.util.List;
-
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.webapp.SubView;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * A simpler two column layout implementation with a header, a navigation bar

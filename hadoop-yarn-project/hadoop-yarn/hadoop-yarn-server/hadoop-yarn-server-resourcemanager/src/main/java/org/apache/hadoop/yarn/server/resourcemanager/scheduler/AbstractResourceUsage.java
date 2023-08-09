@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -201,10 +200,10 @@ public class AbstractResourceUsage {
     }
   }
 
-  public Set<String> getExistingNodeLabels() {
+  public Set<String> getNodePartitionsSet() {
     readLock.lock();
     try {
-      return new HashSet<>(usages.keySet());
+      return usages.keySet();
     } finally {
       readLock.unlock();
     }

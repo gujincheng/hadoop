@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -47,11 +47,7 @@ public class DelegationTokenRenewer
     /** @return the renew token. */
     public Token<?> getRenewToken();
 
-    /**
-     * Set delegation token.
-     * @param <T> generic type T.
-     * @param token token.
-     */
+    /** Set delegation token. */
     public <T extends TokenIdentifier> void setDelegationToken(Token<T> token);
   }
 
@@ -101,7 +97,7 @@ public class DelegationTokenRenewer
     public boolean equals(final Object that) {
       if (this == that) {
         return true;
-      } else if (!(that instanceof RenewAction)) {
+      } else if (that == null || !(that instanceof RenewAction)) {
         return false;
       }
       return token.equals(((RenewAction<?>)that).token);
@@ -111,7 +107,7 @@ public class DelegationTokenRenewer
      * Set a new time for the renewal.
      * It can only be called when the action is not in the queue or any
      * collection because the hashCode may change
-     * @param delay the renewal time
+     * @param newTime the new time
      */
     private void updateRenewalTime(long delay) {
       renewalTime = Time.now() + delay - delay/10;
@@ -176,11 +172,7 @@ public class DelegationTokenRenewer
   /** Queue to maintain the RenewActions to be processed by the {@link #run()} */
   private volatile DelayQueue<RenewAction<?>> queue = new DelayQueue<RenewAction<?>>();
   
-  /**
-   * For testing purposes.
-   *
-   * @return renew queue length.
-   */
+  /** For testing purposes */
   @VisibleForTesting
   protected int getRenewQueueLength() {
     return queue.size();
@@ -219,13 +211,7 @@ public class DelegationTokenRenewer
     }
   }
   
-  /**
-   * Add a renew action to the queue.
-   *
-   * @param <T> generic type T.
-   * @param fs file system.
-   * @return renew action.
-   * */
+  /** Add a renew action to the queue. */
   @SuppressWarnings("static-access")
   public <T extends FileSystem & Renewable> RenewAction<T> addRenewAction(final T fs) {
     synchronized (this) {
@@ -237,17 +223,15 @@ public class DelegationTokenRenewer
     if (action.token != null) {
       queue.add(action);
     } else {
-      FileSystem.LOG.error("does not have a token for renewal");
+      fs.LOG.error("does not have a token for renewal");
     }
     return action;
   }
 
   /**
    * Remove the associated renew action from the queue
-   *
-   * @param <T> generic type T.
-   * @param fs file system.
-   * @throws IOException raised on errors performing I/O.
+   * 
+   * @throws IOException
    */
   public <T extends FileSystem & Renewable> void removeRenewAction(
       final T fs) throws IOException {
@@ -256,12 +240,14 @@ public class DelegationTokenRenewer
       try {
         action.cancel();
       } catch (InterruptedException ie) {
-        LOG.error("Interrupted while canceling token for {} filesystem.", fs.getUri());
-        LOG.debug("Exception in removeRenewAction.", ie);
+        LOG.error("Interrupted while canceling token for " + fs.getUri()
+            + "filesystem");
+        LOG.debug("Exception in removeRenewAction: {}", ie);
       }
     }
   }
 
+  @SuppressWarnings("static-access")
   @Override
   public void run() {
     for(;;) {
@@ -274,7 +260,8 @@ public class DelegationTokenRenewer
       } catch (InterruptedException ie) {
         return;
       } catch (Exception ie) {
-        FileSystem.LOG.warn("Failed to renew token, action=" + action, ie);
+        action.weakFs.get().LOG.warn("Failed to renew token, action=" + action,
+            ie);
       }
     }
   }

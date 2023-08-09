@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -117,7 +116,7 @@ public class TestOfflineImageViewerForStoragePolicy {
       hdfs.setStoragePolicy(dir, HdfsConstants.HOT_STORAGE_POLICY_NAME);
 
       // Write results to the fsimage file
-      hdfs.setSafeMode(SafeModeAction.ENTER, false);
+      hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER, false);
       hdfs.saveNamespace();
 
       // Determine the location of the fsimage file

@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.net.URI;
@@ -46,12 +44,11 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithNodeGroup;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NetworkTopologyWithNodeGroup;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -87,7 +84,7 @@ public class TestBalancerWithNodeGroup {
     TestBalancer.initConf(conf);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     conf.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, false);
-    conf.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY,
+    conf.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY, 
         NetworkTopologyWithNodeGroup.class.getName());
     conf.set(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, 
         BlockPlacementPolicyWithNodeGroup.class.getName());
@@ -195,8 +192,8 @@ public class TestBalancerWithNodeGroup {
     // start rebalancing
     Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     final int r = Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);
-    assertEquals("Balancer did not exit with NO_MOVE_PROGRESS",
-        ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
+    Assert.assertTrue(r == ExitStatus.SUCCESS.getExitCode() ||
+        (r == ExitStatus.NO_MOVE_PROGRESS.getExitCode()));
     waitForHeartBeat(totalUsedSpace, totalCapacity);
     LOG.info("Rebalancing with default factor.");
   }
@@ -212,30 +209,6 @@ public class TestBalancerWithNodeGroup {
       }
     }
     return ret;
-  }
-
-  private void verifyNetworkTopology() {
-    NetworkTopology topology =
-        cluster.getNamesystem().getBlockManager().getDatanodeManager().
-            getNetworkTopology();
-    assertTrue("must be an instance of NetworkTopologyWithNodeGroup",
-        topology instanceof NetworkTopologyWithNodeGroup);
-  }
-
-  private void verifyProperBlockPlacement(String file,
-      long length, int numOfReplicas) throws IOException {
-    BlockPlacementPolicy placementPolicy =
-        cluster.getNamesystem().getBlockManager().getBlockPlacementPolicy();
-    List<LocatedBlock> locatedBlocks = client.
-        getBlockLocations(file, 0, length).getLocatedBlocks();
-    assertFalse("No blocks found for file " + file, locatedBlocks.isEmpty());
-    for (LocatedBlock locatedBlock : locatedBlocks) {
-      BlockPlacementStatus status = placementPolicy.verifyBlockPlacement(
-          locatedBlock.getLocations(), numOfReplicas);
-      assertTrue("Block placement policy was not satisfied for block " +
-          locatedBlock.getBlock().getBlockId(),
-          status.isPlacementPolicySatisfied());
-    }
   }
 
   /**
@@ -259,7 +232,6 @@ public class TestBalancerWithNodeGroup {
     cluster = new MiniDFSClusterWithNodeGroup(builder);
     try {
       cluster.waitActive();
-      verifyNetworkTopology();
       client = NameNodeProxies.createProxy(conf, 
           cluster.getFileSystem(0).getUri(),
           ClientProtocol.class).getProxy();
@@ -286,14 +258,12 @@ public class TestBalancerWithNodeGroup {
       totalCapacity += newCapacity;
 
       // run balancer and validate results
-      runBalancer(conf, totalUsedSpace, totalCapacity);
+      runBalancerCanFinish(conf, totalUsedSpace, totalCapacity);
       
       lbs = client.getBlockLocations(filePath.toUri().getPath(), 0, length);
       Set<ExtendedBlock> after = getBlocksOnRack(lbs.getLocatedBlocks(), RACK0);
       assertEquals(before, after);
-
-      verifyProperBlockPlacement(filePath.toUri().getPath(), length,
-          numOfDatanodes);
+      
     } finally {
       cluster.shutdown();
     }
@@ -321,18 +291,15 @@ public class TestBalancerWithNodeGroup {
     cluster = new MiniDFSClusterWithNodeGroup(builder);
     try {
       cluster.waitActive();
-      verifyNetworkTopology();
       client = NameNodeProxies.createProxy(conf, 
           cluster.getFileSystem(0).getUri(),
           ClientProtocol.class).getProxy();
 
       long totalCapacity = TestBalancer.sum(capacities);
-      int numOfReplicas = numOfDatanodes / 2;
       // fill up the cluster to be 20% full
       long totalUsedSpace = totalCapacity * 2 / 10;
-      long length = totalUsedSpace / numOfReplicas;
-      TestBalancer.createFile(cluster, filePath, length,
-          (short) numOfReplicas, 0);
+      TestBalancer.createFile(cluster, filePath, totalUsedSpace / (numOfDatanodes/2),
+          (short) (numOfDatanodes/2), 0);
       
       long newCapacity = CAPACITY;
       String newRack = RACK1;
@@ -345,9 +312,6 @@ public class TestBalancerWithNodeGroup {
 
       // run balancer and validate results
       runBalancer(conf, totalUsedSpace, totalCapacity);
-
-      verifyProperBlockPlacement(filePath.toUri().getPath(), length,
-          numOfReplicas);
 
     } finally {
       cluster.shutdown();
@@ -381,7 +345,6 @@ public class TestBalancerWithNodeGroup {
     cluster = new MiniDFSClusterWithNodeGroup(builder);
     try {
       cluster.waitActive();
-      verifyNetworkTopology();
       client = NameNodeProxies.createProxy(conf, 
           cluster.getFileSystem(0).getUri(),
           ClientProtocol.class).getProxy();
@@ -389,16 +352,11 @@ public class TestBalancerWithNodeGroup {
       long totalCapacity = TestBalancer.sum(capacities);
       // fill up the cluster to be 60% full
       long totalUsedSpace = totalCapacity * 6 / 10;
-      int numOfReplicas = 3;
-      long length = totalUsedSpace / 3;
-      TestBalancer.createFile(cluster, filePath, length,
-          (short) numOfReplicas, 0);
+      TestBalancer.createFile(cluster, filePath, totalUsedSpace / 3, 
+          (short) (3), 0);
 
       // run balancer which can finish in 5 iterations with no block movement.
       runBalancerCanFinish(conf, totalUsedSpace, totalCapacity);
-
-      verifyProperBlockPlacement(filePath.toUri().getPath(), length,
-          numOfReplicas);
 
     } finally {
       cluster.shutdown();

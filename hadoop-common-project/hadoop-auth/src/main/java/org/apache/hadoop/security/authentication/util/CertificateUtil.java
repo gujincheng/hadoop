@@ -18,6 +18,7 @@
 package org.apache.hadoop.security.authentication.util;
 
 import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;

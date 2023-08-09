@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileUtil;
@@ -39,10 +37,11 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,7 +73,7 @@ public class TestDiskFailures {
   private static MiniYARNCluster yarnCluster;
   LocalDirsHandlerService dirsHandler;
 
-  @BeforeAll
+  @BeforeClass
   public static void setup() throws AccessControlException,
       FileNotFoundException, UnsupportedFileSystemException, IOException {
     localFS = FileContext.getLocalFSFileContext();
@@ -83,7 +82,7 @@ public class TestDiskFailures {
     // Do not start cluster here
   }
 
-  @AfterAll
+  @AfterClass
   public static void teardown() {
     if (yarnCluster != null) {
       yarnCluster.stop();
@@ -100,7 +99,7 @@ public class TestDiskFailures {
    * @throws IOException
    */
   @Test
-  void testLocalDirsFailures() throws IOException {
+  public void testLocalDirsFailures() throws IOException {
     testDirsFailures(true);
   }
 
@@ -112,7 +111,7 @@ public class TestDiskFailures {
    * @throws IOException
    */  
   @Test
-  void testLogDirsFailures() throws IOException {
+  public void testLogDirsFailures() throws IOException {
     testDirsFailures(false);
   }
 
@@ -123,7 +122,7 @@ public class TestDiskFailures {
    * @throws IOException
    */
   @Test
-  void testDirFailuresOnStartup() throws IOException {
+  public void testDirFailuresOnStartup() throws IOException {
     Configuration conf = new YarnConfiguration();
     String localDir1 = new File(testDir, "localDir1").getPath();
     String localDir2 = new File(testDir, "localDir2").getPath();
@@ -138,11 +137,11 @@ public class TestDiskFailures {
     LocalDirsHandlerService dirSvc = new LocalDirsHandlerService();
     dirSvc.init(conf);
     List<String> localDirs = dirSvc.getLocalDirs();
-    assertEquals(1, localDirs.size());
-    assertEquals(new Path(localDir2).toString(), localDirs.get(0));
+    Assert.assertEquals(1, localDirs.size());
+    Assert.assertEquals(new Path(localDir2).toString(), localDirs.get(0));
     List<String> logDirs = dirSvc.getLogDirs();
-    assertEquals(1, logDirs.size());
-    assertEquals(new Path(logDir1).toString(), logDirs.get(0));
+    Assert.assertEquals(1, logDirs.size());
+    Assert.assertEquals(new Path(logDir1).toString(), logDirs.get(0));
   }
 
   private void testDirsFailures(boolean localORLogDirs) throws IOException {
@@ -178,7 +177,8 @@ public class TestDiskFailures {
     List<String> list = localORLogDirs ? dirsHandler.getLocalDirs()
                                        : dirsHandler.getLogDirs();
     String[] dirs = list.toArray(new String[list.size()]);
-    assertEquals(numLocalDirs, dirs.length, "Number of nm-" + dirType + "-dirs is wrong.");
+    Assert.assertEquals("Number of nm-" + dirType + "-dirs is wrong.",
+                        numLocalDirs, dirs.length);
     String expectedDirs = StringUtils.join(",", list);
     // validate the health of disks initially
     verifyDisksHealth(localORLogDirs, expectedDirs, true);
@@ -225,9 +225,11 @@ public class TestDiskFailures {
     String seenDirs = StringUtils.join(",", list);
     LOG.info("ExpectedDirs=" + expectedDirs);
     LOG.info("SeenDirs=" + seenDirs);
-    assertEquals(expectedDirs, seenDirs);
+    Assert.assertTrue("NodeManager could not identify disk failure.",
+                      expectedDirs.equals(seenDirs));
 
-    assertEquals(isHealthy, dirsHandler.areDisksHealthy(), "Node's health in terms of disks is wrong");
+    Assert.assertEquals("Node's health in terms of disks is wrong",
+                        isHealthy, dirsHandler.areDisksHealthy());
     for (int i = 0; i < 10; i++) {
       Iterator<RMNode> iter = yarnCluster.getResourceManager().getRMContext()
                               .getRMNodes().values().iterator();
@@ -245,7 +247,8 @@ public class TestDiskFailures {
     }
     Iterator<RMNode> iter = yarnCluster.getResourceManager().getRMContext()
                             .getRMNodes().values().iterator();
-    assertEquals(isHealthy, iter.next().getState() != NodeState.UNHEALTHY, "RM is not updated with the health status of a node");
+    Assert.assertEquals("RM is not updated with the health status of a node",
+        isHealthy, iter.next().getState() != NodeState.UNHEALTHY);
   }
 
   /**

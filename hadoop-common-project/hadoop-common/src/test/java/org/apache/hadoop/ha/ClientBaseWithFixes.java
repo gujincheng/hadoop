@@ -41,6 +41,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ServerCnxnFactory;
+import org.apache.zookeeper.server.ServerCnxnFactoryAccessor;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
@@ -50,7 +51,7 @@ import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Copy-paste of ClientBase from ZooKeeper, but without any of the
@@ -436,7 +437,9 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
 
     protected static ZooKeeperServer getServer(ServerCnxnFactory fac) {
-        return fac.getZooKeeperServer();
+        ZooKeeperServer zs = ServerCnxnFactoryAccessor.getZkServer(fac);
+
+        return zs;
     }
 
     protected void tearDownAll() throws Exception {

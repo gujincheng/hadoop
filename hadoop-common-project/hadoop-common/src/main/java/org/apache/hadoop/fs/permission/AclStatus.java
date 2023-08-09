@@ -23,8 +23,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Objects;
-import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * An AclStatus contains the ACL information of a specific file. AclStatus
@@ -185,8 +185,7 @@ public class AclStatus {
 
     /**
      * Sets the permission for the file.
-     * @param permission permission.
-     * @return Builder.
+     * @param permission
      */
     public Builder setPermission(FsPermission permission) {
       this.permission = permission;
@@ -225,7 +224,6 @@ public class AclStatus {
   /**
    * Get the effective permission for the AclEntry
    * @param entry AclEntry to get the effective action
-   * @return FsAction.
    */
   public FsAction getEffectivePermission(AclEntry entry) {
     return getEffectivePermission(entry, permission);

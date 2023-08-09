@@ -22,7 +22,6 @@ import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.util.Deque;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.shell.PathData;
 
@@ -36,7 +35,7 @@ public class TestFilterExpression {
   private FilterExpression test;
 
   @Rule
-  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
+  public Timeout globalTimeout = new Timeout(10000);
 
   @Before
   public void setup() {

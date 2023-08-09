@@ -30,9 +30,8 @@ import java.util.Map;
 import java.util.Set;
 
 class ErasureCodingWork extends BlockReconstructionWork {
-  private final byte[] liveBlockIndices;
-  private final byte[] liveBusyBlockIndices;
-  private final byte[] excludeReconstructedIndices;
+  private final byte[] liveBlockIndicies;
+  private final byte[] liveBusyBlockIndicies;
   private final String blockPoolId;
 
   public ErasureCodingWork(String blockPoolId, BlockInfo block,
@@ -41,20 +40,18 @@ class ErasureCodingWork extends BlockReconstructionWork {
       List<DatanodeDescriptor> containingNodes,
       List<DatanodeStorageInfo> liveReplicaStorages,
       int additionalReplRequired, int priority,
-      byte[] liveBlockIndices, byte[] liveBusyBlockIndices,
-      byte[] excludeReconstrutedIndices) {
+      byte[] liveBlockIndicies, byte[] liveBusyBlockIndicies) {
     super(block, bc, srcNodes, containingNodes,
         liveReplicaStorages, additionalReplRequired, priority);
     this.blockPoolId = blockPoolId;
-    this.liveBlockIndices = liveBlockIndices;
-    this.liveBusyBlockIndices = liveBusyBlockIndices;
-    this.excludeReconstructedIndices=excludeReconstrutedIndices;
+    this.liveBlockIndicies = liveBlockIndicies;
+    this.liveBusyBlockIndicies = liveBusyBlockIndicies;
     LOG.debug("Creating an ErasureCodingWork to {} reconstruct ",
         block);
   }
 
-  byte[] getLiveBlockIndices() {
-    return liveBlockIndices;
+  byte[] getLiveBlockIndicies() {
+    return liveBlockIndicies;
   }
 
   @Override
@@ -75,15 +72,15 @@ class ErasureCodingWork extends BlockReconstructionWork {
    */
   private boolean hasAllInternalBlocks() {
     final BlockInfoStriped block = (BlockInfoStriped) getBlock();
-    if (liveBlockIndices.length
-        + liveBusyBlockIndices.length < block.getRealTotalBlockNum()) {
+    if (liveBlockIndicies.length
+        + liveBusyBlockIndicies.length < block.getRealTotalBlockNum()) {
       return false;
     }
     BitSet bitSet = new BitSet(block.getTotalBlockNum());
-    for (byte index : liveBlockIndices) {
+    for (byte index : liveBlockIndicies) {
       bitSet.set(index);
     }
-    for (byte busyIndex: liveBusyBlockIndices) {
+    for (byte busyIndex: liveBusyBlockIndicies) {
       bitSet.set(busyIndex);
     }
     for (int i = 0; i < block.getRealDataBlockNum(); i++) {
@@ -150,21 +147,21 @@ class ErasureCodingWork extends BlockReconstructionWork {
     } else {
       targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
           new ExtendedBlock(blockPoolId, stripedBlk), getSrcNodes(), targets,
-          liveBlockIndices, excludeReconstructedIndices, stripedBlk.getErasureCodingPolicy());
+          getLiveBlockIndicies(), stripedBlk.getErasureCodingPolicy());
     }
   }
 
   private void createReplicationWork(int sourceIndex,
       DatanodeStorageInfo target) {
     BlockInfoStriped stripedBlk = (BlockInfoStriped) getBlock();
-    final byte blockIndex = liveBlockIndices[sourceIndex];
+    final byte blockIndex = liveBlockIndicies[sourceIndex];
     final DatanodeDescriptor source = getSrcNodes()[sourceIndex];
     final long internBlkLen = StripedBlockUtil.getInternalBlockLength(
         stripedBlk.getNumBytes(), stripedBlk.getCellSize(),
         stripedBlk.getDataBlockNum(), blockIndex);
     final Block targetBlk = new Block(stripedBlk.getBlockId() + blockIndex,
         internBlkLen, stripedBlk.getGenerationStamp());
-    source.addECBlockToBeReplicated(targetBlk,
+    source.addBlockToBeReplicated(targetBlk,
         new DatanodeStorageInfo[] {target});
     LOG.debug("Add replication task from source {} to "
         + "target {} for EC block {}", source, target, targetBlk);
@@ -176,7 +173,7 @@ class ErasureCodingWork extends BlockReconstructionWork {
     BitSet bitSet = new BitSet(block.getRealTotalBlockNum());
     for (int i = 0; i < getSrcNodes().length; i++) {
       if (getSrcNodes()[i].isInService()) {
-        bitSet.set(liveBlockIndices[i]);
+        bitSet.set(liveBlockIndicies[i]);
       }
     }
     // If the block is on the node which is decommissioning or
@@ -187,7 +184,7 @@ class ErasureCodingWork extends BlockReconstructionWork {
       if ((getSrcNodes()[i].isDecommissionInProgress() ||
           (getSrcNodes()[i].isEnteringMaintenance() &&
           getSrcNodes()[i].isAlive())) &&
-          !bitSet.get(liveBlockIndices[i])) {
+          !bitSet.get(liveBlockIndicies[i])) {
         srcIndices.add(i);
       }
     }

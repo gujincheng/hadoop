@@ -18,14 +18,13 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.Test;
 
 /**
  * Unit tests for key converters for various tables' row keys.
@@ -34,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestKeyConverters {
 
   @Test
-  void testAppIdKeyConverter() {
+  public void testAppIdKeyConverter() {
     AppIdKeyConverter appIdKeyConverter = new AppIdKeyConverter();
     long currentTs = System.currentTimeMillis();
     ApplicationId appId1 = ApplicationId.newInstance(currentTs, 1);
@@ -49,20 +48,23 @@ public class TestKeyConverters {
     // App ids' should be encoded in a manner wherein descending order
     // is maintained.
     assertTrue(
+        "Ordering of app ids' is incorrect",
         Bytes.compareTo(appIdBytes1, appIdBytes2) > 0
             && Bytes.compareTo(appIdBytes1, appIdBytes3) > 0
-            && Bytes.compareTo(appIdBytes2, appIdBytes3) > 0,
-        "Ordering of app ids' is incorrect");
+            && Bytes.compareTo(appIdBytes2, appIdBytes3) > 0);
     String decodedAppId1 = appIdKeyConverter.decode(appIdBytes1);
     String decodedAppId2 = appIdKeyConverter.decode(appIdBytes2);
     String decodedAppId3 = appIdKeyConverter.decode(appIdBytes3);
-    assertEquals(appIdStr1, decodedAppId1);
-    assertEquals(appIdStr2, decodedAppId2);
-    assertEquals(appIdStr3, decodedAppId3);
+    assertTrue("Decoded app id is not same as the app id encoded",
+        appIdStr1.equals(decodedAppId1));
+    assertTrue("Decoded app id is not same as the app id encoded",
+        appIdStr2.equals(decodedAppId2));
+    assertTrue("Decoded app id is not same as the app id encoded",
+        appIdStr3.equals(decodedAppId3));
   }
 
   @Test
-  void testEventColumnNameConverter() {
+  public void testEventColumnNameConverter() {
     String eventId = "=foo_=eve=nt=";
     byte[] valSepBytes = Bytes.toBytes(Separator.VALUES.getValue());
     byte[] maxByteArr =
@@ -89,7 +91,7 @@ public class TestKeyConverters {
   }
 
   @Test
-  void testLongKeyConverter() {
+  public void testLongKeyConverter() {
     LongKeyConverter longKeyConverter = new LongKeyConverter();
     confirmLongKeyConverter(longKeyConverter, Long.MIN_VALUE);
     confirmLongKeyConverter(longKeyConverter, -1234567890L);
@@ -111,7 +113,7 @@ public class TestKeyConverters {
   }
 
   @Test
-  void testStringKeyConverter() {
+  public void testStringKeyConverter() {
     StringKeyConverter stringKeyConverter = new StringKeyConverter();
     String phrase = "QuackAttack now!";
 

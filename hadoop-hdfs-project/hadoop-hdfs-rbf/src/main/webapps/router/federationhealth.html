@@ -123,10 +123,9 @@
     <th>DataNodes usages% (Min/Median/Max/stdDev)</th>
     <td>{#NodeUsage.nodeUsage}{min} / {median} / {max} / {stdDev}{/NodeUsage.nodeUsage}</td>
   </tr>
-  <tr><th><a href="#tab-datanode">Live Nodes</a></th><td>{NumLiveNodes} (Decommissioned: {NumDecomLiveNodes}, In Maintenance: {NumInMaintenanceLiveDataNodes})</td></tr>
-  <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadNodes} (Decommissioned: {NumDecomDeadNodes}, In Maintenance: {NumInMaintenanceDeadDataNodes})</td></tr>
+  <tr><th><a href="#tab-datanode">Live Nodes</a></th><td>{NumLiveNodes} (Decommissioned: {NumDecomLiveNodes})</td></tr>
+  <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadNodes} (Decommissioned: {NumDecomDeadNodes})</td></tr>
   <tr><th><a href="#tab-datanode">Decommissioning Nodes</a></th><td>{NumDecommissioningNodes}</td></tr>
-  <tr><th><a href="#tab-datanode">Entering Maintenance Nodes</a></th><td> {NumEnteringMaintenanceDataNodes}</td></tr>
   <tr><th title="Excludes missing blocks.">Number of Under-Replicated Blocks</th><td>{NumOfBlocksUnderReplicated}</td></tr>
   <tr><th>Number of Blocks Pending Deletion</th><td>{NumOfBlocksPendingDeletion}</td></tr>
 </table>
@@ -350,7 +349,6 @@
       <th style="width:180px; text-align:center">Capacity</th>
       <th>Blocks</th-->
       <th>Block pool used</th>
-      <th>Block pool usage StdDev</th>
       <th>Version</th>
     </tr>
   </thead>
@@ -374,7 +372,6 @@
     </td>
     <td>{numBlocks}</td>
     <td ng-value="{blockPoolUsedPercent}">{blockPoolUsed|fmt_bytes} ({blockPoolUsedPercent|fmt_percentage})</td>
-    <td ng-value="{blockPoolUsedPercentStdDev}">{blockPoolUsedPercentStdDev|fmt_percentage}</td>
     <td>{version}</td>
   </tr>
   {/LiveNodes}
@@ -384,7 +381,6 @@
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{location}/{name} ({xferaddr})</td>
     <td></td>
     <td>{#helper_relative_time value="{lastContact}"/}</td>
-    <td></td>
     <td></td>
     <td></td>
     <td></td>
@@ -460,7 +456,7 @@ No nodes are decommissioning.
   </ul>
 </div>
 <small>
-<table class="table" id="table-mounttable">
+<table class="table">
   <thead>
     <tr>
       <th>Global path</th>
@@ -480,9 +476,9 @@ No nodes are decommissioning.
   <tbody>
     {#MountTable}
     <tr>
-      <td ng-value="{sourcePath}">{sourcePath}</td>
-      <td ng-value="{nameserviceId}">{nameserviceId}</td>
-      <td ng-value="{path}">{path}</td>
+      <td>{sourcePath}</td>
+      <td>{nameserviceId}</td>
+      <td>{path}</td>
       <td>{order}</td>
       <td align="center" class="federationhealth-mounttable-icon federationhealth-mounttable-{readonly}" title="{status}"/>
       <td align="center" class="mount-table-icon mount-table-fault-tolerant-{faulttolerant}" title="{ftStatus}"></td>
@@ -511,6 +507,5 @@ No nodes are decommissioning.
 <script type="text/javascript" src="static/dfs-dust.js"></script>
 <script type="text/javascript" src="/static/d3-v4.1.1.min.js"></script>
 <script type="text/javascript" src="federationhealth.js"></script>
-<script type="text/javascript" src="static/histogram-hostip.js"></script>
 </body>
 </html>

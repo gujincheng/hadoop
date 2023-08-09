@@ -556,11 +556,33 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     // Set the scope
     pc.setScope(PlacementScope.NODE);
 
-    // Target tag is optional.
+    try {
+      ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
+      Assert.fail(EXCEPTION_PREFIX + "constraint with no tag(s)");
+    } catch (IllegalArgumentException e) {
+      assertEquals(String.format(
+          RestApiErrorMessages.ERROR_PLACEMENT_POLICY_CONSTRAINT_TAGS_NULL,
+          "CA1 ", "comp-a"), e.getMessage());
+    }
+
+    // Set a target tag - but an invalid one
+    pc.setTargetTags(Collections.singletonList("comp-invalid"));
+
+    try {
+      ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
+      Assert.fail(EXCEPTION_PREFIX + "constraint with invalid tag name");
+    } catch (IllegalArgumentException e) {
+      assertEquals(
+          String.format(
+              RestApiErrorMessages.ERROR_PLACEMENT_POLICY_TAG_NAME_NOT_SAME,
+              "comp-invalid", "comp-a", "comp-a", "comp-a"),
+          e.getMessage());
+    }
+
+    // Set valid target tags now
     pc.setTargetTags(Collections.singletonList("comp-a"));
 
-    // Validation can succeed for any arbitrary target, only scheduler knows
-    // if the target tag is valid.
+    // Finally it should succeed
     try {
       ServiceApiUtil.validateAndResolveService(app, sfs, CONF_DNS_ENABLED);
     } catch (IllegalArgumentException e) {

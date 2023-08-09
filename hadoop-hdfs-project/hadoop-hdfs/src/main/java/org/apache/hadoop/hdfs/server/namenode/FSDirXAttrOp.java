@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.FileStatus;
@@ -32,10 +35,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReencryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.util.Lists;
-
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -43,13 +42,12 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.ListIterator;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SNAPSHOT_DELETED;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 
-public class FSDirXAttrOp {
+class FSDirXAttrOp {
   private static final XAttr KEYID_XATTR =
       XAttrHelper.buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, null);
   private static final XAttr UNREADABLE_BY_SUPERUSER_XATTR =
@@ -266,7 +264,7 @@ public class FSDirXAttrOp {
     return newXAttrs;
   }
 
-  public static INode unprotectedSetXAttrs(
+  static INode unprotectedSetXAttrs(
       FSDirectory fsd, final INodesInPath iip, final List<XAttr> xAttrs,
       final EnumSet<XAttrSetFlag> flag)
       throws IOException {
@@ -326,12 +324,6 @@ public class FSDirXAttrOp {
       if (!isFile && SECURITY_XATTR_UNREADABLE_BY_SUPERUSER.equals(xaName)) {
         throw new IOException("Can only set '" +
             SECURITY_XATTR_UNREADABLE_BY_SUPERUSER + "' on a file.");
-      }
-
-      if (xaName.equals(XATTR_SNAPSHOT_DELETED) && !(inode.isDirectory() &&
-          inode.getParent().isSnapshottable())) {
-        throw new IOException("Can only set '" +
-            XATTR_SNAPSHOT_DELETED + "' on a snapshot root.");
       }
     }
 
@@ -437,10 +429,7 @@ public class FSDirXAttrOp {
       if (inode != null &&
           inode.isDirectory() &&
           inode.getFsPermission().getStickyBit()) {
-        if (pc.isSuperUser()) {
-          // call external enforcer for audit
-          pc.checkSuperuserPrivilege(iip.getPath());
-        } else {
+        if (!pc.isSuperUser()) {
           fsd.checkOwner(pc, iip);
         }
       } else {

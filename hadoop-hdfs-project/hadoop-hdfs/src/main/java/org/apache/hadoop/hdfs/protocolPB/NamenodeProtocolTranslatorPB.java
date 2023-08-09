@@ -102,11 +102,11 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
 
   @Override
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize, long timeInterval)
+      minBlockSize)
       throws IOException {
     GetBlocksRequestProto req = GetBlocksRequestProto.newBuilder()
         .setDatanode(PBHelperClient.convert((DatanodeID)datanode)).setSize(size)
-        .setMinBlockSize(minBlockSize).setTimeInterval(timeInterval).build();
+        .setMinBlockSize(minBlockSize).build();
     try {
       return PBHelper.convert(rpcProxy.getBlocks(NULL_CONTROLLER, req)
           .getBlocks());

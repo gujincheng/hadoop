@@ -21,20 +21,18 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEF
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.MockNameNodeResourceChecker;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.ipc.RemoteException;
@@ -82,19 +80,6 @@ public class TestNNHealthCheck {
   }
 
   @Test
-  public void testNNHAServiceTargetWithProvidedAddr() {
-    conf.set(DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY, "0.0.0.1:1");
-    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "0.0.0.1:2");
-
-    // Test constructor with provided address.
-    NNHAServiceTarget target = new NNHAServiceTarget(conf, "ns", "nn1",
-        "0.0.0.0:1", "0.0.0.0:2");
-
-    assertEquals("/0.0.0.0:1", target.getAddress().toString());
-    assertEquals("/0.0.0.0:2", target.getHealthMonitorAddress().toString());
-  }
-
-  @Test
   public void testNNHealthCheckWithSafemodeAsUnhealthy() throws Exception {
     conf.setBoolean(DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE, true);
 
@@ -105,7 +90,7 @@ public class TestNNHealthCheck {
 
     // manually set safemode.
     cluster.getFileSystem(0)
-        .setSafeMode(SafeModeAction.ENTER);
+        .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
 
     NNHAServiceTarget haTarget = new NNHAServiceTarget(conf,
         DFSUtil.getNamenodeNameServiceId(conf), "nn1");

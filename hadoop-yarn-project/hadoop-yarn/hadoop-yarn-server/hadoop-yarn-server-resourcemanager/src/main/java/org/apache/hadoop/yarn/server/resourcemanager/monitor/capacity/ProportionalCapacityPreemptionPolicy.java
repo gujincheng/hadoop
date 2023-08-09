@@ -17,11 +17,9 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractParentQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -42,6 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .ManagedParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptableQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
@@ -430,11 +429,9 @@ public class ProportionalCapacityPreemptionPolicy
   }
 
   private Set<String> getLeafQueueNames(TempQueuePerPartition q) {
-    // Also exclude ParentQueues, which might be without children
-    if (CollectionUtils.isEmpty(q.children)
-        && !(q.parentQueue instanceof ManagedParentQueue)
-        && (q.parentQueue == null
-        || !q.parentQueue.isEligibleForAutoQueueCreation())) {
+    // If its a ManagedParentQueue, it might not have any children
+    if ((q.children == null || q.children.isEmpty())
+        && !(q.parentQueue instanceof ManagedParentQueue)) {
       return ImmutableSet.of(q.queueName);
     }
 
@@ -496,7 +493,7 @@ public class ProportionalCapacityPreemptionPolicy
     Map<ApplicationAttemptId, Set<RMContainer>> toPreempt =
         new HashMap<>();
     Map<PreemptionCandidatesSelector, Map<ApplicationAttemptId,
-        Set<RMContainer>>> toPreemptPerSelector =  new HashMap<>();
+        Set<RMContainer>>> toPreemptPerSelector =  new HashMap<>();;
     for (PreemptionCandidatesSelector selector :
         candidatesSelectionPolicies) {
       long startTime = 0;
@@ -630,9 +627,9 @@ public class ProportionalCapacityPreemptionPolicy
           partitionToLookAt, killable, absCap, absMaxCap, partitionResource,
           reserved, curQueue, effMinRes, effMaxRes);
 
-      if (curQueue instanceof AbstractParentQueue) {
+      if (curQueue instanceof ParentQueue) {
         String configuredOrderingPolicy =
-            ((AbstractParentQueue) curQueue).getQueueOrderingPolicy().getConfigName();
+            ((ParentQueue) curQueue).getQueueOrderingPolicy().getConfigName();
 
         // Recursively add children
         for (CSQueue c : curQueue.getChildQueues()) {

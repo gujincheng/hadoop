@@ -18,7 +18,7 @@
 
 /**
  * These .proto interfaces are private and stable.
- * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
+ * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
 
@@ -32,7 +32,6 @@ package hadoop.yarn;
 import "yarn_protos.proto";
 
 message RefreshQueuesRequestProto {
-  optional string sub_cluster_id = 1;
 }
 message RefreshQueuesResponseProto {
 }
@@ -40,31 +39,26 @@ message RefreshQueuesResponseProto {
 message RefreshNodesRequestProto {
   optional DecommissionTypeProto decommissionType = 1 [default = NORMAL];
   optional int32 decommissionTimeout = 2;
-  optional string sub_cluster_id = 3;
 }
 message RefreshNodesResponseProto {
 }
 
 message RefreshSuperUserGroupsConfigurationRequestProto {
-  optional string sub_cluster_id = 1;
 }
 message RefreshSuperUserGroupsConfigurationResponseProto {
 }
 
 message RefreshUserToGroupsMappingsRequestProto {
-  optional string sub_cluster_id = 1;
 }
 message RefreshUserToGroupsMappingsResponseProto {
 }
 
 message RefreshAdminAclsRequestProto {
-  optional string sub_cluster_id = 1;
 }
 message RefreshAdminAclsResponseProto {
 }
 
 message RefreshServiceAclsRequestProto {
-  optional string sub_cluster_id = 1;
 }
 message RefreshServiceAclsResponseProto {
 }
@@ -79,14 +73,12 @@ message GetGroupsForUserResponseProto {
 
 message UpdateNodeResourceRequestProto {
   repeated NodeResourceMapProto node_resource_map = 1;
-  optional string sub_cluster_id = 2;
 }
 
 message UpdateNodeResourceResponseProto {
 }
 
 message RefreshNodesResourcesRequestProto {
-  optional string sub_cluster_id = 1;
 }
 
 message RefreshNodesResourcesResponseProto {
@@ -95,7 +87,6 @@ message RefreshNodesResourcesResponseProto {
 message AddToClusterNodeLabelsRequestProto {
   repeated string deprecatedNodeLabels = 1;
   repeated NodeLabelProto nodeLabels = 2;
-  optional string sub_cluster_id = 3;
 }
 
 message AddToClusterNodeLabelsResponseProto {
@@ -103,7 +94,6 @@ message AddToClusterNodeLabelsResponseProto {
 
 message RemoveFromClusterNodeLabelsRequestProto {
   repeated string nodeLabels = 1;
-  optional string sub_cluster_id = 2;
 }
 
 message RemoveFromClusterNodeLabelsResponseProto {
@@ -112,7 +102,6 @@ message RemoveFromClusterNodeLabelsResponseProto {
 message ReplaceLabelsOnNodeRequestProto {
   repeated NodeIdToLabelsProto nodeToLabels = 1;
   optional bool failOnUnknownNodes = 2;
-  optional string sub_cluster_id = 3;
 }
 
 message ReplaceLabelsOnNodeResponseProto {
@@ -122,14 +111,12 @@ message UpdateNodeLabelsResponseProto {
 }
 
 message CheckForDecommissioningNodesRequestProto {
-  optional string sub_cluster_id = 1;
 }
 message CheckForDecommissioningNodesResponseProto {
   repeated NodeIdProto decommissioningNodes = 1;
 }
 
 message RefreshClusterMaxPriorityRequestProto {
-  optional string sub_cluster_id = 1;
 }
 message RefreshClusterMaxPriorityResponseProto {
 }
@@ -156,30 +143,10 @@ message NodesToAttributesMappingRequestProto {
   optional AttributeMappingOperationTypeProto operation = 1 [default = REPLACE];
   repeated NodeToAttributesProto nodeToAttributes = 2;
   optional bool failOnUnknownNodes = 3;
-  optional string sub_cluster_id = 4;
 }
 
 message NodesToAttributesMappingResponseProto {
 }
-
-message DeregisterSubClusterRequestProto {
-  optional string subClusterId = 1;
-}
-
-message DeregisterSubClusterResponseProto {
-  repeated DeregisterSubClustersProto deregisterSubClusters = 1;
-}
-
-message SaveFederationQueuePolicyRequestProto {
-  required string queue = 1;
-  required FederationQueueWeightProto federationQueueWeight = 2;
-  optional string policyManagerClassName = 3;
-}
-
-message SaveFederationQueuePolicyResponseProto {
-  required string message = 1;
-}
-
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////

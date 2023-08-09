@@ -56,11 +56,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
-
 
 @Private
 public interface ResourceManagerAdministrationProtocol extends GetUserMappingsProtocol {
@@ -111,8 +106,8 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
    * 
    * @param request request to update resource for a node in cluster.
    * @return (empty) response on accepting update.
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   @Private
   @Idempotent
@@ -158,35 +153,4 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   NodesToAttributesMappingResponse mapAttributesToNodes(
       NodesToAttributesMappingRequest request) throws YarnException,
       IOException;
-
-  /**
-   * In YARN Federation mode, We allow users to mark subClusters
-   * With no heartbeat for a long time as SC_LOST state.
-   *
-   * If we include a specific subClusterId in the request, check for the specified subCluster.
-   * If subClusterId is empty, all subClusters are checked.
-   *
-   * @param request deregisterSubCluster request.
-   * The request contains the id of to deregister sub-cluster.
-   * @return Response from deregisterSubCluster.
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException if an IO error occurred.
-   */
-  @Private
-  @Idempotent
-  DeregisterSubClusterResponse deregisterSubCluster(DeregisterSubClusterRequest request)
-      throws YarnException, IOException;
-
-  /**
-   * In YARN-Federation mode, We will be storing the Policy information for Queues.
-   *
-   * @param request saveFederationQueuePolicy Request
-   * @return Response from saveFederationQueuePolicy.
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException if an IO error occurred.
-   */
-  @Private
-  @Idempotent
-  SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
-      SaveFederationQueuePolicyRequest request) throws YarnException, IOException;
 }

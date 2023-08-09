@@ -103,7 +103,7 @@ class CapacitySchedulerPage extends RmView {
           ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : nodeLabel;
       // first display the queue's label specific details :
       ResponseInfo ri =
-          info("\'" + lqinfo.getQueuePath()
+          info("\'" + lqinfo.getQueuePath().substring(5)
               + "\' Queue Status for Partition \'" + nodeLabelDisplay + "\'");
       renderQueueCapacityInfo(ri, nodeLabel);
       html.__(InfoBlock.class);
@@ -113,7 +113,7 @@ class CapacitySchedulerPage extends RmView {
 
       // second display the queue specific details :
       ri =
-          info("\'" + lqinfo.getQueuePath() + "\' Queue Status")
+          info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status")
               .__("Queue State:", lqinfo.getQueueState());
       renderCommonLeafQueueInfo(ri);
 
@@ -125,7 +125,7 @@ class CapacitySchedulerPage extends RmView {
 
     private void renderLeafQueueInfoWithoutParition(Block html) {
       ResponseInfo ri =
-          info("\'" + lqinfo.getQueuePath() + "\' Queue Status")
+          info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status")
               .__("Queue State:", lqinfo.getQueueState());
       renderQueueCapacityInfo(ri, "");
       renderCommonLeafQueueInfo(ri);
@@ -159,12 +159,8 @@ class CapacitySchedulerPage extends RmView {
           __("Used Capacity:",
               appendPercent(resourceUsages.getUsed(),
                   capacities.getUsedCapacity() / 100))
-          .__(capacities.getWeight() != -1 ?
-              "Configured Weight:" :
-                  "Configured Capacity:",
-              capacities.getWeight() != -1 ?
-                  capacities.getWeight() :
-                  capacities.getConfiguredMinResource() == null ?
+          .__("Configured Capacity:",
+              capacities.getConfiguredMinResource() == null ?
                   Resources.none().toString() :
                   capacities.getConfiguredMinResource().toString())
           .__("Configured Max Capacity:",
@@ -197,21 +193,14 @@ class CapacitySchedulerPage extends RmView {
 
     private void renderCommonLeafQueueInfo(ResponseInfo ri) {
       ri.
-          __("Num Schedulable Applications:",
-              Integer.toString(lqinfo.getNumActiveApplications())).
-          __("Num Non-Schedulable Applications:",
-              Integer.toString(lqinfo.getNumPendingApplications())).
-          __("Num Containers:",
-              Integer.toString(lqinfo.getNumContainers())).
-          __("Max Applications:",
-              Integer.toString(lqinfo.getMaxApplications())).
-          __("Max Applications Per User:",
-              Integer.toString(lqinfo.getMaxApplicationsPerUser())).
-          __("Configured Minimum User Limit Percent:",
-              lqinfo.getUserLimit() + "%").
+          __("Num Schedulable Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
+          __("Num Non-Schedulable Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
+          __("Num Containers:", Integer.toString(lqinfo.getNumContainers())).
+          __("Max Applications:", Integer.toString(lqinfo.getMaxApplications())).
+          __("Max Applications Per User:", Integer.toString(lqinfo.getMaxApplicationsPerUser())).
+          __("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
           __("Configured User Limit Factor:", lqinfo.getUserLimitFactor()).
-          __("Accessible Node Labels:",
-              StringUtils.join(",", lqinfo.getNodeLabels())).
+          __("Accessible Node Labels:", StringUtils.join(",", lqinfo.getNodeLabels())).
           __("Ordering Policy: ", lqinfo.getOrderingPolicyDisplayName()).
           __("Preemption:",
               lqinfo.getPreemptionDisabled() ? "disabled" : "enabled").
@@ -242,7 +231,7 @@ class CapacitySchedulerPage extends RmView {
       TBODY<TABLE<Hamlet>> tbody =
           html.table("#userinfo").thead().$class("ui-widget-header").tr().th()
               .$class("ui-state-default").__("User Name").__().th()
-              .$class("ui-state-default").__("User Limit Resource").__().th()
+              .$class("ui-state-default").__("Max Resource").__().th()
               .$class("ui-state-default").__("Weight").__().th()
               .$class("ui-state-default").__("Used Resource").__().th()
               .$class("ui-state-default").__("Max AM Resource").__().th()
@@ -348,7 +337,7 @@ class CapacitySchedulerPage extends RmView {
               span().$style(join(width(usedCapPercent),
                 ";font-size:1px;left:0%;", absUsedCap > absCap ? Q_OVER : Q_UNDER)).
             __('.').__().
-              span(".q", info.getQueuePath()).__().
+              span(".q", "Queue: "+info.getQueuePath().substring(5)).__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
             __(join(percent(used), " used")).__();
 
@@ -492,7 +481,7 @@ class CapacitySchedulerPage extends RmView {
             a(_Q).$style(width(Q_MAX_WIDTH)).
               span().$style(join(width(used), ";left:0%;",
                   used > 1 ? Q_OVER : Q_UNDER)).__(".").__().
-              span(".q", "root").__().
+              span(".q", "Queue: root").__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
               __(join(percent(used), " used")).__().
               __(QueueBlock.class).__();
@@ -522,7 +511,7 @@ class CapacitySchedulerPage extends RmView {
             a(_Q).$style(width(Q_MAX_WIDTH)).
               span().$style(join(width(used), ";left:0%;",
                   used > 1 ? Q_OVER : Q_UNDER)).__(".").__().
-              span(".q", "root").__().
+              span(".q", "Queue: root").__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
                 __(join(percent(used), " used")).__().
                 __(QueueBlock.class).__().__();
@@ -656,12 +645,13 @@ class CapacitySchedulerPage extends RmView {
           "    }",
           "  });",
           "  $('#cs').bind('select_node.jstree', function(e, data) {",
-          "    var queues = $('.q', data.rslt.obj);",
-          "    var q = '^' + queues.first().text();",
-          "    q += queues.length == 1 ? '$' : '\\\\.';",
-          // Update this filter column index for queue if new columns are added
-          // Current index for queue column is 5
-          "    $('#apps').dataTable().fnFilter(q, 5, true);",
+          "    var q = $('.q', data.rslt.obj).first().text();",
+          "    if (q == 'Queue: root') q = '';",
+          "    else {",
+          "      q = q.substr(q.lastIndexOf(':') + 2);",
+          "      q = '^' + q.substr(q.lastIndexOf('.') + 1) + '$';",
+          "    }",
+          "    $('#apps').dataTable().fnFilter(q, 4, true);",
           "  });",
           "  $('#cs').show();",
           "});").__().

@@ -40,20 +40,16 @@ import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
-import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
-import org.apache.hadoop.fs.s3a.impl.StoreContext;
-import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
-import org.apache.hadoop.fs.s3a.impl.StubContextAccessor;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
-import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTrackerFactory;
-import static org.apache.hadoop.util.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Relays FS calls to the mocked FS, allows for some extra logging with
@@ -177,8 +173,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
         conf,
         new EmptyS3AStatisticsContext(),
         noopAuditor(conf),
-        AuditTestSupport.NOOP_SPAN,
-        new MinimalWriteOperationHelperCallbacks());
+        AuditTestSupport.NOOP_SPAN);
   }
 
   @Override
@@ -200,11 +195,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
     return true;
   }
 
-  @Override
-  public boolean isMultipartUploadEnabled() {
-    return true;
-  }
-
   /**
    * Make operation to set the s3 client public.
    * @param client client.
@@ -222,11 +212,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  void finishedWrite(String key,
-      long length,
-      String eTag,
-      String versionId,
-      final PutObjectOptions putOptions) {
+  void finishedWrite(String key, long length, String eTag, String versionId,
+          BulkOperationState operationState) {
 
   }
 
@@ -352,7 +339,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
   @Override
   void deleteObjectAtPath(Path f,
       String key,
-      boolean isFile)
+      boolean isFile,
+      final BulkOperationState operationState)
       throws AmazonClientException, IOException {
     deleteObject(key);
   }
@@ -392,29 +380,11 @@ public class MockS3AFileSystem extends S3AFileSystem {
 
   @Override
   public void operationRetried(Exception ex) {
-    /* no-op */
+    /** no-op */
   }
 
   @Override
   protected DurationTrackerFactory getDurationTrackerFactory() {
     return stubDurationTrackerFactory();
   }
-
-  /**
-   * Build an immutable store context.
-   * If called while the FS is being initialized,
-   * some of the context will be incomplete.
-   * new store context instances should be created as appropriate.
-   * @return the store context of this FS.
-   */
-  public StoreContext createStoreContext() {
-    return new StoreContextBuilder().setFsURI(getUri())
-        .setBucket(getBucket())
-        .setConfiguration(getConf())
-        .setUsername(getUsername())
-        .setAuditor(getAuditor())
-        .setContextAccessors(new StubContextAccessor(getBucket()))
-        .build();
-  }
-
 }

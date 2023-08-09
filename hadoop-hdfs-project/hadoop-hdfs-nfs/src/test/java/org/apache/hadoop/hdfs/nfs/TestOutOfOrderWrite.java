@@ -21,12 +21,6 @@ package org.apache.hadoop.hdfs.nfs;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.SocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
@@ -48,6 +42,13 @@ import org.apache.hadoop.oncrpc.SimpleTcpClientHandler;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
 
 public class TestOutOfOrderWrite {
   public final static Logger LOG =
@@ -99,9 +100,9 @@ public class TestOutOfOrderWrite {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
       // Get handle from create response
-      ByteBuf buf = (ByteBuf) msg;
+      ChannelBuffer buf = (ChannelBuffer) e.getMessage();
       XDR rsp = new XDR(buf.array());
       if (rsp.getBytes().length == 0) {
         LOG.info("rsp length is zero, why?");
@@ -124,7 +125,7 @@ public class TestOutOfOrderWrite {
       rsp.readBoolean(); // value follow
       handle = new FileHandle();
       handle.deserialize(rsp);
-      channel = ctx.channel();
+      channel = e.getChannel();
     }
   }
 
@@ -135,17 +136,16 @@ public class TestOutOfOrderWrite {
     }
 
     @Override
-    protected ChannelInitializer<SocketChannel>  setChannelHandler() {
-      return new ChannelInitializer<SocketChannel>() {
+    protected ChannelPipelineFactory setPipelineFactory() {
+      this.pipelineFactory = new ChannelPipelineFactory() {
         @Override
-        protected void initChannel(SocketChannel ch) throws Exception {
-          ChannelPipeline p = ch.pipeline();
-          p.addLast(
+        public ChannelPipeline getPipeline() {
+          return Channels.pipeline(
               RpcUtil.constructRpcFrameDecoder(),
-              new WriteHandler(request)
-          );
+              new WriteHandler(request));
         }
       };
+      return this.pipelineFactory;
     }
 
   }

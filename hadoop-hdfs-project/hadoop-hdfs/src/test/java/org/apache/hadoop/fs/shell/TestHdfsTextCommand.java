@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -107,7 +107,7 @@ public class TestHdfsTextCommand {
 
   private String inputStreamToString(InputStream stream) throws IOException {
     StringWriter writer = new StringWriter();
-    IOUtils.copy(stream, writer, StandardCharsets.UTF_8);
+    IOUtils.copy(stream, writer, Charset.defaultCharset());
     return writer.toString();
   }
 

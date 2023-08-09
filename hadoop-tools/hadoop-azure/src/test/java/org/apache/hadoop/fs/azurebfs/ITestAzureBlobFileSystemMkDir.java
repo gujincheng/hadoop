@@ -49,7 +49,7 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
         DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE || !getIsNamespaceEnabled(
             getFileSystem()));
     final AzureBlobFileSystem fs = getFileSystem();
-    Path path = path("testFolder");
+    Path path = new Path("testFolder");
     assertMkdirs(fs, path);
     assertMkdirs(fs, path);
   }
@@ -64,7 +64,7 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(FS_AZURE_ENABLE_MKDIR_OVERWRITE, Boolean.toString(false));
     AzureBlobFileSystem fs = getFileSystem(config);
-    Path path = path("testFolder");
+    Path path = new Path("testFolder");
     assertMkdirs(fs, path); //checks that mkdirs returns true
     long timeCreated = fs.getFileStatus(path).getModificationTime();
     assertMkdirs(fs, path); //call to existing dir should return success
@@ -78,8 +78,8 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
         DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE && getIsNamespaceEnabled(
             getFileSystem()));
     final AzureBlobFileSystem fs = getFileSystem();
-    Path path = path("testFilePath");
-    fs.create(path).close();
+    Path path = new Path("testFilePath");
+    fs.create(path);
     assertTrue(fs.getFileStatus(path).isFile());
     intercept(FileAlreadyExistsException.class, () -> fs.mkdirs(path));
   }

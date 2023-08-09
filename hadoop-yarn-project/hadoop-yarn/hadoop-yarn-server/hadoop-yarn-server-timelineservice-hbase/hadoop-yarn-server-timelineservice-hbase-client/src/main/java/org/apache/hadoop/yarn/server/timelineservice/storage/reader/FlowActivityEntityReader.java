@@ -46,6 +46,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRo
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 /**
  * Timeline entity reader for flow activity entities that are stored in the
  * flow activity table.
@@ -80,10 +82,8 @@ class FlowActivityEntityReader extends TimelineEntityReader {
 
   @Override
   protected void validateParams() {
-    String clusterId = getContext().getClusterId();
-    if (clusterId == null) {
-      throw new NullPointerException("clusterId shouldn't be null");
-    }
+    Preconditions.checkNotNull(getContext().getClusterId(),
+        "clusterId shouldn't be null");
   }
 
   @Override
@@ -133,16 +133,16 @@ class FlowActivityEntityReader extends TimelineEntityReader {
         throw new BadRequestException(
             "fromid doesn't belong to clusterId=" + clusterId);
       }
-      scan.withStartRow(key.getRowKey());
-      scan.withStopRow(
+      scan.setStartRow(key.getRowKey());
+      scan.setStopRow(
           new FlowActivityRowKeyPrefix(clusterId,
               (getFilters().getCreatedTimeBegin() <= 0 ? 0
                   : (getFilters().getCreatedTimeBegin() - 1)))
                       .getRowKeyPrefix());
     } else {
-      scan.withStartRow(new FlowActivityRowKeyPrefix(clusterId, getFilters()
+      scan.setStartRow(new FlowActivityRowKeyPrefix(clusterId, getFilters()
           .getCreatedTimeEnd()).getRowKeyPrefix());
-      scan.withStopRow(new FlowActivityRowKeyPrefix(clusterId, (getFilters()
+      scan.setStopRow(new FlowActivityRowKeyPrefix(clusterId, (getFilters()
           .getCreatedTimeBegin() <= 0 ? 0
           : (getFilters().getCreatedTimeBegin() - 1))).getRowKeyPrefix());
     }

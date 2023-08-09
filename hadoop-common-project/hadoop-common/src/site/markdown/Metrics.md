@@ -82,11 +82,7 @@ The default timeunit used for RPC metrics is milliseconds (as per the below desc
 | `RpcAuthenticationSuccesses` | Total number of authentication successes |
 | `RpcAuthorizationFailures` | Total number of authorization failures |
 | `RpcAuthorizationSuccesses` | Total number of authorization successes |
-| `RpcClientBackoff` | Total number of client backoff requests |
-| `RpcSlowCalls` | Total number of slow RPC calls |
-| `RpcCallsSuccesses` | Total number of RPC calls that are successfully processed |
 | `NumOpenConnections` | Current number of open connections |
-| `NumInProcessHandler` | Current number of handlers on working |
 | `CallQueueLength` | Current length of the call queue |
 | `numDroppedConnections` | Total number of dropped connections |
 | `rpcQueueTime`*num*`sNumOps` | Shows total number of RPC calls (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
@@ -107,8 +103,6 @@ The default timeunit used for RPC metrics is milliseconds (as per the below desc
 | `rpcLockWaitTime`*num*`s90thPercentileLatency` | Shows the 90th percentile of RPC lock wait time in milliseconds (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
 | `rpcLockWaitTime`*num*`s95thPercentileLatency` | Shows the 95th percentile of RPC lock wait time in milliseconds (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
 | `rpcLockWaitTime`*num*`s99thPercentileLatency` | Shows the 99th percentile of RPC lock wait time in milliseconds (*num* seconds granularity) if `rpc.metrics.quantile.enable` is set to true. *num* is specified by `rpc.metrics.percentiles.intervals`. |
-| `TotalRequests` | Total num of requests served by the RPC server. |
-| `TotalRequestsPerSeconds` | Total num of requests per second served by the RPC server. |
 
 RetryCache/NameNodeRetryCache
 -----------------------------
@@ -145,10 +139,8 @@ to FairCallQueue metrics. For each level of priority, rpcqueue and rpcprocessing
 rpcdetailed context
 ===================
 
-Metrics of rpcdetailed context are exposed in unified manner by RPC layer. Two metrics are exposed for each RPC based on its name. Metrics named "(RPC method name)NumOps" indicates total number of method calls, and metrics named "(RPC method name)AvgTime" shows average processing time for method calls in milliseconds.
+Metrics of rpcdetailed context are exposed in unified manner by RPC layer. Two metrics are exposed for each RPC based on its name. Metrics named "(RPC method name)NumOps" indicates total number of method calls, and metrics named "(RPC method name)AvgTime" shows average turn around time for method calls in milliseconds.
 Please note that the AvgTime metrics do not include time spent waiting to acquire locks on data structures (see RpcLockWaitTimeAvgTime).
-Metrics named "Overall(RPC method name)AvgTime" shows the average overall processing time for method calls
-in milliseconds. It is measured from request arrival to when the response is sent back to the client.
 
 rpcdetailed
 -----------
@@ -225,7 +217,7 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `WarmUpEDEKTimeNumOps` | Total number of warming up EDEK |
 | `WarmUpEDEKTimeAvgTime` | Average time of warming up EDEK in milliseconds |
 | `WarmUpEDEKTime`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of time spent in warming up EDEK in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
-| `ResourceCheckTime`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of NameNode resource check latency in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `ResourceCheckTime`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of of NameNode resource check latency in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
 | `EditLogTailTimeNumOps` | Total number of times the standby NameNode tailed the edit log |
 | `EditLogTailTimeAvgTime` | Average time (in milliseconds) spent by standby NameNode in tailing edit log |
 | `EditLogTailTime`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of time spent in tailing edit logs by standby NameNode in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
@@ -306,7 +298,6 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `FSN(Read/Write)Lock`*OperationName*`NanosAvgTime` | Average time of holding the lock by operations in nanoseconds |
 | `FSN(Read/Write)LockOverallNanosNumOps`  | Total number of acquiring lock by all operations |
 | `FSN(Read/Write)LockOverallNanosAvgTime` | Average time of holding the lock by all operations in nanoseconds |
-| `PendingSPSPaths` | The number of paths to be processed by storage policy satisfier |
 
 JournalNode
 -----------
@@ -375,9 +366,6 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 |:---- |:---- |
 | `BytesWritten` | Total number of bytes written to DataNode |
 | `BytesRead` | Total number of bytes read from DataNode |
-| `ReadTransferRateNumOps` | Total number of data read transfers |
-| `ReadTransferRateAvgTime` | Average transfer rate of bytes read from DataNode, measured in bytes per second. |
-| `ReadTransferRate`*num*`s(50/75/90/95/99)thPercentileRate` | The 50/75/90/95/99th percentile of the transfer rate of bytes read from DataNode, measured in bytes per second. |
 | `BlocksWritten` | Total number of blocks written to DataNode |
 | `BlocksRead` | Total number of blocks read from DataNode |
 | `BlocksReplicated` | Total number of blocks replicated |
@@ -471,28 +459,6 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `EcReconstructionBytesRead` | Total number of bytes read by erasure coding worker |
 | `EcReconstructionBytesWritten` | Total number of bytes written by erasure coding worker |
 | `EcReconstructionRemoteBytesRead` | Total number of bytes remote read by erasure coding worker |
-| `CreateRbwOpNumOps` | Total number of create rbw operations |
-| `CreateRbwOpAvgTime` | Average time of create rbw operations in milliseconds |
-| `RecoverRbwOpNumOps` | Total number of recovery rbw operations |
-| `RecoverRbwOpAvgTime` | Average time of recovery rbw operations in milliseconds |
-| `ConvertTemporaryToRbwOpNumOps` | Total number of convert temporary to rbw operations |
-| `ConvertTemporaryToRbwOpAvgTime` | Average time of convert temporary to rbw operations in milliseconds |
-| `CreateTemporaryOpNumOps` | Total number of create temporary operations |
-| `CreateTemporaryOpAvgTime` | Average time of create temporary operations in milliseconds |
-| `FinalizeBlockOpNumOps` | Total number of finalize block operations |
-| `FinalizeBlockOpAvgTime` | Average time of finalize block operations in milliseconds |
-| `UnfinalizeBlockOpNumOps` | Total number of un-finalize block operations |
-| `UnfinalizeBlockOpAvgTime` | Average time of un-finalize block operations in milliseconds |
-| `CheckAndUpdateOpNumOps` | Total number of check and update operations |
-| `CheckAndUpdateOpAvgTime` | Average time of check and update operations in milliseconds |
-| `UpdateReplicaUnderRecoveryOpNumOps` | Total number of update replica under recovery operations |
-| `UpdateReplicaUnderRecoveryOpAvgTime` | Average time of update replica under recovery operations in milliseconds |
-| `PacketsReceived` | Total number of packets received by Datanode (excluding heartbeat packet from client) |
-| `PacketsSlowWriteToMirror` | Total number of packets whose write to other Datanodes in the pipeline takes more than a certain time (300ms by default) |
-| `PacketsSlowWriteToDisk` | Total number of packets whose write to disk takes more than a certain time (300ms by default) |
-| `PacketsSlowWriteToOsCache` | Total number of packets whose write to os cache takes more than a certain time (300ms by default) |
-| `slowFlushOrSyncCount` | Total number of packets whose sync/flush takes more than a certain time (300ms by default) |
-| `slowAckToUpstreamCount` | Total number of packets whose upstream ack takes more than a certain time (300ms by default) |
 
 FsVolume
 --------
@@ -581,35 +547,33 @@ RouterRPCMetrics shows the statistics of the Router component in Router-based fe
 |:---- |:---- |
 | `ProcessingOp` | Number of operations the Router processed internally |
 | `ProxyOp` | Number of operations the Router proxied to a Namenode |
-| `ProxyOpFailureStandby` | Number of operations to hit a standby NN |
-| `ProxyOpFailureCommunicate` | Number of operations to fail to reach NN |
+| `ProxyOpFailureStandby` | Number of operations to fail to reach NN |
+| `ProxyOpFailureCommunicate` | Number of operations to hit a standby NN |
 | `ProxyOpNotImplemented` | Number of operations not implemented |
 | `RouterFailureStateStore` | Number of failed requests due to State Store unavailable |
 | `RouterFailureReadOnly` | Number of failed requests due to read only mount point |
 | `RouterFailureLocked` | Number of failed requests due to locked path |
 | `RouterFailureSafemode` | Number of failed requests due to safe mode |
 | `ProcessingNumOps` | Number of operations the Router processed internally within an interval time of metric |
-| `ProcessingAvgTime` | Average time for the Router to process operations in milliseconds |
+| `ProcessingAvgTime` | Average time for the Router to process operations in nanoseconds |
 | `ProxyNumOps` | Number of times of that the Router to proxy operations to the Namenodes within an interval time of metric |
-| `ProxyAvgTime` | Average time for the Router to proxy operations to the Namenodes in milliseconds |
+| `ProxyAvgTime` | Average time for the Router to proxy operations to the Namenodes in nanoseconds |
 
 StateStoreMetrics
 -----------------
 StateStoreMetrics shows the statistics of the State Store component in Router-based federation.
 
-| Name                                      | Description                                                                        |
-|:------------------------------------------|:-----------------------------------------------------------------------------------|
-| `ReadsNumOps`                             | Number of GET transactions for State Store within an interval time of metric       |
-| `ReadsAvgTime`                            | Average time of GET transactions for State Store in milliseconds                   |
-| `WritesNumOps`                            | Number of PUT transactions for State Store within an interval time of metric       |
-| `WritesAvgTime`                           | Average time of PUT transactions for State Store in milliseconds                   |
-| `RemovesNumOps`                           | Number of REMOVE transactions for State Store within an interval time of metric    |
-| `RemovesAvgTime`                          | Average time of REMOVE transactions for State Store in milliseconds                |
-| `FailuresNumOps`                          | Number of failed transactions for State Store within an interval time of metric    |
-| `FailuresAvgTime`                         | Average time of failed transactions for State Store in milliseconds                |
-| `Cache`*BaseRecord*`Size`                 | Number of store records to cache in State Store                                    |
-| `Cache`*BaseRecord*`LoadNumOps`           | Number of times store records are loaded in the State Store Cache from State Store |
-| `Cache`*BaseRecord*`LoadAvgTime`          | Average time of loading State Store Cache from State Store in milliseconds         |
+| Name | Description |
+|:---- |:---- |
+| `ReadsNumOps` | Number of GET transactions for State Store within an interval time of metric |
+| `ReadsAvgTime` | Average time of GET transactions for State Store in milliseconds |
+| `WritesNumOps` | Number of PUT transactions for State Store within an interval time of metric |
+| `WritesAvgTime` | Average time of PUT transactions for State Store in milliseconds |
+| `RemovesNumOps` | Number of REMOVE transactions for State Store within an interval time of metric |
+| `RemovesAvgTime` | Average time of REMOVE transactions for State Store in milliseconds |
+| `FailuresNumOps` | Number of failed transactions for State Store within an interval time of metric |
+| `FailuresAvgTime` | Average time of failed transactions for State Store in milliseconds |
+| `Cache`*BaseRecord*`Size` | Number of store records to cache in State Store |
 
 yarn context
 ============

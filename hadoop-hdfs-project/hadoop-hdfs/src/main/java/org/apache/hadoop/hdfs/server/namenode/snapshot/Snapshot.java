@@ -44,8 +44,6 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import org.apache.hadoop.security.AccessControlException;
 
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SNAPSHOT_DELETED;
-
 /** Snapshot of a sub-tree in the namesystem. */
 @InterfaceAudience.Private
 public class Snapshot implements Comparable<byte[]> {
@@ -63,10 +61,6 @@ public class Snapshot implements Comparable<byte[]> {
   
   public static String generateDefaultSnapshotName() {
     return new SimpleDateFormat(DEFAULT_SNAPSHOT_NAME_PATTERN).format(new Date());
-  }
-
-  public static String generateDeletedSnapshotName(Snapshot s) {
-    return getSnapshotName(s) + "#" + s.getId();
   }
 
   public static String getSnapshotPath(String snapshottableDir,
@@ -92,12 +86,6 @@ public class Snapshot implements Comparable<byte[]> {
   
   public static int getSnapshotId(Snapshot s) {
     return s == null ? CURRENT_STATE_ID : s.getId();
-  }
-
-  public static String getSnapshotString(int snapshot) {
-    return snapshot == CURRENT_STATE_ID? "<CURRENT_STATE>"
-        : snapshot == NO_SNAPSHOT_ID? "<NO_SNAPSHOT>"
-        : "Snapshot #" + snapshot;
   }
 
   /**
@@ -183,11 +171,6 @@ public class Snapshot implements Comparable<byte[]> {
           }).toArray(Feature[]::new));
     }
 
-    boolean isMarkedAsDeleted() {
-      final XAttrFeature f = getXAttrFeature();
-      return f != null && f.getXAttr(XATTR_SNAPSHOT_DELETED) != null;
-    }
-
     @Override
     public ReadOnlyList<INode> getChildrenList(int snapshotId) {
       return getParent().getChildrenList(snapshotId);
@@ -265,7 +248,7 @@ public class Snapshot implements Comparable<byte[]> {
   public boolean equals(Object that) {
     if (this == that) {
       return true;
-    } else if (!(that instanceof Snapshot)) {
+    } else if (that == null || !(that instanceof Snapshot)) {
       return false;
     }
     return this.id == ((Snapshot)that).id;

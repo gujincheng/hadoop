@@ -20,7 +20,7 @@
 
 The S3A filesystem client supports `Hadoop Delegation Tokens`.
 This allows YARN application like MapReduce, Distcp, Apache Flink and Apache Spark to
-obtain credentials to access S3 buckets and pass them to
+obtain credentials to access S3 buckets and pass them pass these credentials to
 jobs/queries, so granting them access to the service with the same access
 permissions as the user.
 
@@ -37,9 +37,10 @@ the S3A client from the AWS STS service. They have a limited duration
 so restrict how long an application can access AWS on behalf of a user.
 Clients with this token have the full permissions of the user.
 
-*Role Delegation Tokens:* These contain an "STS Session Token" requested by the
-STS "Assume Role" API, granting the caller permission to interact with S3 using a specific IAM
-role, *with permissions restricted to accessing a specific S3 bucket*.
+*Role Delegation Tokens:* These contain an "STS Session Token" requested by by the
+STS "Assume Role" API, so grant the caller to interact with S3 as specific AWS
+role, *with permissions restricted to purely accessing the S3 bucket
+and associated S3Guard data*.
 
 Role Delegation Tokens are the most powerful. By restricting the access rights
 of the granted STS token, no process receiving the token may perform
@@ -55,13 +56,13 @@ see [S3A Delegation Token Architecture](delegation_token_architecture.html).
 
 ## <a name="background"></a> Background: Hadoop Delegation Tokens.
 
-A Hadoop Delegation Token is a byte array of data which is submitted to
-Hadoop services as proof that the caller has the permissions to perform
+A Hadoop Delegation Token are is a byte array of data which is submitted to
+a Hadoop services as proof that the caller has the permissions to perform
 the operation which it is requesting —
-and which can be passed between applications to *delegate* those permissions.
+and which can be passed between applications to *delegate* those permission.
 
-Tokens are opaque to clients. Clients simply get a byte array
-of data which they must provide to a service when required.
+Tokens are opaque to clients, clients who simply get a byte array
+of data which they must to provide to a service when required.
 This normally contains encrypted data for use by the service.
 
 The service, which holds the password to encrypt/decrypt this data,
@@ -79,7 +80,7 @@ After use, tokens may be revoked: this relies on services holding tables of
 valid tokens, either in memory or, for any HA service, in Apache Zookeeper or
 similar. Revoking tokens is used to clean up after jobs complete.
 
-Delegation Token support is tightly integrated with YARN: requests to launch
+Delegation support is tightly integrated with YARN: requests to launch
 containers and applications can include a list of delegation tokens to
 pass along. These tokens are serialized with the request, saved to a file
 on the node launching the container, and then loaded in to the credentials
@@ -103,12 +104,12 @@ S3A now supports delegation tokens, so allowing a caller to acquire tokens
 from a local S3A Filesystem connector instance and pass them on to
 applications to grant them equivalent or restricted access.
 
-These S3A Delegation Tokens are special in a way that they do not contain
+These S3A Delegation Tokens are special in that they do not contain
 password-protected data opaque to clients; they contain the secrets needed
 to access the relevant S3 buckets and associated services.
 
 They are obtained by requesting a delegation token from the S3A filesystem client.
-Issued tokens may be included in job submissions, passed to running applications,
+Issued token mey be included in job submissions, passed to running applications,
 etc. This token is specific to an individual bucket; all buckets which a client
 wishes to work with must have a separate delegation token issued.
 
@@ -117,10 +118,8 @@ class, which then supports multiple "bindings" behind it, so supporting
 different variants of S3A Delegation Tokens.
 
 Because applications only collect Delegation Tokens in secure clusters,
-it does mean that to be able to submit delegation tokens in transient
+It does mean that to be able to submit delegation tokens in transient
 cloud-hosted Hadoop clusters, _these clusters must also have Kerberos enabled_.
-
-*Tip*: you should only be deploying Hadoop in public clouds with Kerberos enabled.
 
 
 ### <a name="session-tokens"></a> S3A Session Delegation Tokens
@@ -141,10 +140,11 @@ for specifics details on the (current) token lifespan.
 
 ### <a name="role-tokens"></a> S3A Role Delegation Tokens
 
-A Role Delegation Token is created by asking the AWS
+A Role Delegation Tokens is created by asking the AWS
 [Security Token Service](http://docs.aws.amazon.com/STS/latest/APIReference/Welcome.html)
-for a set of "Assumed Role" session credentials with a limited lifetime, belonging to a given IAM Role.
-The resulting session credentials are restricted to grant access to all KMS keys, and to the specific S3 bucket.
+for set of "Assumed Role" credentials, with a AWS account specific role for a limited duration..
+This role is restricted to only grant access the S3 bucket, the S3Guard table
+and all KMS keys,
 They are marshalled into the S3A Delegation Token.
 
 Other S3A connectors can extract these credentials and use them to
@@ -156,13 +156,13 @@ Issued tokens cannot be renewed or revoked.
 
 ### <a name="full-credentials"></a> S3A Full-Credential Delegation Tokens
 
-Full Credential Delegation Tokens contain the full AWS login details
+Full Credential Delegation Tokens tokens contain the full AWS login details
 (access key and secret key) needed to access a bucket.
 
 They never expire, so are the equivalent of storing the AWS account credentials
 in a Hadoop, Hive, Spark configuration or similar.
 
-The differences are:
+They differences are:
 
 1. They are automatically passed from the client/user to the application.
 A remote application can use them to access data on behalf of the user.
@@ -181,20 +181,21 @@ Hadoop security enabled —which inevitably means with Kerberos.
 Even though S3A delegation tokens do not use Kerberos, the code in
 applications which fetch DTs is normally only executed when the cluster is
 running in secure mode; somewhere where the `core-site.xml` configuration
-sets `hadoop.security.authentication` to `kerberos` or another valid
+sets `hadoop.security.authentication` to to `kerberos` or another valid
 authentication mechanism.
 
-*Without enabling security at this level, delegation tokens will not
+* Without enabling security at this level, delegation tokens will not
 be collected.*
 
-Once Kerberos is enabled, the process for acquiring tokens is as follows:
+Once Kerberos enabled, the process for acquiring tokens is as follows:
 
 1. Enable Delegation token support by setting `fs.s3a.delegation.token.binding`
 to the classname of the token binding to use.
+to use.
 1. Add any other binding-specific settings (STS endpoint, IAM role, etc.)
 1. Make sure the settings are the same in the service as well as the client.
 1. In the client, switch to using a [Hadoop Credential Provider](hadoop-project-dist/hadoop-common/CredentialProviderAPI.html)
-for storing your local credentials, with a local filesystem store
+for storing your local credentials, *with a local filesystem store
  (`localjceks:` or `jcecks://file`), so as to keep the full secrets out of any
  job configurations.
 1. Execute the client from a Kerberos-authenticated account
@@ -214,7 +215,7 @@ application configured with the login credentials for an AWS account able to iss
 Hadoop MapReduce jobs copy their client-side configurations with the job.
 If your AWS login secrets are set in an XML file then they are picked up
 and passed in with the job, _even if delegation tokens are used to propagate
-session or role secrets_.
+session or role secrets.
 
 Spark-submit will take any credentials in the `spark-defaults.conf`file
 and again, spread them across the cluster.
@@ -260,7 +261,7 @@ the same STS endpoint.
 * In experiments, a few hundred requests per second are needed to trigger throttling,
 so this is very unlikely to surface in production systems.
 * The S3A filesystem connector retries all throttled requests to AWS services, including STS.
-* Other S3 clients which use the AWS SDK will, if configured, also retry throttled requests.
+* Other S3 clients with use the AWS SDK will, if configured, also retry throttled requests.
 
 Overall, the risk of triggering STS throttling appears low, and most applications
 will recover from what is generally an intermittently used AWS service.
@@ -302,7 +303,7 @@ relevant bucket, then a new session token will be issued.
 a session delegation token, then the existing token will be forwarded.
 The life of the token will not be extended.
 1. If the application requesting a token does not have either of these,
-the token cannot be issued: the operation will fail with an error.
+the the tokens cannot be issued: the operation will fail with an error.
 
 
 The endpoint for STS requests are set by the same configuration
@@ -352,10 +353,10 @@ it is authenticated with; the role token binding will fail.
 
 When the AWS credentials supplied to the Session Delegation Token binding
 through `fs.s3a.aws.credentials.provider` are themselves a set of
-session credentials, generated delegation tokens will simply contain these
-existing session credentials, not a new set of credentials obtained from STS.
+session credentials, generated delegation tokens with simply contain these
+existing session credentials, a new set of credentials obtained from STS.
 This is because the STS service does not let
-callers authenticated with session/role credentials request new sessions.
+callers authenticated with session/role credentials from requesting new sessions.
 
 This feature is useful when generating tokens from an EC2 VM instance in one IAM
 role and forwarding them over to VMs which are running in a different IAM role.
@@ -383,15 +384,15 @@ There are some further configuration options:
 
 | **Key** | **Meaning** | **Default** |
 | --- | --- | --- |
-| `fs.s3a.assumed.role.session.duration` | Duration of delegation tokens |  `1h` |
+| `fs.s3a.assumed.role.session.duration"` | Duration of delegation tokens |  `1h` |
 | `fs.s3a.assumed.role.arn` | ARN for role to request |  (undefined) |
 | `fs.s3a.assumed.role.sts.endpoint.region` | region for issued tokens |  (undefined) |
 
 The option `fs.s3a.assumed.role.arn` must be set to a role which the
-user can assume. It must have permissions to access the bucket and
-any KMS encryption keys. The actual
+user can assume. It must have permissions to access the bucket, any
+associated S3Guard table and any KMS encryption keys. The actual
 requested role will be this role, explicitly restricted to the specific
-bucket.
+bucket and S3Guard table.
 
 The XML settings needed to enable session tokens are:
 
@@ -412,13 +413,16 @@ The XML settings needed to enable session tokens are:
 ```
 
 A JSON role policy for the role/session will automatically be generated which will
-consist of:
-
+consist of
 1. Full access to the S3 bucket for all operations used by the S3A client
 (read, write, list, multipart operations, get bucket location, etc).
+1. Full user access to any S3Guard DynamoDB table used by the bucket.
 1. Full user access to KMS keys. This is to be able to decrypt any data
 in the bucket encrypted with SSE-KMS, as well as encrypt new data if that
 is the encryption policy.
+
+If the client doesn't have S3Guard enabled, but the remote application does,
+the issued role tokens will not have permission to access the S3Guard table.
 
 ### <a name="enabling-full-tokens"></a> Enabling Full Delegation Tokens
 
@@ -449,7 +453,7 @@ relevant bucket, then a full credential token will be issued.
 a session delegation token, then the existing token will be forwarded.
 The life of the token will not be extended.
 1. If the application requesting a token does not have either of these,
-the tokens cannot be issued: the operation will fail with an error.
+the the tokens cannot be issued: the operation will fail with an error.
 
 ## <a name="managing_token_duration"></a> Managing the Delegation Tokens Duration
 
@@ -465,7 +469,7 @@ that of the role itself: 1h by default, though this can be changed to
 12h [In the IAM Console](https://console.aws.amazon.com/iam/home#/roles),
 or from the AWS CLI.
 
-Without increasing the duration of the role, one hour is the maximum value;
+*Without increasing the duration of role, one hour is the maximum value;
 the error message `The requested DurationSeconds exceeds the MaxSessionDuration set for this role`
 is returned if the requested duration of a Role Delegation Token is greater
 than that available for the role.
@@ -545,7 +549,7 @@ Consult [troubleshooting Assumed Roles](assumed_roles.html#troubleshooting)
 for details on AWS error messages related to AWS IAM roles.
 
 The [cloudstore](https://github.com/steveloughran/cloudstore) module's StoreDiag
-utility can also be used to explore delegation token support.
+utility can also be used to explore delegation token support
 
 
 ### Submitted job cannot authenticate
@@ -557,7 +561,7 @@ There are many causes for this; delegation tokens add some more.
 
 * This user is not `kinit`-ed in to Kerberos. Use `klist` and
 `hadoop kdiag` to see the Kerberos authentication state of the logged in user.
-* The filesystem instance on the client does not have a token binding set in
+* The filesystem instance on the client has not had a token binding set in
 `fs.s3a.delegation.token.binding`, so does not attempt to issue any.
 * The job submission is not aware that access to the specific S3 buckets
 are required. Review the application's submission mechanism to determine
@@ -659,7 +663,7 @@ for unmarshalling.
 
 This identifier must contain all information needed at the far end to
 authenticate the caller with AWS services used by the S3A client: AWS S3 and
-potentially AWS KMS (for SSE-KMS).
+potentially AWS KMS (for SSE-KMS) and AWS DynamoDB (for S3Guard).
 
 It must have its own unique *Token Kind*, to ensure that it can be distinguished
 from the other token identifiers when tokens are being unmarshalled.
@@ -689,7 +693,8 @@ is needed to keep them out of logs.
 * Secrets MUST NOT be logged, even at debug level.
 * Prefer short-lived session secrets over long-term secrets.
 * Try to restrict the permissions to what a client with the delegated token
-  may perform to those needed to access data in the S3 bucket.
+  may perform to those needed to access data in the S3 bucket. This potentially
+  includes a DynamoDB table, KMS access, etc.
 * Implementations need to be resistant to attacks which pass in invalid data as
 their token identifier: validate the types of the unmarshalled data; set limits
 on the size of all strings and other arrays to read in, etc.
@@ -717,7 +722,7 @@ In the initial results of these tests:
 
 * A few hundred requests a second can be made before STS block the caller.
 * The throttling does not last very long (seconds)
-* It does not appear to affect any other STS endpoints.
+* Tt does not appear to affect any other STS endpoints.
 
 If developers wish to experiment with these tests and provide more detailed
 analysis, we would welcome this. Do bear in mind that all users of the
@@ -749,7 +754,7 @@ Look at the other examples to see what to do; `SessionTokenIdentifier` does
 most of the work.
 
 Having a `toString()` method which is informative is ideal for the `hdfs creds`
-command as well as debugging: *but do not print secrets*.
+command as well as debugging: *but do not print secrets*
 
 *Important*: Add no references to any AWS SDK class, to
 ensure it can be safely deserialized whenever the relevant token
@@ -793,6 +798,7 @@ Create the delegation token.
 If non-empty, the `policy` argument contains an AWS policy model to grant access to:
 
 * The target S3 bucket.
+* Any S3Guard DDB table it is bonded to.
 * KMS key `"kms:GenerateDataKey` and `kms:Decrypt`permissions for all KMS keys.
 
 This can be converted to a string and passed to the AWS `assumeRole` operation.
@@ -832,16 +838,16 @@ This tests marshalling and unmarshalling of tokens identifiers.
 
 Tests the lifecycle of session tokens.
 
-#### Integration Test `ITestSessionDelegationInFilesystem`
+#### Integration Test `ITestSessionDelegationInFileystem`.
 
 This collects DTs from one filesystem, and uses that to create a new FS instance and
-then perform filesystem operations. A miniKDC is instantiated.
+then perform filesystem operations. A miniKDC is instantiated
 
 * Take care to remove all login secrets from the environment, so as to make sure that
 the second instance is picking up the DT information.
 * `UserGroupInformation.reset()` can be used to reset user secrets after every test
 case (e.g. teardown), so that issued DTs from one test case do not contaminate the next.
-* It's subclass, `ITestRoleDelegationInFilesystem` adds a check that the current credentials
+* its subclass, `ITestRoleDelegationInFileystem` adds a check that the current credentials
 in the DT cannot be used to access data on other buckets —that is, the active
 session really is restricted to the target bucket.
 
@@ -851,7 +857,7 @@ session really is restricted to the target bucket.
 It's not easy to bring up a YARN cluster with a secure HDFS and miniKDC controller in
 test cases —this test, the closest there is to an end-to-end test,
 uses mocking to mock the RPC calls to the YARN AM, and then verifies that the tokens
-have been collected in the job context.
+have been collected in the job context,
 
 #### Load Test `ILoadTestSessionCredentials`
 

@@ -101,8 +101,6 @@ public class ZlibDecompressor implements Decompressor {
 
   /**
    * Creates a new decompressor.
-   * @param header header.
-   * @param directBufferSize directBufferSize.
    */
   public ZlibDecompressor(CompressionHeader header, int directBufferSize) {
     this.header = header;

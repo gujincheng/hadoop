@@ -53,8 +53,6 @@ import org.apache.hadoop.security.AccessControlException;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
@@ -69,8 +67,6 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestAzureBlobFileSystemDelegationSAS.class);
-
-  private boolean isHNSEnabled;
 
   public ITestAzureBlobFileSystemDelegationSAS() throws Exception {
     // These tests rely on specific settings in azure-auth-keys.xml:
@@ -87,7 +83,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
 
   @Override
   public void setup() throws Exception {
-    isHNSEnabled = this.getConfiguration().getBoolean(
+    boolean isHNSEnabled = this.getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
     Assume.assumeTrue(isHNSEnabled);
     createFilesystemForSASTests();
@@ -227,15 +223,15 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       stream.writeBytes("hello");
     }
 
-    assertPathDoesNotExist(fs, "This path should not exist", destinationPath);
+    assertFalse(fs.exists(destinationPath));
     fs.rename(sourcePath, destinationPath);
-    assertPathDoesNotExist(fs, "This path should not exist", sourcePath);
-    assertPathExists(fs, "This path should exist", destinationPath);
+    assertFalse(fs.exists(sourcePath));
+    assertTrue(fs.exists(destinationPath));
 
-    assertPathDoesNotExist(fs, "This path should not exist", destinationDir);
+    assertFalse(fs.exists(destinationDir));
     fs.rename(sourceDir, destinationDir);
-    assertPathDoesNotExist(fs, "This path should not exist", sourceDir);
-    assertPathExists(fs, "This path should exist", destinationDir);
+    assertFalse(fs.exists(sourceDir));
+    assertTrue(fs.exists(destinationDir));
   }
 
   @Test
@@ -250,13 +246,13 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       stream.writeBytes("hello");
     }
 
-    assertPathExists(fs, "This path should exist", filePath);
+    assertTrue(fs.exists(filePath));
     fs.delete(filePath, false);
-    assertPathDoesNotExist(fs, "This path should not exist", filePath);
+    assertFalse(fs.exists(filePath));
 
-    assertPathExists(fs, "This path should exist", dirPath);
+    assertTrue(fs.exists(dirPath));
     fs.delete(dirPath, false);
-    assertPathDoesNotExist(fs, "This path should not exist", dirPath);
+    assertFalse(fs.exists(dirPath));
   }
 
   @Test
@@ -271,11 +267,11 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       stream.writeBytes("hello");
     }
 
-    assertPathExists(fs, "This path should exist", dirPath);
-    assertPathExists(fs, "This path should exist", filePath);
+    assertTrue(fs.exists(dirPath));
+    assertTrue(fs.exists(filePath));
     fs.delete(dirPath, true);
-    assertPathDoesNotExist(fs, "This path should not exist", filePath);
-    assertPathDoesNotExist(fs, "This path should not exist", dirPath);
+    assertFalse(fs.exists(filePath));
+    assertFalse(fs.exists(dirPath));
   }
 
   @Test
@@ -399,12 +395,11 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   public void testSignatureMask() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    String src = String.format("/testABC/test%s.xt", UUID.randomUUID());
-    fs.create(new Path(src)).close();
+    String src = "/testABC/test.xt";
+    fs.create(new Path(src));
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
         .renamePath(src, "/testABC" + "/abc.txt", null,
-            getTestTracingContext(fs, false), null, false, isHNSEnabled)
-        .getOp();
+            getTestTracingContext(fs, false));
     AbfsHttpOperation result = abfsHttpRestOperation.getResult();
     String url = result.getMaskedUrl();
     String encodedUrl = result.getMaskedEncodedUrl();
@@ -421,7 +416,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     intercept(IOException.class, "sig=XXXX",
         () -> getFileSystem().getAbfsClient()
             .renamePath("testABC/test.xt", "testABC/abc.txt", null,
-                getTestTracingContext(getFileSystem(), false), null, false, isHNSEnabled));
+                getTestTracingContext(getFileSystem(), false)));
   }
 
   @Test
@@ -480,18 +475,5 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     assertEquals("The permissions are not expected.",
         "r--r-----",
         fileStatus.getPermission().toString());
-  }
-
-  @Test
-  public void testSASQuesMarkPrefix() throws Exception {
-    AbfsConfiguration testConfig = this.getConfiguration();
-    // the SAS Token Provider is changed
-    testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, "org.apache.hadoop.fs.azurebfs.extensions.MockWithPrefixSASTokenProvider");
-
-    AzureBlobFileSystem testFs = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
-    Path testFile = new Path("/testSASPrefixQuesMark");
-
-    // the creation of this filesystem should work correctly even when a SAS Token is generated with a ? prefix
-    testFs.create(testFile).close();
   }
 }

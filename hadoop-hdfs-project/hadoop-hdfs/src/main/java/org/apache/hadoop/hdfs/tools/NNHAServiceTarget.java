@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetUtils;
 
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 
@@ -53,69 +53,17 @@ public class NNHAServiceTarget extends HAServiceTarget {
   private InetSocketAddress zkfcAddr;
   private NodeFencer fencer;
   private BadFencingConfigurationException fenceConfigError;
-  private HdfsConfiguration targetConf;
-  private String nnId;
-  private String nsId;
-  private boolean autoFailoverEnabled;
-
-  /**
-   * Create a NNHAServiceTarget for a namenode.
-   * Look up addresses from configuration.
-   *
-   * @param conf          HDFS configuration.
-   * @param nsId          nsId of this nn.
-   * @param nnId          nnId of this nn.
-   */
+  private final String nnId;
+  private final String nsId;
+  private final boolean autoFailoverEnabled;
+  
   public NNHAServiceTarget(Configuration conf,
       String nsId, String nnId) {
-    initializeNnConfig(conf, nsId, nnId);
+    Preconditions.checkNotNull(nnId);
 
-    String serviceAddr =
-        DFSUtil.getNamenodeServiceAddr(targetConf, nsId, nnId);
-    if (serviceAddr == null) {
-      throw new IllegalArgumentException(
-          "Unable to determine service address for namenode '" + nnId + "'");
-    }
-
-    this.addr = NetUtils.createSocketAddr(serviceAddr,
-        HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
-
-    String lifelineAddrStr =
-        DFSUtil.getNamenodeLifelineAddr(targetConf, nsId, nnId);
-    this.lifelineAddr = (lifelineAddrStr != null) ?
-        NetUtils.createSocketAddr(lifelineAddrStr) : null;
-
-    initializeFailoverConfig();
-  }
-
-  /**
-   * Create a NNHAServiceTarget for a namenode.
-   * Addresses are provided so we don't need to lookup the config.
-   *
-   * @param conf          HDFS configuration.
-   * @param nsId          nsId of this nn.
-   * @param nnId          nnId of this nn.
-   * @param addr          Provided service address.
-   * @param lifelineAddr  Provided lifeline address.
-   */
-  public NNHAServiceTarget(Configuration conf,
-      String nsId, String nnId,
-      String addr, String lifelineAddr) {
-    initializeNnConfig(conf, nsId, nnId);
-
-    this.addr = NetUtils.createSocketAddr(addr);
-    this.lifelineAddr = NetUtils.createSocketAddr(lifelineAddr);
-
-    initializeFailoverConfig();
-  }
-
-  private void initializeNnConfig(Configuration conf,
-      String providedNsId, String providedNnId) {
-    Preconditions.checkNotNull(providedNnId);
-
-    if (providedNsId == null) {
-      providedNsId = DFSUtil.getOnlyNameServiceIdOrNull(conf);
-      if (providedNsId == null) {
+    if (nsId == null) {
+      nsId = DFSUtil.getOnlyNameServiceIdOrNull(conf);
+      if (nsId == null) {
         String errorString = "Unable to determine the name service ID.";
         String[] dfsNames = conf.getStrings(DFS_NAMESERVICES);
         if ((dfsNames != null) && (dfsNames.length > 1)) {
@@ -127,17 +75,27 @@ public class NNHAServiceTarget extends HAServiceTarget {
         throw new IllegalArgumentException(errorString);
       }
     }
-
+    assert nsId != null;
+    
     // Make a copy of the conf, and override configs based on the
     // target node -- not the node we happen to be running on.
-    this.targetConf = new HdfsConfiguration(conf);
-    NameNode.initializeGenericKeys(targetConf, providedNsId, providedNnId);
+    HdfsConfiguration targetConf = new HdfsConfiguration(conf);
+    NameNode.initializeGenericKeys(targetConf, nsId, nnId);
+    
+    String serviceAddr = 
+      DFSUtil.getNamenodeServiceAddr(targetConf, nsId, nnId);
+    if (serviceAddr == null) {
+      throw new IllegalArgumentException(
+          "Unable to determine service address for namenode '" + nnId + "'");
+    }
+    this.addr = NetUtils.createSocketAddr(serviceAddr,
+        HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
 
-    this.nsId = providedNsId;
-    this.nnId = providedNnId;
-  }
+    String lifelineAddrStr =
+        DFSUtil.getNamenodeLifelineAddr(targetConf, nsId, nnId);
+    this.lifelineAddr = (lifelineAddrStr != null) ?
+        NetUtils.createSocketAddr(lifelineAddrStr) : null;
 
-  private void initializeFailoverConfig() {
     this.autoFailoverEnabled = targetConf.getBoolean(
         DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY,
         DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_DEFAULT);
@@ -147,13 +105,16 @@ public class NNHAServiceTarget extends HAServiceTarget {
         setZkfcPort(port);
       }
     }
-
+    
     try {
       this.fencer = NodeFencer.create(targetConf,
           DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY);
     } catch (BadFencingConfigurationException e) {
       this.fenceConfigError = e;
     }
+    
+    this.nnId = nnId;
+    this.nsId = nsId;
   }
 
   /**

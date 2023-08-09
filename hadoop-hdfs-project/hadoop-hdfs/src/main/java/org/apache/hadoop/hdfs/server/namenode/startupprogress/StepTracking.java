@@ -18,7 +18,6 @@ package org.apache.hadoop.hdfs.server.namenode.startupprogress;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -36,15 +35,5 @@ final class StepTracking extends AbstractTracking {
     clone.count = new AtomicLong(count.get());
     clone.total = total;
     return clone;
-  }
-
-  @Override
-  public String toString() {
-    return new ToStringBuilder(this)
-        .append("count", count)
-        .append("total", total)
-        .append("beginTime", beginTime)
-        .append("endTime", endTime)
-        .toString();
   }
 }

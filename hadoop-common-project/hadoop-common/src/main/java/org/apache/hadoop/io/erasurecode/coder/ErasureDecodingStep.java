@@ -37,10 +37,10 @@ public class ErasureDecodingStep implements ErasureCodingStep {
 
   /**
    * The constructor with all the necessary info.
-   * @param inputBlocks inputBlocks.
+   * @param inputBlocks
    * @param erasedIndexes the indexes of erased blocks in inputBlocks array
-   * @param outputBlocks outputBlocks.
-   * @param rawDecoder rawDecoder.
+   * @param outputBlocks
+   * @param rawDecoder
    */
   public ErasureDecodingStep(ECBlock[] inputBlocks, int[] erasedIndexes,
                              ECBlock[] outputBlocks,

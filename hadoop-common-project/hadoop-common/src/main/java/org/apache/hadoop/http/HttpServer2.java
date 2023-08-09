@@ -27,7 +27,6 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -55,9 +54,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -82,7 +81,6 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
 import org.apache.hadoop.security.ssl.FileMonitoringTimerTask;
 import org.apache.hadoop.security.ssl.SSLFactory;
-import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -97,11 +95,10 @@ import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
-import org.eclipse.jetty.server.SymlinkAllowedResourceAliasChecker;
+import org.eclipse.jetty.server.handler.AllowSymLinkAliasChecker;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
-import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.FilterMapping;
@@ -144,7 +141,7 @@ public final class HttpServer2 implements FilterContainer {
 
   public static final String HTTP_SOCKET_BACKLOG_SIZE_KEY =
       "hadoop.http.socket.backlog.size";
-  public static final int HTTP_SOCKET_BACKLOG_SIZE_DEFAULT = 500;
+  public static final int HTTP_SOCKET_BACKLOG_SIZE_DEFAULT = 128;
   public static final String HTTP_MAX_THREADS_KEY = "hadoop.http.max.threads";
   public static final String HTTP_ACCEPTOR_COUNT_KEY =
       "hadoop.http.acceptor.count";
@@ -211,9 +208,6 @@ public final class HttpServer2 implements FilterContainer {
   protected static final String PROMETHEUS_SINK = "PROMETHEUS_SINK";
   private PrometheusMetricsSink prometheusMetricsSink;
 
-  private StatisticsHandler statsHandler;
-  private HttpServer2Metrics metrics;
-
   /**
    * Class to construct instances of HTTP server with specific options.
    */
@@ -244,9 +238,7 @@ public final class HttpServer2 implements FilterContainer {
 
     private String hostName;
     private boolean disallowFallbackToRandomSignerSecretProvider;
-    private final List<String> authFilterConfigurationPrefixes =
-        new ArrayList<>(Collections.singletonList(
-            "hadoop.http.authentication."));
+    private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
     private String excludeCiphers;
 
     private boolean xFrameEnabled;
@@ -270,7 +262,6 @@ public final class HttpServer2 implements FilterContainer {
      *          specifies the binding address, and the port specifies the
      *          listening port. Unspecified or zero port means that the server
      *          can listen to any port.
-     * @return Builder.
      */
     public Builder addEndpoint(URI endpoint) {
       endpoints.add(endpoint);
@@ -281,9 +272,6 @@ public final class HttpServer2 implements FilterContainer {
      * Set the hostname of the http server. The host name is used to resolve the
      * _HOST field in Kerberos principals. The hostname of the first listener
      * will be used if the name is unspecified.
-     *
-     * @param hostName hostName.
-     * @return Builder.
      */
     public Builder hostName(String hostName) {
       this.hostName = hostName;
@@ -312,9 +300,6 @@ public final class HttpServer2 implements FilterContainer {
     /**
      * Specify whether the server should authorize the client in SSL
      * connections.
-     *
-     * @param value value.
-     * @return Builder.
      */
     public Builder needsClientAuth(boolean value) {
       this.needsClientAuth = value;
@@ -339,9 +324,6 @@ public final class HttpServer2 implements FilterContainer {
     /**
      * Specify the SSL configuration to load. This API provides an alternative
      * to keyStore/keyPassword/trustStore.
-     *
-     * @param sslCnf sslCnf.
-     * @return Builder.
      */
     public Builder setSSLConf(Configuration sslCnf) {
       this.sslConf = sslCnf;
@@ -378,15 +360,8 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
-    public Builder setAuthFilterConfigurationPrefix(String value) {
-      this.authFilterConfigurationPrefixes.clear();
-      this.authFilterConfigurationPrefixes.add(value);
-      return this;
-    }
-
-    public Builder setAuthFilterConfigurationPrefixes(String[] prefixes) {
-      this.authFilterConfigurationPrefixes.clear();
-      Collections.addAll(this.authFilterConfigurationPrefixes, prefixes);
+    public Builder authFilterConfigurationPrefix(String value) {
+      this.authFilterConfigurationPrefix = value;
       return this;
     }
 
@@ -493,16 +468,9 @@ public final class HttpServer2 implements FilterContainer {
       HttpServer2 server = new HttpServer2(this);
 
       if (this.securityEnabled &&
-          authFilterConfigurationPrefixes.stream().noneMatch(
-              prefix -> this.conf.get(prefix + "type")
-                  .equals(PseudoAuthenticationHandler.TYPE))
-      ) {
-        server.initSpnego(
-            conf,
-            hostName,
-            getFilterProperties(conf, authFilterConfigurationPrefixes),
-            usernameConfKey,
-            keytabConfKey);
+          !this.conf.get(authFilterConfigurationPrefix + "type").
+          equals(PseudoAuthenticationHandler.TYPE)) {
+        server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey);
       }
 
       for (URI ep : endpoints) {
@@ -753,27 +721,6 @@ public final class HttpServer2 implements FilterContainer {
     addDefaultApps(contexts, appDir, conf);
     webServer.setHandler(handlers);
 
-    if (conf.getBoolean(
-        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED,
-        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED_DEFAULT)) {
-      // Jetty StatisticsHandler must be inserted as the first handler.
-      // The tree might look like this:
-      //
-      // - StatisticsHandler (for all requests)
-      //   - HandlerList
-      //     - ContextHandlerCollection
-      //     - RequestLogHandler (if enabled)
-      //     - WebAppContext
-      //       - SessionHandler
-      //       - Servlets
-      //       - Filters
-      //       - etc..
-      //
-      // Reference: https://www.eclipse.org/lists/jetty-users/msg06273.html
-      statsHandler = new StatisticsHandler();
-      webServer.insertHandler(statsHandler);
-    }
-
     Map<String, String> xFrameParams = setHeaders(conf);
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), xFrameParams);
     final FilterInitializer[] initializers = getFilterInitializers(conf);
@@ -787,28 +734,6 @@ public final class HttpServer2 implements FilterContainer {
 
     addDefaultServlets();
     addPrometheusServlet(conf);
-    addAsyncProfilerServlet(contexts, conf);
-  }
-
-  private void addAsyncProfilerServlet(ContextHandlerCollection contexts, Configuration conf)
-      throws IOException {
-    final String asyncProfilerHome = ProfileServlet.getAsyncProfilerHome();
-    if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {
-      addServlet("prof", "/prof", ProfileServlet.class);
-      Path tmpDir = Paths.get(ProfileServlet.OUTPUT_DIR);
-      if (Files.notExists(tmpDir)) {
-        Files.createDirectories(tmpDir);
-      }
-      ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output-hadoop");
-      genCtx.addServlet(ProfileOutputServlet.class, "/*");
-      genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
-      genCtx.setDisplayName("prof-output-hadoop");
-      setContextAttributes(genCtx, conf);
-    } else {
-      addServlet("prof", "/prof", ProfilerDisabledServlet.class);
-      LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property "
-          + "not specified. Disabling /prof endpoint.");
-    }
   }
 
   private void addPrometheusServlet(Configuration conf) {
@@ -860,25 +785,18 @@ public final class HttpServer2 implements FilterContainer {
       throws Exception {
     final Configuration conf = b.conf;
     Properties config = getFilterProperties(conf,
-        b.authFilterConfigurationPrefixes);
+                                            b.authFilterConfigurationPrefix);
     return AuthenticationFilter.constructSecretProvider(
         ctx, config, b.disallowFallbackToRandomSignerSecretProvider);
   }
 
-  public static Properties getFilterProperties(Configuration conf, List<String> prefixes) {
-    Properties props = new Properties();
-    for (String prefix : prefixes) {
-      Map<String, String> filterConfigMap =
-          AuthenticationFilterInitializer.getFilterConfigMap(conf, prefix);
-      for (Map.Entry<String, String> entry : filterConfigMap.entrySet()) {
-        Object previous = props.setProperty(entry.getKey(), entry.getValue());
-        if (previous != null && !previous.equals(entry.getValue())) {
-          LOG.warn("Overwriting configuration for key='{}' with value='{}' " +
-              "previous value='{}'", entry.getKey(), entry.getValue(), previous);
-        }
-      }
-    }
-    return props;
+  private static Properties getFilterProperties(Configuration conf, String
+      prefix) {
+    Properties prop = new Properties();
+    Map<String, String> filterConfig = AuthenticationFilterInitializer
+        .getFilterConfigMap(conf, prefix);
+    prop.putAll(filterConfig);
+    return prop;
   }
 
   private static void addNoCacheFilter(ServletContextHandler ctxt) {
@@ -913,11 +831,8 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Add default apps.
-   *
-   * @param parent contexthandlercollection.
    * @param appDir The application directory
-   * @param conf configuration.
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   protected void addDefaultApps(ContextHandlerCollection parent,
       final String appDir, Configuration conf) throws IOException {
@@ -944,7 +859,7 @@ public final class HttpServer2 implements FilterContainer {
       handler.setHttpOnly(true);
       handler.getSessionCookieConfig().setSecure(true);
       logContext.setSessionHandler(handler);
-      logContext.addAliasCheck(new SymlinkAllowedResourceAliasChecker(logContext));
+      logContext.addAliasCheck(new AllowSymLinkAliasChecker());
       setContextAttributes(logContext, conf);
       addNoCacheFilter(logContext);
       defaultContexts.put(logContext, true);
@@ -963,7 +878,7 @@ public final class HttpServer2 implements FilterContainer {
     handler.setHttpOnly(true);
     handler.getSessionCookieConfig().setSecure(true);
     staticContext.setSessionHandler(handler);
-    staticContext.addAliasCheck(new SymlinkAllowedResourceAliasChecker(staticContext));
+    staticContext.addAliasCheck(new AllowSymLinkAliasChecker());
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
   }
@@ -1198,12 +1113,6 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Define a filter for a context and set up default url mappings.
-   *
-   * @param ctx ctx.
-   * @param name name.
-   * @param classname classname.
-   * @param parameters parameters.
-   * @param urls urls.
    */
   public static void defineFilter(ServletContextHandler ctx, String name,
       String classname, Map<String,String> parameters, String[] urls) {
@@ -1314,7 +1223,6 @@ public final class HttpServer2 implements FilterContainer {
   /**
    * Get the address that corresponds to a particular connector.
    *
-   * @param index index.
    * @return the corresponding address for the connector, or null if there's no
    *         such connector or the connector is not bounded or was closed.
    */
@@ -1334,9 +1242,6 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Set the min, max number of worker threads (simultaneous connections).
-   *
-   * @param min min.
-   * @param max max.
    */
   public void setThreads(int min, int max) {
     QueuedThreadPool pool = (QueuedThreadPool) webServer.getThreadPool();
@@ -1345,12 +1250,8 @@ public final class HttpServer2 implements FilterContainer {
   }
 
   private void initSpnego(Configuration conf, String hostName,
-      Properties authFilterConfigurationPrefixes, String usernameConfKey, String keytabConfKey)
-      throws IOException {
+      String usernameConfKey, String keytabConfKey) throws IOException {
     Map<String, String> params = new HashMap<>();
-    for (Map.Entry<Object, Object> entry : authFilterConfigurationPrefixes.entrySet()) {
-      params.put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
-    }
     String principalInConf = conf.get(usernameConfKey);
     if (principalInConf != null && !principalInConf.isEmpty()) {
       params.put("kerberos.principal", SecurityUtil.getServerPrincipal(
@@ -1367,8 +1268,6 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Start the server. Does not wait for the server to start.
-   *
-   * @throws IOException raised on errors performing I/O.
    */
   public void start() throws IOException {
     try {
@@ -1379,16 +1278,6 @@ public final class HttpServer2 implements FilterContainer {
           DefaultMetricsSystem.instance()
               .register("prometheus", "Hadoop metrics prometheus exporter",
                   prometheusMetricsSink);
-        }
-        if (statsHandler != null) {
-          // Create metrics source for each HttpServer2 instance.
-          // Use port number to make the metrics source name unique.
-          int port = -1;
-          for (ServerConnector connector : listeners) {
-            port = connector.getLocalPort();
-            break;
-          }
-          metrics = HttpServer2Metrics.create(statsHandler, port);
         }
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
@@ -1543,9 +1432,7 @@ public final class HttpServer2 implements FilterContainer {
   }
 
   /**
-   * stop the server.
-   *
-   * @throws Exception exception.
+   * stop the server
    */
   public void stop() throws Exception {
     MultiException exception = null;
@@ -1584,9 +1471,6 @@ public final class HttpServer2 implements FilterContainer {
 
     try {
       webServer.stop();
-      if (metrics != null) {
-        metrics.remove();
-      }
     } catch (Exception e) {
       LOG.error("Error while stopping web server for webapp "
           + webAppContext.getDisplayName(), e);
@@ -1646,7 +1530,6 @@ public final class HttpServer2 implements FilterContainer {
    * @param request the servlet request.
    * @param response the servlet response.
    * @return TRUE/FALSE based on the logic decribed above.
-   * @throws IOException raised on errors performing I/O.
    */
   public static boolean isInstrumentationAccessAllowed(
     ServletContext servletContext, HttpServletRequest request,
@@ -1668,11 +1551,9 @@ public final class HttpServer2 implements FilterContainer {
    * Does the user sending the HttpServletRequest has the administrator ACLs? If
    * it isn't the case, response will be modified to send an error to the user.
    *
-   * @param servletContext servletContext.
-   * @param request request.
    * @param response used to send the error response if user does not have admin access.
    * @return true if admin-authorized, false otherwise
-   * @throws IOException raised on errors performing I/O.
+   * @throws IOException
    */
   public static boolean hasAdministratorAccess(
       ServletContext servletContext, HttpServletRequest request,
@@ -1969,15 +1850,5 @@ public final class HttpServer2 implements FilterContainer {
     headers.put(HTTP_HEADER_PREFIX + splitVal[0],
             splitVal[1]);
     return headers;
-  }
-
-  @VisibleForTesting
-  HttpServer2Metrics getMetrics() {
-    return metrics;
-  }
-
-  @VisibleForTesting
-  List<ServerConnector> getListeners() {
-    return listeners;
   }
 }

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -51,16 +49,6 @@ public abstract class GetApplicationsResponse {
     GetApplicationsResponse response =
         Records.newRecord(GetApplicationsResponse.class);
     response.setApplicationList(applications);
-    return response;
-  }
-
-  @Private
-  @Unstable
-  public static GetApplicationsResponse newInstance(
-      Collection<ApplicationReport> applications) {
-    GetApplicationsResponse response =
-        Records.newRecord(GetApplicationsResponse.class);
-    response.setApplicationList(new ArrayList<>(applications));
     return response;
   }
 
